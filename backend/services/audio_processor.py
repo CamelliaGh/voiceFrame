@@ -109,7 +109,7 @@ class AudioProcessor:
                                 width: int = 1200, height: int = 200) -> BytesIO:
         """Generate waveform visualization as PNG image"""
         # Create figure with specific dimensions
-        fig, ax = plt.subplots(figsize=(width/100, height/100), facecolor='none')
+        fig, ax = plt.subplots(figsize=(width/100, height/100), facecolor=(0, 0, 0, 0))
         fig.patch.set_alpha(0.0)  # Make figure background transparent
         
         # Generate time axis
@@ -137,7 +137,7 @@ class AudioProcessor:
             dpi=100, 
             bbox_inches='tight',
             pad_inches=0,
-            facecolor='transparent', 
+            facecolor=(0, 0, 0, 0), 
             edgecolor='none',
             transparent=True
         )
