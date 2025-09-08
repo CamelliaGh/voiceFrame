@@ -1,0 +1,40 @@
+{
+  "name": "Framed Template",
+  "description": "Elegant framed design matching the photo layout with script text, centered photo, waveform, and QR code",
+  "template_file": "framed_template.png",
+  "page_size": "A4_Landscape",
+  "is_premium": false,
+  "premium_price_cents": null,
+  "premium_features": [],
+  "placeholders": {
+    "text": {
+      "x": 754,
+      "y": 100,
+      "width": 2000,
+      "height": 200,
+      "font": "script",
+      "font_size": 120,
+      "color": "#000000",
+      "alignment": "center"
+    },
+    "photo": {
+      "x": 604,
+      "y": 350,
+      "width": 2300,
+      "height": 1200,
+      "shape": "rectangle"
+    },
+    "waveform": {
+      "x": 754,
+      "y": 1650,
+      "width": 2000,
+      "height": 200
+    },
+    "qr_code": {
+      "x": 1554,
+      "y": 1950,
+      "width": 400,
+      "height": 400
+    }
+  }
+}

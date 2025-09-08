@@ -1,0 +1,40 @@
+{
+    "name": "Elegant Template",
+    "description": "Sophisticated and refined design for special occasions",
+    "template_file": "elegant_template.png",
+    "page_size": "A4",
+    "is_premium": true,
+    "premium_price_cents": 699,
+    "premium_features": [
+      "Luxury design elements",
+      "Premium typography",
+      "Sophisticated layout"
+    ],
+    "placeholders": {
+      "text": {
+        "x": 200,
+        "y": 100,
+        "width": 800,
+        "height": 150
+      },
+      "photo": {
+        "x": 400,
+        "y": 300,
+        "width": 400,
+        "height": 400,
+        "shape": "square"
+      },
+      "waveform": {
+        "x": 200,
+        "y": 800,
+        "width": 800,
+        "height": 200
+      },
+      "qr_code": {
+        "x": 900,
+        "y": 1000,
+        "width": 200,
+        "height": 200
+      }
+    }
+  }

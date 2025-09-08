@@ -1,0 +1,389 @@
+### 9.4 Email Marketing Metrics
+- **Email Collection Rate**: 100% (required for delivery)
+- **Email Deliverability Rate**: >95%
+- **Marketing Opt-in Rate**: Target 40-60% post-purchase
+- **Email Open Rates**: Target 25-35% (paid customers typically higher engagement)
+- **Click-Through Rates**: Target 8-12%
+- **Repeat Purchase Rate**: Target 20-30% within 12 months
+- **Customer Lifetime Value**: Track repeat purchases and referrals### 4.4 Anonymous Checkout Flow
+- **No Account Required**: Users can purchase and download without registration
+- **Email Required**: Essential for PDF delivery (natural email capture)
+- **Session-Based**: Temporary session tokens for payment processing
+- **Email Delivery**: Download links + marketing opt-in opportunity
+- **Payment Processors**: Stripe Checkout (anonymous payments), PayPal Guest Checkout
+- **Supported Methods**: Credit cards, digital wallets, PayPal
+- **Security**: PCI compliance, encrypted transactions
+- **Download Security**: Unique, time-limited download URLs
+- **Marketing Permission**: Soft opt-in post-purchase for future campaigns# Audio Poster Generator - Product Requirements Document (PRD)
+
+## 1. Product Overview
+
+### 1.1 Product Vision
+Create a web-based platform that allows users to generate personalized audio poster PDFs combining photos, audio waveforms, and custom text messages. The product operates on a freemium model where users can preview watermarked versions and pay to download clean, professional-quality PDFs.
+
+### 1.2 Product Mission
+Empower people to create meaningful, personalized keepsakes that capture special audio moments with visual memories - perfect for gifts, anniversaries, and sentimental occasions.
+
+### 1.3 Success Metrics (V1 - Pay-Per-Download)
+- **User Acquisition**: 5,000+ monthly visitors within 6 months
+- **Conversion Rate**: 8-12% preview-to-purchase conversion rate
+- **Revenue**: $15,000-25,000 MRR within 12 months
+- **Average Order Value**: $3.50 (mix of standard and premium downloads)
+- **User Satisfaction**: 4.5+ star rating average
+- **Time to Generate**: <30 seconds average processing time
+- **Checkout Abandonment**: <20% cart abandonment rate
+
+## 2. Target Audience
+
+### 2.1 Primary Users
+- **Romantic Partners** (25-45 years): Creating anniversary gifts, song dedications
+- **Parents** (30-50 years): Preserving children's first words, lullabies, voice messages
+- **Gift Givers** (20-60 years): Creating unique personalized presents
+- **Content Creators** (18-35 years): Social media content, portfolio pieces
+
+### 2.2 User Personas
+**"Sentimental Sarah" (32, Marketing Manager)**
+- Wants to create anniversary gift with "their song"
+- Values high-quality, professional output
+- Willing to pay for premium features
+- Tech-comfortable but prefers simple interfaces
+
+**"Memory-Making Mike" (38, Father of 2)**
+- Wants to preserve daughter's first "I love you daddy"
+- Budget-conscious but values sentimental items
+- Limited time, needs quick results
+- Mobile-first user
+
+## 3. Core Features & Requirements
+
+### 3.1 User Interface Requirements
+
+#### 3.1.1 Upload Interface
+- **Photo Upload**
+  - Supported formats: JPG, PNG, HEIC
+  - Max file size: 50MB
+  - Auto-rotation based on EXIF data
+  - Basic image validation and error handling
+
+- **Audio Upload**
+  - Supported formats: MP3, WAV, M4A, AAC
+  - Max file size: 100MB
+  - Max duration: 10 minutes
+  - Audio format conversion if needed
+
+#### 3.1.2 Customization Options
+- **Text Input**
+  - Character limit: 200 characters
+  - Font options: 3-5 elegant font choices
+  - Pre-written suggestions library (50+ options)
+  - Real-time character counter
+
+- **Photo Shape Selection**
+  - Square (default)
+  - Circle
+  - Rounded rectangle (future enhancement)
+
+- **PDF Size Options**
+  - A4 (210 × 297 mm) - default
+  - US Letter (8.5 × 11 inches)
+  - A3 (297 × 420 mm) - premium only
+  - Custom dimensions - premium only
+
+#### 3.1.3 Preview System
+- Real-time preview updates
+- Mobile-responsive preview
+- Preview shows watermarked version
+- Download preview button (watermarked)
+
+### 3.2 Audio Processing Requirements
+
+#### 3.2.1 Waveform Generation
+- **Technical Specifications**
+  - Sample rate normalization to 44.1kHz
+  - Amplitude normalization
+  - Waveform resolution: 1920px width, 200px height
+  - Black waveform on transparent background
+  - SVG format for scalability
+
+- **Audio Analysis**
+  - Automatic silence trimming
+  - Peak detection for visual emphasis
+  - Duration display
+  - Volume level optimization
+
+#### 3.2.2 QR Code Generation
+- **QR Code Content Options**
+  - Unique URL to audio playback page (default)
+  - Direct audio file link (premium)
+  - Custom URL input (premium)
+  - Spotify/Apple Music link (if detectable)
+
+- **QR Code Specifications**
+  - High contrast black/white
+  - Error correction level: M (15%)
+  - Minimum size: 1 inch square
+  - Scalable vector format
+
+### 3.3 PDF Generation Requirements
+
+#### 3.3.1 Layout Engine
+- **Design Templates**
+  - Classic template (free) - similar to example image
+  - Modern template (premium)
+  - Minimalist template (premium)
+  - Vintage template (premium)
+
+- **Element Positioning**
+  - Top: Custom text (18pt font)
+  - Center: Photo (max 4" x 4")
+  - Bottom center: Waveform (6" wide)
+  - Bottom right: QR code (1" x 1")
+
+#### 3.3.2 Quality Specifications
+- **Resolution**: 300 DPI minimum
+- **Color Space**: RGB for digital, CMYK option for printing
+- **File Size**: <10MB for standard templates
+- **Fonts**: Embedded fonts for consistency
+
+### 3.4 Watermark System
+
+#### 3.4.1 Free Version Watermark
+- **Placement**: Diagonal across entire poster, semi-transparent
+- **Content**: "PREVIEW - AudioPoster.com"
+- **Opacity**: 20% - visible but not completely obstructive
+- **Color**: Light gray (#CCCCCC)
+- **Font**: Sans-serif, 24pt
+
+#### 3.4.2 Watermark Technical Implementation
+- Applied during PDF generation, not as overlay
+- Cannot be easily removed by users
+- Maintains poster readability for preview purposes
+
+## 4. Monetization Strategy
+
+### 4.1 Pricing Model - Pay-Per-Download (V1)
+
+#### 4.1.1 Free Experience
+- **Included Features**
+  - Unlimited watermarked poster generation
+  - Real-time preview with all customization options
+  - All template options available for preview
+  - All PDF sizes and photo shapes
+  - Full QR code functionality (in watermarked version)
+  - No account required - anonymous usage
+
+#### 4.1.2 Pay-Per-Download Model
+
+**Standard Download - $2.99**
+- Remove watermark from current poster
+- High-resolution PDF (300 DPI)
+- Instant download via email or direct link
+- No account creation required
+- 24-hour download link validity
+
+**Premium Download - $4.99** 
+- Everything in Standard
+- Access to premium templates
+- Custom PDF sizing options
+- Enhanced QR code options
+- Commercial usage rights
+- 7-day download link validity
+
+### 4.3 Email Marketing Integration
+- **Natural Email Collection**: Email required for PDF delivery (not seen as spam/signup)
+- **High-Quality Leads**: Users who paid are highly engaged prospects
+- **Purchase Behavior Data**: Track seasonal patterns, gift-giving occasions
+- **Segmentation Opportunities**: Standard vs Premium buyers, occasion-based campaigns
+- **Follow-up Campaigns**: Holiday reminders, new template launches, special offers
+- **No Account Required**: Users can purchase and download without registration
+- **Session-Based**: Temporary session tokens for payment processing
+- **Email Delivery**: Download links sent to provided email address
+- **Payment Processors**: Stripe Checkout (anonymous payments), PayPal Guest Checkout
+- **Supported Methods**: Credit cards, digital wallets, PayPal
+- **Security**: PCI compliance, encrypted transactions
+- **Download Security**: Unique, time-limited download URLs
+
+## 5. Technical Architecture
+
+### 5.1 Backend Requirements
+
+#### 5.1.1 Core Technology Stack
+- **Framework**: Flask or FastAPI (Python)
+- **Database**: PostgreSQL for user data, Redis for sessions
+- **File Storage**: AWS S3 for uploaded files and generated PDFs
+- **Processing Queue**: Celery with Redis for background tasks
+- **Caching**: Redis for frequently accessed templates and assets
+
+#### 5.1.2 Audio Processing Pipeline
+```
+Upload → Validation → Format Conversion → Waveform Analysis → 
+SVG Generation → QR Code Creation → PDF Assembly → Storage
+```
+
+#### 5.1.3 Scalability Considerations
+- Horizontal scaling with load balancers
+- CDN integration for static assets
+- Database read replicas for high traffic
+- Asynchronous processing for PDF generation
+
+### 5.2 Frontend Requirements
+
+#### 5.2.1 Technology Stack
+- **Framework**: React.js with TypeScript
+- **Styling**: Tailwind CSS with custom components
+- **State Management**: Context API or Zustand
+- **File Upload**: React Dropzone
+- **Payment UI**: Stripe Elements
+
+#### 5.2.2 Performance Requirements
+- **Page Load Time**: <3 seconds initial load
+- **File Upload Feedback**: Real-time progress indicators
+- **Preview Generation**: <2 seconds after upload
+- **Mobile Responsiveness**: Full feature parity on mobile
+
+### 5.3 Security & Privacy
+
+#### 5.3.1 Data Protection (Anonymous Model)
+- **No User Data Collection**: No accounts, no personal data storage beyond email for delivery
+- **Minimal Email Storage**: Email addresses stored only for order fulfillment (7-30 days)
+- **File Encryption**: All uploaded files encrypted at rest
+- **Automatic Deletion**: Uploaded files deleted after 24 hours
+- **Session Privacy**: No audio content analysis or permanent storage
+- **Order Records**: Minimal anonymous order data for support (Order ID + email + purchase date)
+
+#### 5.3.2 Simplified Security Model
+- **Session-Based Security**: Temporary tokens for file uploads and payments
+- **No Password Management**: Eliminates password-related security risks
+- **Payment Security**: Stripe/PayPal handle all sensitive payment data
+- **Download Security**: Time-limited, unique URLs for PDF downloads
+
+#### 5.3.2 Upload Security
+- **File Validation**: Type checking, virus scanning
+- **Size Limits**: Enforced at both client and server level
+- **Rate Limiting**: Prevent abuse and DDoS attacks
+- **Content Filtering**: Basic inappropriate content detection
+
+## 6. User Experience Flow
+
+### 6.1 Anonymous User Journey (V1)
+1. **Landing Page**: Clear value proposition, example gallery
+2. **Upload Interface**: Drag-and-drop file uploads with progress indicators
+3. **Customization**: Real-time preview with intuitive controls
+4. **Preview**: Full-screen watermarked preview with sharing options
+5. **Purchase Decision**: "Remove Watermark & Download" CTA with pricing
+6. **Email Collection & Delivery**: Email input for PDF delivery (natural lead capture)
+7. **Instant Download**: PDF download + email with download link + soft marketing opt-in
+8. **Follow-up**: Automated email sequence for future occasions and new templates
+
+### 6.2 Simplified Architecture (No User Accounts)
+- **Session-Based State**: All user data stored in browser session
+- **Temporary File Storage**: Uploaded files stored for 24 hours only
+- **Purchase Tracking**: Anonymous order IDs for support purposes
+- **Email-Based Support**: Customer service via email/order ID lookup
+
+## 7. Marketing & Growth Strategy
+
+### 7.1 Email-Driven Growth Strategy
+- **High-Value Email List**: Every customer email is a paying customer
+- **Behavioral Segmentation**: 
+  - Standard vs Premium buyers
+  - Seasonal purchasers (Valentine's, Mother's Day, Christmas)
+  - Audio content types (music, voice messages, speeches)
+- **Campaign Opportunities**:
+  - Holiday reminder campaigns (2 weeks before major gift-giving occasions)
+  - New template launches to existing customers
+  - Seasonal promotions and limited-time offers
+  - "Create another memory" follow-up campaigns (3-6 months post-purchase)
+- **Cross-Selling**: Premium features to standard buyers
+- **Referral Programs**: Incentivize sharing with friends and family
+
+### 7.2 Retention Marketing Tactics
+- **Anniversary Reminders**: Email customers on purchase anniversary dates
+- **Seasonal Campaigns**: Target specific holidays based on previous purchase timing
+- **Template Showcases**: Feature new designs with customer-created examples
+- **Gift Occasion Prompts**: Birthday reminders, graduation season, wedding season
+- **Success Stories**: User-generated content and testimonials in email campaigns
+
+## 8. Development Roadmap
+
+### 8.1 MVP Phase - Anonymous Pay-Per-Download (Months 1-3)
+- Core upload and generation functionality
+- 2-3 template designs
+- Stripe anonymous checkout integration
+- Watermark system
+- Email delivery system
+- Session-based file handling
+- Essential security measures
+
+### 8.2 Enhancement Phase (Months 4-6)
+- Additional template options
+- Premium download tier
+- PayPal integration
+- Mobile optimization
+- Customer support system
+- Analytics dashboard
+
+### 8.3 Scale Phase (Months 7-12)
+- Optional user accounts (for power users)
+- Bulk generation tools
+- International payment methods
+- API for third-party integrations
+- Print-on-demand partnerships
+
+## 9. Success Metrics & KPIs
+
+### 9.1 User Engagement
+- **Daily Active Users (DAU)**
+- **Monthly Active Users (MAU)**
+- **Session Duration**
+- **Bounce Rate**
+- **Feature Adoption Rate**
+
+### 9.2 Conversion Metrics
+- **Free-to-Preview Conversion**: % of visitors who create previews
+- **Preview-to-Payment Conversion**: % of previews that convert to paid downloads
+- **Subscription Retention Rate**
+- **Customer Lifetime Value (CLV)**
+- **Average Revenue Per User (ARPU)**
+
+### 9.3 Technical Performance
+- **PDF Generation Time**
+- **Upload Success Rate**
+- **Error Rate**
+- **Server Response Time**
+- **CDN Cache Hit Rate**
+
+## 10. Risk Assessment & Mitigation
+
+### 10.1 Technical Risks
+- **High Processing Load**: Implement queue system and auto-scaling
+- **File Storage Costs**: Aggressive cleanup policies, compression
+- **Audio Processing Complexity**: Use proven libraries (librosa, ffmpeg)
+
+### 10.2 Business Risks
+- **Low Conversion Rate**: A/B test pricing, improve preview quality
+- **Seasonal Demand**: Diversify use cases beyond holidays
+- **Copyright Issues**: Clear ToS, user responsibility disclaimers
+
+### 10.3 Competitive Risks
+- **Market Saturation**: Focus on audio-specific niche, superior UX
+- **Large Player Entry**: Build strong brand loyalty, unique features
+- **Price Competition**: Emphasize quality and ease of use
+
+## 11. Future Enhancements
+
+### 11.1 Advanced Features
+- **Video Integration**: Add video clips alongside audio
+- **Multi-Language Support**: Localization for global markets
+- **AI-Powered Suggestions**: Smart text suggestions based on audio content
+- **Social Features**: Public gallery, user ratings, sharing
+
+### 11.2 Platform Extensions
+- **Mobile Apps**: Native iOS and Android applications
+- **Print Integration**: Direct printing service partnerships
+- **Gift Store Integration**: Physical product marketplace
+- **API Marketplace**: Third-party developer ecosystem
+
+---
+
+*This PRD is a living document and will be updated based on user feedback, market research, and development discoveries.*

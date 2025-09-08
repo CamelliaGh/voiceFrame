@@ -1,0 +1,48 @@
+from sqlalchemy.orm import Session
+from datetime import datetime
+from typing import Optional, Dict, Any
+
+from ..models import SessionModel
+
+class SessionManager:
+    """Manages user sessions for file uploads and customization"""
+    
+    def get_session(self, db: Session, token: str) -> Optional[SessionModel]:
+        """Get session by token if not expired"""
+        session = db.query(SessionModel).filter(
+            SessionModel.session_token == token,
+            SessionModel.expires_at > datetime.utcnow()
+        ).first()
+        return session
+    
+    def get_session_by_order(self, db: Session, order_id: str) -> Optional[SessionModel]:
+        """Get session associated with an order (for PDF generation)"""
+        # This would need a relationship between sessions and orders
+        # For now, we'll implement a basic lookup
+        # In production, you might store session_token in the order
+        return None
+    
+    def update_session(self, db: Session, session: SessionModel, data: Dict[str, Any]) -> SessionModel:
+        """Update session with new data"""
+        for key, value in data.items():
+            if hasattr(session, key) and value is not None:
+                setattr(session, key, value)
+        
+        db.commit()
+        db.refresh(session)
+        return session
+    
+    def cleanup_expired_sessions(self, db: Session) -> int:
+        """Remove expired sessions and their associated files"""
+        expired_sessions = db.query(SessionModel).filter(
+            SessionModel.expires_at <= datetime.utcnow()
+        ).all()
+        
+        count = len(expired_sessions)
+        
+        # TODO: Delete associated S3 files before deleting sessions
+        for session in expired_sessions:
+            db.delete(session)
+        
+        db.commit()
+        return count

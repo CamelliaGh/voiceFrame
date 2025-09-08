@@ -1,0 +1,36 @@
+{
+    "name": "Classic Template",
+    "description": "Timeless and elegant design for any occasion",
+    "template_file": "classic_template.png",
+    "page_size": "A4",
+    "is_premium": false,
+    "premium_price_cents": null,
+    "premium_features": [],
+    "placeholders": {
+      "text": {
+        "x": 200,
+        "y": 100,
+        "width": 800,
+        "height": 150
+      },
+      "photo": {
+        "x": 400,
+        "y": 300,
+        "width": 400,
+        "height": 400,
+        "shape": "square"
+      },
+      "waveform": {
+        "x": 200,
+        "y": 800,
+        "width": 800,
+        "height": 200
+      },
+      "qr_code": {
+        "x": 900,
+        "y": 1000,
+        "width": 200,
+        "height": 200
+      }
+    }
+  }
