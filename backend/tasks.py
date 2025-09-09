@@ -352,14 +352,15 @@ def send_marketing_email_batch(email_list: list, subject: str, html_content: str
     except Exception as e:
         raise Exception(f"Marketing email batch failed: {str(e)}")
 
-# Periodic task schedule
-celery_app.conf.beat_schedule = {
-    'cleanup-expired-sessions': {
-        'task': 'backend.tasks.cleanup_expired_sessions',
-        'schedule': 86400.0,  # Run daily (24 hours)
-    },
-    'cleanup-expired-orders': {
-        'task': 'backend.tasks.cleanup_expired_orders', 
-        'schedule': 86400.0,  # Run daily (24 hours)
-    },
-}
+# Periodic task schedule - DISABLED FOR DEVELOPMENT
+# Uncomment these when deploying to production
+# celery_app.conf.beat_schedule = {
+#     'cleanup-expired-sessions': {
+#         'task': 'backend.tasks.cleanup_expired_sessions',
+#         'schedule': 86400.0,  # Run daily (24 hours)
+#     },
+#     'cleanup-expired-orders': {
+#         'task': 'backend.tasks.cleanup_expired_orders', 
+#         'schedule': 86400.0,  # Run daily (24 hours)
+#     },
+# }
