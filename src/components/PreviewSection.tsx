@@ -14,6 +14,28 @@ export default function PreviewSection({ onNext, onBack }: PreviewSectionProps) 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Calculate aspect ratio based on PDF size (adjusted for better viewport fit)
+  const getAspectRatio = (pdfSize: string) => {
+    switch (pdfSize) {
+      case 'A4':
+        return 'aspect-[3/4]' // A4 Portrait: adjusted for viewport
+      case 'A4_Landscape':
+        return 'aspect-[4/3]' // A4 Landscape: adjusted for viewport
+      case 'Letter':
+        return 'aspect-[3/4]' // Letter Portrait: adjusted for viewport
+      case 'Letter_Landscape':
+        return 'aspect-[4/3]' // Letter Landscape: adjusted for viewport
+      case 'A3':
+        return 'aspect-[2/3]' // A3 Portrait: adjusted for viewport
+      case 'A3_Landscape':
+        return 'aspect-[3/2]' // A3 Landscape: adjusted for viewport
+      default:
+        return 'aspect-[3/4]' // Default fallback
+    }
+  }
+
+  const aspectRatio = session?.pdf_size ? getAspectRatio(session.pdf_size) : 'aspect-[3/4]'
+
   const generatePreview = async () => {
     if (!session) return
 
@@ -60,7 +82,14 @@ export default function PreviewSection({ onNext, onBack }: PreviewSectionProps) 
         <div className="lg:col-span-2">
           <div className="card">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Poster Preview</h3>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Poster Preview</h3>
+                {session?.pdf_size && (
+                  <p className="text-sm text-gray-600 mt-1">
+                    Size: {session.pdf_size.replace('_', ' ')}
+                  </p>
+                )}
+              </div>
               <button
                 onClick={generatePreview}
                 disabled={loading}
@@ -73,14 +102,14 @@ export default function PreviewSection({ onNext, onBack }: PreviewSectionProps) 
 
             <div className="border border-gray-200 rounded-lg overflow-hidden">
               {loading ? (
-                <div className="aspect-[3/4] bg-gray-50 flex items-center justify-center">
+                <div className={`${aspectRatio} bg-gray-50 flex items-center justify-center`}>
                   <div className="text-center">
                     <div className="w-8 h-8 border-2 border-primary-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
                     <p className="text-sm text-gray-600">Generating preview...</p>
                   </div>
                 </div>
               ) : error ? (
-                <div className="aspect-[3/4] bg-red-50 flex items-center justify-center">
+                <div className={`${aspectRatio} bg-red-50 flex items-center justify-center`}>
                   <div className="text-center text-red-600">
                     <p className="font-medium">{error}</p>
                     <button
@@ -94,11 +123,11 @@ export default function PreviewSection({ onNext, onBack }: PreviewSectionProps) 
               ) : previewUrl ? (
                 <iframe
                   src={previewUrl}
-                  className="w-full aspect-[3/4]"
+                  className={`w-full ${aspectRatio}`}
                   title="Poster Preview"
                 />
               ) : (
-                <div className="aspect-[3/4] bg-gray-100 flex items-center justify-center">
+                <div className={`${aspectRatio} bg-gray-100 flex items-center justify-center`}>
                   <div className="text-center text-gray-500">
                     <Eye className="w-12 h-12 mx-auto mb-2" />
                     <p>Preview not available</p>
