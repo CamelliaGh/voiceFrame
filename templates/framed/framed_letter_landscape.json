@@ -1,0 +1,39 @@
+{
+  "name": "Framed Template - Letter Landscape",
+  "description": "Elegant framed design for Letter landscape orientation",
+  "template_file": "framed_template_letter_landscape.png",
+  "page_size": "Letter_Landscape",
+  "is_premium": false,
+  "premium_price_cents": null,
+  "premium_features": [],
+  "placeholders": {
+    "text": {
+      "x": 708,
+      "y": 102,
+      "width": 1881,
+      "height": 205,
+      "font": "script",
+      "font_size": 100,
+      "color": "#000000",
+      "alignment": "center"
+    },
+    "photo": {
+      "x": 567,
+      "y": 359,
+      "width": 2163,
+      "height": 1439
+    },
+    "waveform": {
+      "x": 708,
+      "y": 1902,
+      "width": 1881,
+      "height": 205
+    },
+    "qr_code": {
+      "x": 1508,
+      "y": 2210,
+      "width": 281,
+      "height": 308
+    }
+  }
+}

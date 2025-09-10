@@ -16,7 +16,7 @@ class SessionResponse(BaseModel):
 class SessionUpdate(BaseModel):
     custom_text: Optional[str] = None
     photo_shape: Optional[Literal['square', 'circle']] = None
-    pdf_size: Optional[Literal['A4', 'Letter', 'A3']] = None
+    pdf_size: Optional[Literal['A4', 'A4_Landscape', 'Letter', 'Letter_Landscape', 'A3', 'A3_Landscape']] = None
     template_id: Optional[str] = None
 
 class UploadResponse(BaseModel):

@@ -125,7 +125,7 @@ class VisualPDFGenerator:
             photo_size = (placeholder['width'], placeholder['height'])
             photo = self.image_processor.create_shaped_image(
                 session.photo_s3_key,
-                placeholder.get('shape', 'square'),
+                'rectangle',  # Always use rectangle for framed templates
                 photo_size
             )
             
@@ -358,21 +358,32 @@ class VisualPDFGenerator:
             if image.mode != 'RGB':
                 image = image.convert('RGB')
             
-            # Handle landscape orientation
+            # Handle different page sizes and orientations
             page_size = template.get('page_size', 'A4')
-            if 'Landscape' in page_size:
-                # For landscape, we need to resize the image to match landscape dimensions
-                # A4 landscape: 3508 x 2480 pixels at 300 DPI
-                if 'A4' in page_size:
-                    target_size = (3508, 2480)  # width, height for A4 landscape
-                elif 'Letter' in page_size:
-                    target_size = (3600, 2400)  # width, height for Letter landscape
-                else:  # A3 landscape
-                    target_size = (4961, 3508)  # width, height for A3 landscape
-                
-                # Resize image to landscape dimensions
+            
+            # Define target sizes for different page formats (width, height in pixels at 300 DPI)
+            if page_size == 'A4_Landscape':
+                target_size = (3507, 2480)  # A4 landscape
+            elif page_size == 'A4':
+                target_size = (2480, 3507)  # A4 portrait
+            elif page_size == 'Letter_Landscape':
+                target_size = (3300, 2550)  # Letter landscape
+            elif page_size == 'Letter':
+                target_size = (2550, 3300)  # Letter portrait
+            elif page_size == 'A3_Landscape':
+                target_size = (4961, 3507)  # A3 landscape
+            elif page_size == 'A3':
+                target_size = (3507, 4961)  # A3 portrait
+            else:
+                # Default to A4 landscape if unknown
+                target_size = (3507, 2480)
+            
+            # Resize image to target dimensions
+            if image.size != target_size:
                 image = image.resize(target_size, Image.Resampling.LANCZOS)
-                print(f"Resized image to landscape: {target_size}")
+                print(f"Resized image to {page_size}: {target_size}")
+            else:
+                print(f"Image already correct size for {page_size}: {target_size}")
             
             # Create temporary PDF file
             temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf')

@@ -1,20 +1,4 @@
-### 9.4 Email Marketing Metrics
-- **Email Collection Rate**: 100% (required for delivery)
-- **Email Deliverability Rate**: >95%
-- **Marketing Opt-in Rate**: Target 40-60% post-purchase
-- **Email Open Rates**: Target 25-35% (paid customers typically higher engagement)
-- **Click-Through Rates**: Target 8-12%
-- **Repeat Purchase Rate**: Target 20-30% within 12 months
-- **Customer Lifetime Value**: Track repeat purchases and referrals### 4.4 Anonymous Checkout Flow
-- **No Account Required**: Users can purchase and download without registration
-- **Email Required**: Essential for PDF delivery (natural email capture)
-- **Session-Based**: Temporary session tokens for payment processing
-- **Email Delivery**: Download links + marketing opt-in opportunity
-- **Payment Processors**: Stripe Checkout (anonymous payments), PayPal Guest Checkout
-- **Supported Methods**: Credit cards, digital wallets, PayPal
-- **Security**: PCI compliance, encrypted transactions
-- **Download Security**: Unique, time-limited download URLs
-- **Marketing Permission**: Soft opt-in post-purchase for future campaigns# Audio Poster Generator - Product Requirements Document (PRD)
+ Product Requirements Document (PRD)
 
 ## 1. Product Overview
 
@@ -28,7 +12,7 @@ Empower people to create meaningful, personalized keepsakes that capture special
 - **User Acquisition**: 5,000+ monthly visitors within 6 months
 - **Conversion Rate**: 8-12% preview-to-purchase conversion rate
 - **Revenue**: $15,000-25,000 MRR within 12 months
-- **Average Order Value**: $3.50 (mix of standard and premium downloads)
+- **Average Order Value**: $4.9 
 - **User Satisfaction**: 4.5+ star rating average
 - **Time to Generate**: <30 seconds average processing time
 - **Checkout Abandonment**: <20% cart abandonment rate
@@ -79,15 +63,14 @@ Empower people to create meaningful, personalized keepsakes that capture special
   - Real-time character counter
 
 - **Photo Shape Selection**
-  - Square (default)
-  - Circle
-  - Rounded rectangle (future enhancement)
+  - Rectangle 
+  - 
 
 - **PDF Size Options**
   - A4 (210 × 297 mm) - default
   - US Letter (8.5 × 11 inches)
-  - A3 (297 × 420 mm) - premium only
-  - Custom dimensions - premium only
+  - A3 (297 × 420 mm) 
+ 
 
 #### 3.1.3 Preview System
 - Real-time preview updates
@@ -101,7 +84,7 @@ Empower people to create meaningful, personalized keepsakes that capture special
 - **Technical Specifications**
   - Sample rate normalization to 44.1kHz
   - Amplitude normalization
-  - Waveform resolution: 1920px width, 200px height
+  - Waveform resolution
   - Black waveform on transparent background
   - SVG format for scalability
 
@@ -114,8 +97,7 @@ Empower people to create meaningful, personalized keepsakes that capture special
 #### 3.2.2 QR Code Generation
 - **QR Code Content Options**
   - Unique URL to audio playback page (default)
-  - Direct audio file link (premium)
-  - Custom URL input (premium)
+  - Direct audio file link 
   - Spotify/Apple Music link (if detectable)
 
 - **QR Code Specifications**
@@ -128,16 +110,13 @@ Empower people to create meaningful, personalized keepsakes that capture special
 
 #### 3.3.1 Layout Engine
 - **Design Templates**
-  - Classic template (free) - similar to example image
-  - Modern template (premium)
-  - Minimalist template (premium)
-  - Vintage template (premium)
+  - Classic template 
+  - Modern template 
+  - Minimalist template
+  - Vintage template
 
 - **Element Positioning**
-  - Top: Custom text (18pt font)
-  - Center: Photo (max 4" x 4")
-  - Bottom center: Waveform (6" wide)
-  - Bottom right: QR code (1" x 1")
+  - Based on the template's JSON.
 
 #### 3.3.2 Quality Specifications
 - **Resolution**: 300 DPI minimum
@@ -174,20 +153,9 @@ Empower people to create meaningful, personalized keepsakes that capture special
 
 #### 4.1.2 Pay-Per-Download Model
 
-**Standard Download - $2.99**
-- Remove watermark from current poster
-- High-resolution PDF (300 DPI)
-- Instant download via email or direct link
-- No account creation required
-- 24-hour download link validity
-
-**Premium Download - $4.99** 
-- Everything in Standard
-- Access to premium templates
-- Custom PDF sizing options
-- Enhanced QR code options
-- Commercial usage rights
-- 7-day download link validity
+**Fixed $4.99** 
+- Everything in Standard without watermark
+- QR validility for ten years!
 
 ### 4.3 Email Marketing Integration
 - **Natural Email Collection**: Email required for PDF delivery (not seen as spam/signup)
@@ -247,7 +215,7 @@ SVG Generation → QR Code Creation → PDF Assembly → Storage
 - **No User Data Collection**: No accounts, no personal data storage beyond email for delivery
 - **Minimal Email Storage**: Email addresses stored only for order fulfillment (7-30 days)
 - **File Encryption**: All uploaded files encrypted at rest
-- **Automatic Deletion**: Uploaded files deleted after 24 hours
+- **Automatic Deletion**: Uploaded files deleted after 24 hours for unpaid users
 - **Session Privacy**: No audio content analysis or permanent storage
 - **Order Records**: Minimal anonymous order data for support (Order ID + email + purchase date)
 
@@ -352,6 +320,25 @@ SVG Generation → QR Code Creation → PDF Assembly → Storage
 - **Error Rate**
 - **Server Response Time**
 - **CDN Cache Hit Rate**
+
+### 9.4 Email Marketing Metrics
+- **Email Collection Rate**: 100% (required for delivery)
+- **Email Deliverability Rate**: >95%
+- **Marketing Opt-in Rate**: Target 40-60% post-purchase
+- **Email Open Rates**: Target 25-35% (paid customers typically higher engagement)
+- **Click-Through Rates**: Target 8-12%
+- **Repeat Purchase Rate**: Target 20-30% within 12 months
+- **Customer Lifetime Value**: Track repeat purchases and referrals### 4.4 Anonymous Checkout Flow
+- **No Account Required**: Users can purchase and download without registration
+- **Email Required**: Essential for PDF delivery (natural email capture)
+- **Session-Based**: Temporary session tokens for payment processing
+- **Email Delivery**: Download links + marketing opt-in opportunity
+- **Payment Processors**: Stripe Checkout (anonymous payments), PayPal Guest Checkout
+- **Supported Methods**: Credit cards, digital wallets, PayPal
+- **Security**: PCI compliance, encrypted transactions
+- **Download Security**: Unique, time-limited download URLs
+- **Marketing Permission**: Soft opt-in post-purchase for future campaigns# Audio Poster Generator
+
 
 ## 10. Risk Assessment & Mitigation
 

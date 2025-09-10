@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react'
-import { Type, Square, Circle, FileText, ArrowLeft, ArrowRight } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Type, FileText, ArrowLeft, ArrowRight } from 'lucide-react'
 import { useSession } from '../contexts/SessionContext'
 import { cn } from '../lib/utils'
 
@@ -23,20 +23,27 @@ const textSuggestions = [
   "Perfect Day"
 ]
 
-const templates = [
-  { id: 'classic', name: 'Classic', description: 'Clean and timeless design' },
-  { id: 'modern', name: 'Modern', description: 'Contemporary minimalist style' },
-  { id: 'vintage', name: 'Vintage', description: 'Retro-inspired aesthetic' },
-  { id: 'elegant', name: 'Elegant', description: 'Sophisticated and refined' },
-  { id: 'framed', name: 'Framed', description: 'Elegant script text with centered layout' }
-]
+
+// Framed template variants for different sizes
+const getFramedTemplateId = (pdfSize: string) => {
+  switch (pdfSize) {
+    case 'A4_Landscape':
+      return 'framed_a4_landscape'
+    case 'A4':
+      return 'framed_a4_portrait'
+    case 'Letter_Landscape':
+      return 'framed_letter_landscape'
+    case 'Letter':
+      return 'framed_letter_portrait'
+    default:
+      return 'framed_a4_landscape' // Default to A4 landscape
+  }
+}
 
 export default function CustomizationPanel({ onNext, onBack }: CustomizationPanelProps) {
   const { session, updateSessionData } = useSession()
   const [customText, setCustomText] = useState(session?.custom_text || '')
-  const [photoShape, setPhotoShape] = useState<'square' | 'circle'>(session?.photo_shape || 'square')
-  const [pdfSize, setPdfSize] = useState(session?.pdf_size || 'A4')
-  const [templateId, setTemplateId] = useState(session?.template_id || 'classic')
+  const [pdfSize, setPdfSize] = useState<'A4' | 'A4_Landscape' | 'Letter' | 'Letter_Landscape' | 'A3' | 'A3_Landscape'>(session?.pdf_size || 'A4')
   const [characterCount, setCharacterCount] = useState(0)
 
   useEffect(() => {
@@ -58,11 +65,13 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
   const handleSave = async () => {
     if (!session) return
 
+    // Always use the appropriate framed template variant based on PDF size
+    const finalTemplateId = getFramedTemplateId(pdfSize)
+
     await updateSessionData({
       custom_text: customText,
-      photo_shape: photoShape,
       pdf_size: pdfSize,
-      template_id: templateId
+      template_id: finalTemplateId
     })
   }
 
@@ -126,41 +135,6 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
             </div>
           </div>
 
-          {/* Photo Shape */}
-          <div className="card">
-            <div className="flex items-center space-x-2 mb-4">
-              <Square className="w-5 h-5 text-primary-600" />
-              <h3 className="text-lg font-semibold text-gray-900">Photo Shape</h3>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <button
-                onClick={() => setPhotoShape('square')}
-                className={cn(
-                  'p-4 border-2 rounded-lg transition-all duration-200 flex flex-col items-center space-y-2',
-                  photoShape === 'square'
-                    ? 'border-primary-500 bg-primary-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                )}
-              >
-                <Square className="w-8 h-8 text-gray-600" />
-                <span className="text-sm font-medium">Square</span>
-              </button>
-              
-              <button
-                onClick={() => setPhotoShape('circle')}
-                className={cn(
-                  'p-4 border-2 rounded-lg transition-all duration-200 flex flex-col items-center space-y-2',
-                  photoShape === 'circle'
-                    ? 'border-primary-500 bg-primary-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                )}
-              >
-                <Circle className="w-8 h-8 text-gray-600" />
-                <span className="text-sm font-medium">Circle</span>
-              </button>
-            </div>
-          </div>
 
           {/* PDF Size */}
           <div className="card">
@@ -193,7 +167,7 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
                       name="pdfSize"
                       value={size.value}
                       checked={pdfSize === size.value}
-                      onChange={(e) => setPdfSize(e.target.value)}
+                      onChange={(e) => setPdfSize(e.target.value as 'A4' | 'A4_Landscape' | 'Letter' | 'Letter_Landscape' | 'A3' | 'A3_Landscape')}
                       className="text-primary-600 focus:ring-primary-500"
                     />
                     <span className="font-medium">{size.label}</span>
@@ -203,30 +177,6 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
             </div>
           </div>
 
-          {/* Template Selection */}
-          <div className="card">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Template Style</h3>
-            
-            <div className="grid grid-cols-2 gap-4">
-              {templates.map((template) => (
-                <button
-                  key={template.id}
-                  onClick={() => setTemplateId(template.id)}
-                  className={cn(
-                    'p-4 border-2 rounded-lg transition-all duration-200 text-left',
-                    templateId === template.id
-                      ? 'border-primary-500 bg-primary-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  )}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium">{template.name}</span>
-                  </div>
-                  <p className="text-sm text-gray-600">{template.description}</p>
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
 
         {/* Live Preview Placeholder */}

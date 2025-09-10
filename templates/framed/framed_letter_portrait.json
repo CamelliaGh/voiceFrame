@@ -1,0 +1,39 @@
+{
+  "name": "Framed Template - Letter Portrait",
+  "description": "Elegant framed design for Letter portrait orientation",
+  "template_file": "framed_template_letter_portrait.png",
+  "page_size": "Letter",
+  "is_premium": false,
+  "premium_price_cents": null,
+  "premium_features": [],
+  "placeholders": {
+    "text": {
+      "x": 547,
+      "y": 133,
+      "width": 1453,
+      "height": 266,
+      "font": "script",
+      "font_size": 80,
+      "color": "#000000",
+      "alignment": "center"
+    },
+    "photo": {
+      "x": 438,
+      "y": 465,
+      "width": 1671,
+      "height": 1862
+    },
+    "waveform": {
+      "x": 547,
+      "y": 2461,
+      "width": 1453,
+      "height": 266
+    },
+    "qr_code": {
+      "x": 1135,
+      "y": 2860,
+      "width": 280,
+      "height": 280
+    }
+  }
+}

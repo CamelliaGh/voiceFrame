@@ -1,7 +1,7 @@
 {
-  "name": "Framed Template",
-  "description": "Elegant framed design matching the photo layout with script text, centered photo, waveform, and QR code",
-  "template_file": "framed_template.png",
+  "name": "Framed Template - A4 Landscape",
+  "description": "Elegant framed design for A4 landscape orientation",
+  "template_file": "framed_template_a4_landscape.png",
   "page_size": "A4_Landscape",
   "is_premium": false,
   "premium_price_cents": null,

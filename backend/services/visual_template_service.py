@@ -20,18 +20,19 @@ class VisualTemplateService:
         # Scan templates directory for template configurations
         for template_dir in self.templates_dir.iterdir():
             if template_dir.is_dir():
-                template_id = template_dir.name
-                config_file = template_dir / f"{template_id}_template.json"
-                
-                if config_file.exists():
+                # Look for all JSON files in the template directory
+                for config_file in template_dir.glob("*.json"):
                     try:
                         print(f"Loading template from: {config_file}")
                         with open(config_file, 'r') as f:
                             template_config = json.load(f)
                             print(f"Loaded template config: {template_config}")
+                            
+                            # Use the filename (without extension) as the template ID
+                            template_id = config_file.stem
                             self.templates[template_id] = template_config
                     except Exception as e:
-                        print(f"Error loading template {template_id}: {e}")
+                        print(f"Error loading template {config_file}: {e}")
     
     def get_template(self, template_id: str) -> Optional[Dict]:
         """Get template configuration by ID"""
@@ -47,9 +48,14 @@ class VisualTemplateService:
         """Get the file path for a template image"""
         template = self.get_template(template_id)
         if template and template.get('template_file'):
-            template_path = self.templates_dir / template_id / template['template_file']
-            if template_path.exists():
-                return template_path
+            # Find which directory contains this template
+            for template_dir in self.templates_dir.iterdir():
+                if template_dir.is_dir():
+                    for config_file in template_dir.glob("*.json"):
+                        if config_file.stem == template_id:
+                            template_path = template_dir / template['template_file']
+                            if template_path.exists():
+                                return template_path
         return None
     
     def get_placeholder_coordinates(self, template_id: str, element: str) -> Optional[Dict]:

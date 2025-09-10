@@ -1,0 +1,39 @@
+{
+  "name": "Framed Template - A4 Portrait",
+  "description": "Elegant framed design for A4 portrait orientation",
+  "template_file": "framed_template_a4_portrait.png",
+  "page_size": "A4",
+  "is_premium": false,
+  "premium_price_cents": null,
+  "premium_features": [],
+  "placeholders": {
+    "text": {
+      "x": 534,
+      "y": 141,
+      "width": 1413,
+      "height": 282,
+      "font": "script",
+      "font_size": 85,
+      "color": "#000000",
+      "alignment": "center"
+    },
+    "photo": {
+      "x": 428,
+      "y": 494,
+      "width": 1625,
+      "height": 1979
+    },
+    "waveform": {
+      "x": 534,
+      "y": 2616,
+      "width": 1413,
+      "height": 282
+    },
+    "qr_code": {
+      "x": 1090,
+      "y": 3040,
+      "width": 300,
+      "height": 300
+    }
+  }
+}
