@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     secret_key: str = Field(default="your-secret-key-change-this")
     base_url: str = Field(default="http://localhost:3000")
     debug: bool = Field(default=True)
+    project_root: str = Field(default="/app")
     
     # File Processing
     max_photo_size: int = Field(default=50 * 1024 * 1024)  # 50MB

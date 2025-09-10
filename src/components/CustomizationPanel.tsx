@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Type, FileText, ArrowLeft, ArrowRight } from 'lucide-react'
+import { Type, FileText, ArrowLeft, ArrowRight, Image } from 'lucide-react'
 import { useSession } from '../contexts/SessionContext'
 import { cn } from '../lib/utils'
 
@@ -23,6 +23,39 @@ const textSuggestions = [
   "Perfect Day"
 ]
 
+const backgroundOptions = [
+  { 
+    id: 'none', 
+    name: 'No Background', 
+    description: 'Clean white background',
+    preview: null
+  },
+  { 
+    id: 'abstract-blurred', 
+    name: 'Abstract Blurred', 
+    description: 'Soft abstract background',
+    preview: '/backgrounds/237.jpg'
+  },
+  { 
+    id: 'roses-wooden', 
+    name: 'Roses & Wood', 
+    description: 'Beautiful roses on wooden background',
+    preview: '/backgrounds/beautiful-roses-great-white-wooden-background-with-space-right.jpg'
+  },
+  { 
+    id: 'cute-hearts', 
+    name: 'Cute Hearts', 
+    description: 'Romantic hearts background',
+    preview: '/backgrounds/copy-space-with-cute-hearts.jpg'
+  },
+  { 
+    id: 'flat-lay-hearts', 
+    name: 'Flat Lay Hearts', 
+    description: 'Elegant flat lay hearts',
+    preview: '/backgrounds/flat-lay-small-cute-hearts.jpg'
+  }
+]
+
 
 // Framed template variants for different sizes
 const getFramedTemplateId = (pdfSize: string) => {
@@ -44,6 +77,7 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
   const { session, updateSessionData } = useSession()
   const [customText, setCustomText] = useState(session?.custom_text || '')
   const [pdfSize, setPdfSize] = useState<'A4' | 'A4_Landscape' | 'Letter' | 'Letter_Landscape' | 'A3' | 'A3_Landscape'>(session?.pdf_size || 'A4')
+  const [backgroundId, setBackgroundId] = useState(session?.background_id || 'none')
   const [characterCount, setCharacterCount] = useState(0)
 
   useEffect(() => {
@@ -71,7 +105,8 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
     await updateSessionData({
       custom_text: customText,
       pdf_size: pdfSize,
-      template_id: finalTemplateId
+      template_id: finalTemplateId,
+      background_id: backgroundId
     })
   }
 
@@ -171,6 +206,58 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
                       className="text-primary-600 focus:ring-primary-500"
                     />
                     <span className="font-medium">{size.label}</span>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Background Selection */}
+          <div className="card">
+            <div className="flex items-center space-x-2 mb-4">
+              <Image className="w-5 h-5 text-primary-600" />
+              <h3 className="text-lg font-semibold text-gray-900">Background</h3>
+            </div>
+            
+            <div className="space-y-3">
+              {backgroundOptions.map((background) => (
+                <label
+                  key={background.id}
+                  className={cn(
+                    'flex items-center space-x-3 p-3 border rounded-lg cursor-pointer transition-colors duration-200',
+                    backgroundId === background.id
+                      ? 'border-primary-500 bg-primary-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  )}
+                >
+                  <input
+                    type="radio"
+                    name="background"
+                    value={background.id}
+                    checked={backgroundId === background.id}
+                    onChange={(e) => setBackgroundId(e.target.value)}
+                    className="text-primary-600 focus:ring-primary-500"
+                  />
+                  
+                  <div className="flex-1 flex items-center space-x-3">
+                    {background.preview ? (
+                      <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100">
+                        <img
+                          src={background.preview}
+                          alt={background.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <div className="w-12 h-12 rounded-lg bg-white border-2 border-gray-200 flex items-center justify-center">
+                        <div className="w-6 h-6 bg-gray-200 rounded"></div>
+                      </div>
+                    )}
+                    
+                    <div>
+                      <div className="font-medium text-gray-900">{background.name}</div>
+                      <div className="text-sm text-gray-500">{background.description}</div>
+                    </div>
                   </div>
                 </label>
               ))}

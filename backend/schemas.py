@@ -9,6 +9,7 @@ class SessionResponse(BaseModel):
     photo_shape: Optional[Literal['square', 'circle']] = 'square'
     pdf_size: Optional[Literal['A4', 'Letter', 'A3']] = 'A4'
     template_id: Optional[str] = 'classic'
+    background_id: Optional[str] = 'none'
     photo_url: Optional[str] = None
     waveform_url: Optional[str] = None
     audio_duration: Optional[float] = None
@@ -18,6 +19,7 @@ class SessionUpdate(BaseModel):
     photo_shape: Optional[Literal['square', 'circle']] = None
     pdf_size: Optional[Literal['A4', 'A4_Landscape', 'Letter', 'Letter_Landscape', 'A3', 'A3_Landscape']] = None
     template_id: Optional[str] = None
+    background_id: Optional[str] = None
 
 class UploadResponse(BaseModel):
     status: Literal['success', 'error']

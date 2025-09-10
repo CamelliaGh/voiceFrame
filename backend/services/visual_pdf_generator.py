@@ -42,6 +42,11 @@ class VisualPDFGenerator:
             base_image = Image.open(template_path)
             print(f"Template loaded: {base_image.size}")
             
+            # Apply background if specified
+            if session.background_id and session.background_id != 'none':
+                base_image = self._apply_background(base_image, session.background_id)
+                print(f"Background applied: {session.background_id}")
+            
             # Add photo
             if session.photo_s3_key:
                 await self._add_photo_to_template(base_image, session, template)
@@ -398,6 +403,72 @@ class VisualPDFGenerator:
         except Exception as e:
             print(f"Error converting to PDF: {e}")
             raise
+    
+    def _apply_background(self, base_image: Image.Image, background_id: str) -> Image.Image:
+        """Apply background image to the base template"""
+        try:
+            # Map background IDs to file paths
+            background_mapping = {
+                'abstract-blurred': '237.jpg',
+                'roses-wooden': 'beautiful-roses-great-white-wooden-background-with-space-right.jpg',
+                'cute-hearts': 'copy-space-with-cute-hearts.jpg',
+                'flat-lay-hearts': 'flat-lay-small-cute-hearts.jpg'
+            }
+            
+            if background_id not in background_mapping:
+                print(f"Unknown background ID: {background_id}")
+                return base_image
+            
+            # Load background image
+            background_path = Path(settings.project_root) / 'backgrounds' / background_mapping[background_id]
+            if not background_path.exists():
+                print(f"Background file not found: {background_path}")
+                return base_image
+            
+            background = Image.open(background_path)
+            print(f"Background loaded: {background.size}")
+            
+            # Resize background to match base image
+            background = background.resize(base_image.size, Image.Resampling.LANCZOS)
+            
+            # Convert both images to RGBA if needed
+            if base_image.mode != 'RGBA':
+                base_image = base_image.convert('RGBA')
+            if background.mode != 'RGBA':
+                background = background.convert('RGBA')
+            
+            # Make white areas of the template transparent
+            # This allows the background to show through
+            base_data = base_image.getdata()
+            new_data = []
+            
+            for item in base_data:
+                # If pixel is white or very light, make it transparent
+                if item[0] > 240 and item[1] > 240 and item[2] > 240:
+                    new_data.append((item[0], item[1], item[2], 0))  # Transparent
+                else:
+                    new_data.append(item)  # Keep original
+            
+            base_image.putdata(new_data)
+            
+            # Create a new image with background
+            result = Image.new('RGBA', base_image.size, (255, 255, 255, 255))
+            
+            # Paste background first
+            result.paste(background, (0, 0))
+            
+            # Paste base image on top with alpha blending
+            result = Image.alpha_composite(result, base_image)
+            
+            # Convert back to RGB for PDF generation
+            result = result.convert('RGB')
+            
+            print(f"Background applied successfully")
+            return result
+            
+        except Exception as e:
+            print(f"Error applying background: {e}")
+            return base_image
     
     def _generate_qr_url(self, identifier: str) -> str:
         """Generate URL for QR code"""
