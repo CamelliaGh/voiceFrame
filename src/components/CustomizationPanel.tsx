@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Type, FileText, ArrowLeft, ArrowRight, Image } from 'lucide-react'
+import { Type, ArrowLeft, ArrowRight, Image, FileText } from 'lucide-react'
 import { useSession } from '../contexts/SessionContext'
 import { cn } from '../lib/utils'
 
@@ -120,11 +120,11 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
       <div className="text-center">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Customize Your Poster</h2>
         <p className="text-gray-600">
-          Personalize your audio poster with custom text, shapes, and styling options.
+          Personalize your audio poster with custom text, size, and background options.
         </p>
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-8">
+      <div className="max-w-2xl mx-auto">
         {/* Customization Options */}
         <div className="space-y-6">
           {/* Custom Text */}
@@ -264,18 +264,6 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
             </div>
           </div>
 
-        </div>
-
-        {/* Live Preview Placeholder */}
-        <div className="card">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Live Preview</h3>
-          <div className="aspect-[3/4] bg-gray-100 rounded-lg flex items-center justify-center">
-            <div className="text-center text-gray-500">
-              <FileText className="w-12 h-12 mx-auto mb-2" />
-              <p>Preview will appear here</p>
-              <p className="text-sm">Customize options to see changes</p>
-            </div>
-          </div>
         </div>
       </div>
 
