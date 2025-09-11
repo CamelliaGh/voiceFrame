@@ -124,7 +124,7 @@ class StorageManager:
                 return f"https://{settings.s3_bucket}.s3.amazonaws.com/{s3_key}"
         else:
             # For local storage, return local URL
-            return f"http://localhost:8000/static/temp/{temp_key}"
+            return f"{settings.base_url}/static/temp/{temp_key}"
     
     async def _upload_to_s3_permanent(self, file_path: str, s3_key: str, content_type: str):
         """Upload file to S3 with permanent storage settings"""

@@ -99,11 +99,20 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
   const handleSave = async () => {
     if (!session) return
 
+    // Validate custom text
+    if (!customText || customText.trim().length === 0) {
+      throw new Error('Please enter some text for your poster')
+    }
+
+    if (customText.length > 200) {
+      throw new Error('Text is too long. Please keep it under 200 characters')
+    }
+
     // Always use the appropriate framed template variant based on PDF size
     const finalTemplateId = getFramedTemplateId(pdfSize)
 
     await updateSessionData({
-      custom_text: customText,
+      custom_text: customText.trim(),
       pdf_size: pdfSize,
       template_id: finalTemplateId,
       background_id: backgroundId
@@ -111,8 +120,13 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
   }
 
   const handleNext = async () => {
-    await handleSave()
-    onNext()
+    try {
+      await handleSave()
+      onNext()
+    } catch (error: any) {
+      // Error will be handled by the parent component
+      throw error
+    }
   }
 
   return (

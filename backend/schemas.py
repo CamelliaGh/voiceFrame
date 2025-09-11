@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, validator, Field
 from typing import Optional, Literal
 from datetime import datetime
 
@@ -15,11 +15,44 @@ class SessionResponse(BaseModel):
     audio_duration: Optional[float] = None
 
 class SessionUpdate(BaseModel):
-    custom_text: Optional[str] = None
+    custom_text: Optional[str] = Field(None, max_length=200, description="Custom text for the poster")
     photo_shape: Optional[Literal['square', 'circle']] = None
     pdf_size: Optional[Literal['A4', 'A4_Landscape', 'Letter', 'Letter_Landscape', 'A3', 'A3_Landscape']] = None
     template_id: Optional[str] = None
     background_id: Optional[str] = None
+    
+    @validator('custom_text')
+    def validate_custom_text(cls, v):
+        if v is not None:
+            # Remove leading/trailing whitespace
+            v = v.strip()
+            if len(v) > 200:
+                raise ValueError('Custom text too long (max 200 characters)')
+            # Check for only whitespace (but allow empty string for initial state)
+            if v and v.isspace():
+                raise ValueError('Custom text cannot be only whitespace')
+        return v
+    
+    @validator('template_id')
+    def validate_template_id(cls, v):
+        if v is not None:
+            valid_templates = [
+                'classic', 'elegant', 'vintage', 'modern', 'framed',
+                'framed_a4_landscape', 'framed_a4_portrait', 
+                'framed_letter_landscape', 'framed_letter_portrait',
+                'framed_a3_landscape', 'framed_a3_portrait'
+            ]
+            if v not in valid_templates:
+                raise ValueError(f'Invalid template. Must be one of: {", ".join(valid_templates)}')
+        return v
+    
+    @validator('background_id')
+    def validate_background_id(cls, v):
+        if v is not None:
+            valid_backgrounds = ['none', 'abstract-blurred', 'roses-wooden', 'cute-hearts', 'flat-lay-hearts']
+            if v not in valid_backgrounds:
+                raise ValueError(f'Invalid background. Must be one of: {", ".join(valid_backgrounds)}')
+        return v
 
 class UploadResponse(BaseModel):
     status: Literal['success', 'error']

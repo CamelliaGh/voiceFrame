@@ -84,7 +84,7 @@ class PDFGenerator:
             await self._add_waveform(c, session, template_config, width, height)
             
             # Add QR code
-            qr_url = self._generate_qr_url(order.id if order else session.session_token)
+            qr_url = self._generate_qr_url(session, order)
             await self._add_qr_code(c, qr_url, template_config, width, height)
             
             # Add watermark if needed
@@ -155,7 +155,7 @@ class PDFGenerator:
                     import shutil
                     shutil.copy2(temp_file.name, local_path)
                     
-                    return f"http://localhost:8000/static/{pdf_key}"
+                    return f"{settings.base_url}/static/{pdf_key}"
                     
             finally:
                 # Cleanup temporary file
@@ -433,9 +433,37 @@ class PDFGenerator:
             canvas_obj.line(width - margin, height - margin, 
                            width - margin, height - margin - corner_size)
     
-    def _generate_qr_url(self, identifier: str) -> str:
-        """Generate URL for QR code"""
-        return f"{settings.base_url}/listen/{identifier}"
+    def _generate_qr_url(self, session: SessionModel, order: Optional[Order] = None) -> str:
+        """Generate direct audio file URL for QR code"""
+        try:
+            if order and order.permanent_audio_s3_key:
+                # Paid version - use permanent audio URL
+                # First check if the file exists
+                if self.file_uploader.file_exists(order.permanent_audio_s3_key):
+                    return self.file_uploader.generate_presigned_url(
+                        order.permanent_audio_s3_key,
+                        expiration=86400 * 365  # 1 year expiration
+                    )
+                else:
+                    print(f"WARNING: Permanent audio file missing: {order.permanent_audio_s3_key}")
+                    return f"{settings.base_url}/audio-not-found"
+            elif session.audio_s3_key:
+                # Preview version - use session audio URL
+                # First check if the file exists
+                if self.file_uploader.file_exists(session.audio_s3_key):
+                    return self.file_uploader.generate_presigned_url(
+                        session.audio_s3_key,
+                        expiration=86400 * 7  # 7 days expiration
+                    )
+                else:
+                    print(f"WARNING: Session audio file missing: {session.audio_s3_key}")
+                    return f"{settings.base_url}/audio-not-found"
+            else:
+                # Fallback - return a placeholder
+                return f"{settings.base_url}/audio-not-found"
+        except Exception as e:
+            print(f"Error generating QR URL: {e}")
+            return f"{settings.base_url}/audio-error"
     
     def _has_visual_template(self, template_id: str) -> bool:
         """Check if a visual template exists for the given template ID"""

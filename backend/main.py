@@ -119,12 +119,60 @@ async def update_session(
     db: Session = Depends(get_db)
 ):
     """Update session customization data"""
+    print(f"DEBUG: Received data: {data.dict()}")
+    
     session = session_manager.get_session(db, token)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
     
-    session_manager.update_session(db, session, data.dict(exclude_unset=True))
-    return {"status": "updated"}
+    # Validate that required files are uploaded
+    if not session.photo_s3_key:
+        raise HTTPException(status_code=400, detail="Photo must be uploaded before customization")
+    
+    if not session.audio_s3_key:
+        raise HTTPException(status_code=400, detail="Audio file must be uploaded before customization")
+    
+    # Validate that audio processing is complete
+    if not session.waveform_s3_key:
+        raise HTTPException(status_code=400, detail="Audio processing not complete. Please wait and try again.")
+    
+    try:
+        session_manager.update_session(db, session, data.dict(exclude_unset=True))
+        return {"status": "updated"}
+    except ValueError as e:
+        print(f"DEBUG: ValueError in update_session: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/api/session/{token}/validate")
+async def validate_session_for_preview(
+    token: str, 
+    data: SessionUpdate, 
+    db: Session = Depends(get_db)
+):
+    """Validate session data before proceeding to preview"""
+    session = session_manager.get_session(db, token)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    # Validate that required files are uploaded
+    if not session.photo_s3_key:
+        raise HTTPException(status_code=400, detail="Photo must be uploaded before customization")
+    
+    if not session.audio_s3_key:
+        raise HTTPException(status_code=400, detail="Audio file must be uploaded before customization")
+    
+    # Validate that audio processing is complete
+    if not session.waveform_s3_key:
+        raise HTTPException(status_code=400, detail="Audio processing not complete. Please wait and try again.")
+    
+    # Validate custom text for preview
+    if not data.custom_text or data.custom_text.strip() == '':
+        raise HTTPException(status_code=400, detail="Please enter some text for your poster")
+    
+    if data.custom_text and len(data.custom_text.strip()) > 200:
+        raise HTTPException(status_code=400, detail="Text is too long. Please keep it under 200 characters")
+    
+    return {"status": "valid", "message": "Session is ready for preview"}
 
 # File Upload Endpoints
 @app.post("/api/session/{token}/photo", response_model=UploadResponse)
@@ -140,11 +188,23 @@ async def upload_photo(
     
     try:
         # Validate file
-        if not photo.content_type.startswith('image/'):
-            raise HTTPException(status_code=400, detail="File must be an image")
+        if not photo.filename:
+            raise HTTPException(status_code=400, detail="No file selected")
+        
+        if photo.size == 0:
+            raise HTTPException(status_code=400, detail="File is empty")
+        
+        if not photo.content_type or not photo.content_type.startswith('image/'):
+            raise HTTPException(status_code=400, detail="File must be an image (JPEG, PNG, etc.)")
         
         if photo.size > 50 * 1024 * 1024:  # 50MB
             raise HTTPException(status_code=400, detail="File too large (max 50MB)")
+        
+        # Validate file extension
+        allowed_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'}
+        file_extension = os.path.splitext(photo.filename.lower())[1]
+        if file_extension not in allowed_extensions:
+            raise HTTPException(status_code=400, detail=f"Unsupported image format. Allowed: {', '.join(allowed_extensions)}")
         
         # Store photo temporarily for preview generation
         temp_photo_key = await storage_manager.store_photo_temporarily(photo, token)
@@ -180,11 +240,27 @@ async def upload_audio(
     
     try:
         # Validate file
-        if not audio.content_type.startswith('audio/'):
-            raise HTTPException(status_code=400, detail="File must be audio")
+        if not audio.filename:
+            raise HTTPException(status_code=400, detail="No audio file selected")
+        
+        if audio.size == 0:
+            raise HTTPException(status_code=400, detail="Audio file is empty")
+        
+        if not audio.content_type or not audio.content_type.startswith('audio/'):
+            raise HTTPException(status_code=400, detail="File must be an audio file (MP3, WAV, etc.)")
         
         if audio.size > 100 * 1024 * 1024:  # 100MB
-            raise HTTPException(status_code=400, detail="File too large (max 100MB)")
+            raise HTTPException(status_code=400, detail="Audio file too large (max 100MB)")
+        
+        # Validate file extension
+        allowed_extensions = {'.mp3', '.wav', '.m4a', '.aac', '.ogg', '.flac'}
+        file_extension = os.path.splitext(audio.filename.lower())[1]
+        if file_extension not in allowed_extensions:
+            raise HTTPException(status_code=400, detail=f"Unsupported audio format. Allowed: {', '.join(allowed_extensions)}")
+        
+        # Check minimum file size (at least 1KB)
+        if audio.size < 1024:  # 1KB
+            raise HTTPException(status_code=400, detail="Audio file too small (minimum 1KB)")
         
         # Store audio temporarily for preview generation
         temp_audio_key = await storage_manager.store_audio_temporarily(audio, token)
@@ -681,6 +757,24 @@ async def update_session_template(token: str, template_id: str, db: Session = De
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to update template: {str(e)}")
+
+@app.get("/audio-not-found")
+async def audio_not_found():
+    """Handle missing audio files gracefully"""
+    return {
+        "error": "Audio file not found",
+        "message": "The requested audio file is no longer available. This may be because the session has expired or the file was not properly uploaded.",
+        "status": "not_found"
+    }
+
+@app.get("/audio-error")
+async def audio_error():
+    """Handle audio access errors"""
+    return {
+        "error": "Audio access error",
+        "message": "There was an error accessing the audio file. Please try again later.",
+        "status": "error"
+    }
 
 if __name__ == "__main__":
     import uvicorn

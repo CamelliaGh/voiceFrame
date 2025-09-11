@@ -16,6 +16,7 @@ function App() {
   const [currentStep, setCurrentStep] = useState<'upload' | 'customize' | 'preview' | 'payment'>('upload')
   const [hasPhotos, setHasPhotos] = useState(false)
   const [hasAudio, setHasAudio] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const canProceedToCustomize = hasPhotos && hasAudio
   const canProceedToPreview = canProceedToCustomize

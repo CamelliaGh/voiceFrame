@@ -2,8 +2,9 @@ import boto3
 from botocore.exceptions import ClientError, NoCredentialsError
 from fastapi import UploadFile, HTTPException
 import uuid
-from typing import BinaryIO
+from typing import BinaryIO, Optional
 import os
+from datetime import datetime
 
 from ..config import settings
 
@@ -105,7 +106,7 @@ class FileUploader:
         if self.s3_client:
             return f"https://{settings.s3_bucket}.s3.amazonaws.com/{key}"
         else:
-            return f"http://localhost:8000/static/{key}"
+            return f"{settings.base_url}/static/{key}"
     
     def generate_presigned_url(self, key: str, expiration: int = 3600) -> str:
         """Generate presigned URL for secure file access"""
@@ -132,6 +133,61 @@ class FileUploader:
             file_path = os.path.join(self.local_storage_path, key)
             if os.path.exists(file_path):
                 os.remove(file_path)
+    
+    def file_exists(self, key: str) -> bool:
+        """Check if file exists in storage"""
+        if self.s3_client:
+            try:
+                self.s3_client.head_object(Bucket=settings.s3_bucket, Key=key)
+                return True
+            except ClientError:
+                return False
+        else:
+            file_path = os.path.join(self.local_storage_path, key)
+            return os.path.exists(file_path)
+    
+    def list_files_with_prefix(self, prefix: str) -> list:
+        """List all files with given prefix"""
+        if self.s3_client:
+            try:
+                response = self.s3_client.list_objects_v2(
+                    Bucket=settings.s3_bucket,
+                    Prefix=prefix
+                )
+                return [obj['Key'] for obj in response.get('Contents', [])]
+            except ClientError:
+                return []
+        else:
+            # For local storage, simulate S3 behavior
+            prefix_path = os.path.join(self.local_storage_path, prefix)
+            if not os.path.exists(prefix_path):
+                return []
+            
+            files = []
+            for root, dirs, filenames in os.walk(prefix_path):
+                for filename in filenames:
+                    rel_path = os.path.relpath(os.path.join(root, filename), self.local_storage_path)
+                    files.append(rel_path.replace('\\', '/'))  # Normalize path separators
+            return files
+    
+    def get_file_creation_time(self, key: str) -> Optional[datetime]:
+        """Get file creation/modification time"""
+        from datetime import datetime
+        
+        if self.s3_client:
+            try:
+                response = self.s3_client.head_object(Bucket=settings.s3_bucket, Key=key)
+                # S3 returns LastModified time
+                return response['LastModified'].replace(tzinfo=None)
+            except ClientError:
+                return None
+        else:
+            # For local storage, use file modification time
+            file_path = os.path.join(self.local_storage_path, key)
+            if os.path.exists(file_path):
+                mtime = os.path.getmtime(file_path)
+                return datetime.fromtimestamp(mtime)
+            return None
     
     def _get_file_extension(self, filename: str) -> str:
         """Extract file extension from filename"""

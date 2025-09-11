@@ -30,6 +30,47 @@ export default function UploadSection({
     const file = files[0]
     if (!file || !session) return
 
+    // Client-side validation
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/bmp', 'image/webp']
+    const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp']
+    const maxSize = 50 * 1024 * 1024 // 50MB
+    const minSize = 1024 // 1KB
+
+    // Validate file type
+    if (!allowedTypes.includes(file.type)) {
+      setUploadErrors(prev => ({ 
+        ...prev, 
+        photo: 'Invalid file type. Please upload a JPEG, PNG, GIF, BMP, or WebP image.' 
+      }))
+      return
+    }
+
+    // Validate file extension
+    const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'))
+    if (!allowedExtensions.includes(fileExtension)) {
+      setUploadErrors(prev => ({ 
+        ...prev, 
+        photo: 'Invalid file extension. Please upload a JPEG, PNG, GIF, BMP, or WebP image.' 
+      }))
+      return
+    }
+
+    // Validate file size
+    if (file.size === 0) {
+      setUploadErrors(prev => ({ ...prev, photo: 'File is empty. Please select a valid image.' }))
+      return
+    }
+
+    if (file.size < minSize) {
+      setUploadErrors(prev => ({ ...prev, photo: 'File too small. Please select an image larger than 1KB.' }))
+      return
+    }
+
+    if (file.size > maxSize) {
+      setUploadErrors(prev => ({ ...prev, photo: 'File too large. Please select an image smaller than 50MB.' }))
+      return
+    }
+
     setPhotoUploading(true)
     setUploadErrors(prev => ({ ...prev, photo: undefined }))
 
@@ -37,9 +78,10 @@ export default function UploadSection({
       await uploadPhoto(session.session_token, file)
       setPhotoUploaded(true)
       onPhotosUploaded()
-    } catch (error) {
+    } catch (error: any) {
       console.error('Photo upload failed:', error)
-      setUploadErrors(prev => ({ ...prev, photo: 'Failed to upload photo. Please try again.' }))
+      const errorMessage = error?.response?.data?.detail || 'Failed to upload photo. Please try again.'
+      setUploadErrors(prev => ({ ...prev, photo: errorMessage }))
     } finally {
       setPhotoUploading(false)
     }
@@ -49,6 +91,47 @@ export default function UploadSection({
     const file = files[0]
     if (!file || !session) return
 
+    // Client-side validation
+    const allowedTypes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/m4a', 'audio/aac', 'audio/ogg', 'audio/flac']
+    const allowedExtensions = ['.mp3', '.wav', '.m4a', '.aac', '.ogg', '.flac']
+    const maxSize = 100 * 1024 * 1024 // 100MB
+    const minSize = 1024 // 1KB
+
+    // Validate file type
+    if (!allowedTypes.includes(file.type)) {
+      setUploadErrors(prev => ({ 
+        ...prev, 
+        audio: 'Invalid file type. Please upload an MP3, WAV, M4A, AAC, OGG, or FLAC audio file.' 
+      }))
+      return
+    }
+
+    // Validate file extension
+    const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'))
+    if (!allowedExtensions.includes(fileExtension)) {
+      setUploadErrors(prev => ({ 
+        ...prev, 
+        audio: 'Invalid file extension. Please upload an MP3, WAV, M4A, AAC, OGG, or FLAC audio file.' 
+      }))
+      return
+    }
+
+    // Validate file size
+    if (file.size === 0) {
+      setUploadErrors(prev => ({ ...prev, audio: 'File is empty. Please select a valid audio file.' }))
+      return
+    }
+
+    if (file.size < minSize) {
+      setUploadErrors(prev => ({ ...prev, audio: 'File too small. Please select an audio file larger than 1KB.' }))
+      return
+    }
+
+    if (file.size > maxSize) {
+      setUploadErrors(prev => ({ ...prev, audio: 'File too large. Please select an audio file smaller than 100MB.' }))
+      return
+    }
+
     setAudioUploading(true)
     setUploadErrors(prev => ({ ...prev, audio: undefined }))
 
@@ -56,9 +139,10 @@ export default function UploadSection({
       await uploadAudio(session.session_token, file)
       setAudioUploaded(true)
       onAudioUploaded()
-    } catch (error) {
+    } catch (error: any) {
       console.error('Audio upload failed:', error)
-      setUploadErrors(prev => ({ ...prev, audio: 'Failed to upload audio. Please try again.' }))
+      const errorMessage = error?.response?.data?.detail || 'Failed to upload audio. Please try again.'
+      setUploadErrors(prev => ({ ...prev, audio: errorMessage }))
     } finally {
       setAudioUploading(false)
     }
