@@ -1,9 +1,9 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { Upload, Image, Music, CheckCircle, AlertCircle } from 'lucide-react'
 import { useSession } from '../contexts/SessionContext'
 import { uploadPhoto, uploadAudio } from '../lib/api'
-import { formatFileSize } from '../lib/utils'
+// import { formatFileSize } from '../lib/utils'
 import { cn } from '../lib/utils'
 
 interface UploadSectionProps {

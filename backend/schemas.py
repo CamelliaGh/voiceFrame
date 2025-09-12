@@ -16,10 +16,10 @@ class SessionResponse(BaseModel):
 
 class SessionUpdate(BaseModel):
     custom_text: Optional[str] = Field(None, max_length=200, description="Custom text for the poster")
-    photo_shape: Optional[Literal['square', 'circle']] = None
-    pdf_size: Optional[Literal['A4', 'A4_Landscape', 'Letter', 'Letter_Landscape', 'A3', 'A3_Landscape']] = None
-    template_id: Optional[str] = None
-    background_id: Optional[str] = None
+    photo_shape: Optional[Literal['square', 'circle']] = Field(None, description="Photo shape preference")
+    pdf_size: Optional[Literal['A4', 'A4_Landscape', 'Letter', 'Letter_Landscape', 'A3', 'A3_Landscape']] = Field(None, description="PDF page size")
+    template_id: Optional[str] = Field(None, description="Template identifier")
+    background_id: Optional[str] = Field(None, description="Background identifier")
     
     @validator('custom_text')
     def validate_custom_text(cls, v):
@@ -52,6 +52,18 @@ class SessionUpdate(BaseModel):
             valid_backgrounds = ['none', 'abstract-blurred', 'roses-wooden', 'cute-hearts', 'flat-lay-hearts']
             if v not in valid_backgrounds:
                 raise ValueError(f'Invalid background. Must be one of: {", ".join(valid_backgrounds)}')
+        return v
+    
+    @validator('photo_shape')
+    def validate_photo_shape(cls, v):
+        if v is not None and v not in ['square', 'circle']:
+            raise ValueError('Photo shape must be either "square" or "circle"')
+        return v
+    
+    @validator('pdf_size')
+    def validate_pdf_size(cls, v):
+        if v is not None and v not in ['A4', 'A4_Landscape', 'Letter', 'Letter_Landscape', 'A3', 'A3_Landscape']:
+            raise ValueError(f'Invalid PDF size: {v}. Must be one of: A4, A4_Landscape, Letter, Letter_Landscape, A3, A3_Landscape')
         return v
 
 class UploadResponse(BaseModel):

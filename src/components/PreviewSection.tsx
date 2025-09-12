@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Download, Eye, ArrowLeft, ArrowRight, RefreshCw } from 'lucide-react'
 import { useSession } from '../contexts/SessionContext'
 import { getPreviewUrl } from '../lib/api'

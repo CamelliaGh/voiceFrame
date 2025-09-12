@@ -17,15 +17,20 @@ class SessionManager:
     
     def get_session_by_order(self, db: Session, order_id: str) -> Optional[SessionModel]:
         """Get session associated with an order (for PDF generation)"""
-        # This would need a relationship between sessions and orders
-        # For now, we'll implement a basic lookup
-        # In production, you might store session_token in the order
-        return None
+        from ..models import Order
+        
+        # Get the order first
+        order = db.query(Order).filter(Order.id == order_id).first()
+        if not order or not order.session_token:
+            return None
+        
+        # Get the session using the session_token from the order
+        return self.get_session(db, order.session_token)
     
     def update_session(self, db: Session, session: SessionModel, data: Dict[str, Any]) -> SessionModel:
         """Update session with new data"""
         for key, value in data.items():
-            if hasattr(session, key) and value is not None:
+            if hasattr(session, key):
                 setattr(session, key, value)
         
         db.commit()

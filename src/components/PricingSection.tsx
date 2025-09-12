@@ -3,7 +3,7 @@ import { useStripe, useElements, CardElement } from '@stripe/react-stripe-js'
 import { Check, ArrowLeft, CreditCard, Lock, Download, Star } from 'lucide-react'
 import { useSession } from '../contexts/SessionContext'
 import { createPaymentIntent, completeOrder } from '../lib/api'
-import { cn } from '../lib/utils'
+// import { cn } from '../lib/utils'
 
 interface PricingSectionProps {
   onBack: () => void
@@ -11,7 +11,7 @@ interface PricingSectionProps {
 
 const pricingTiers = [
   {
-    id: 'download',
+    id: 'standard',
     name: 'Download Your Poster',
     price: 299,
     description: 'Get your high-quality audio poster PDF',
@@ -47,7 +47,7 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
   const stripe = useStripe()
   const elements = useElements()
   
-  const [selectedTier, setSelectedTier] = useState<'download'>('download')
+  const [selectedTier, setSelectedTier] = useState<'standard' | 'premium'>('standard')
   const [email, setEmail] = useState('')
   const [processing, setProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -71,7 +71,7 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
       const { client_secret, order_id } = await createPaymentIntent(
         session.session_token,
         email,
-        'download'
+        'standard'
       )
 
       // Confirm payment
@@ -190,11 +190,7 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
                 <span className="text-3xl font-bold text-gray-900">
                   ${(tier.price / 100).toFixed(2)}
                 </span>
-                {tier.originalPrice && (
-                  <span className="text-lg text-gray-500 line-through">
-                    ${(tier.originalPrice / 100).toFixed(2)}
-                  </span>
-                )}
+                {/* Original price removed for simplicity */}
               </div>
             </div>
             

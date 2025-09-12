@@ -142,31 +142,56 @@ Empower people to create meaningful, personalized keepsakes that capture special
 ### 3.5 File Storage Policy
 
 #### 3.5.1 Storage Architecture
-- **Temporary Storage**: Local container storage for preview generation
-- **Permanent Storage**: AWS S3 for paid content and long-term access
-- **Hybrid Approach**: Files start temporary, migrate to permanent on payment
+- **Temporary Storage**: S3 bucket with `temp/` prefix for preview generation (with local fallback for development)
+- **Permanent Storage**: AWS S3 with `permanent/` prefix for paid content and long-term access
+- **Hybrid Approach**: Files start in temporary S3 storage, migrate to permanent S3 storage on payment
+- **Folder Structure**:
+  - `temp_photos/{session_token}.jpg` - temporary photos
+  - `temp_audio/{session_token}.{extension}` - temporary audio files
+  - `waveforms/{session_token}.png` - waveform images (stored directly in S3)
+  - `permanent/photos/{order_id}.jpg` - permanent photos
+  - `permanent/audio/{order_id}.{extension}` - permanent audio files
+  - `permanent/waveforms/{order_id}.png` - permanent waveform images
 
 #### 3.5.2 File Lifecycle Management
 
 **Unpaid Users (Preview Mode)**
-- **Storage Location**: Local temporary storage (`/tmp/audioposter/temp/`)
-- **Retention Period**: 7 days from upload
-- **File Types**: Photos, audio files, waveforms
-- **Cleanup Process**: Manual cleanup after 7 days (no session-based deletion)
+- **Storage Location**: S3 bucket with `temp/` prefix (or local `/tmp/audioposter/temp/` in development)
+- **Session Expiration**: 24 hours from session creation
+- **Preview PDF Expiration**: 1 hour from generation
 - **QR Code Access**: 7-day presigned URLs for audio files
+- **File Types**: Photos, audio files, waveforms
+- **Cleanup Process**: Manual cleanup of orphaned files older than 7 days
 
 **Paid Users (Final Download)**
-- **Storage Location**: AWS S3 permanent storage
-- **Retention Period**: 5+ years (manual management, no automatic deletion)
-- **File Types**: All original files + generated PDFs
-- **Migration Process**: Automatic transfer from temporary to permanent storage
+- **Storage Location**: AWS S3 permanent storage with `permanent/` prefix
+- **Download Link Expiration**: 7 days from order completion
 - **QR Code Access**: 5-year presigned URLs for audio files
+- **File Types**: All original files + generated PDFs
+- **Migration Process**: Automatic transfer from temporary to permanent S3 storage
+- **Retention Period**: 5+ years (manual management, no automatic deletion)
 
-#### 3.5.3 Cleanup and Maintenance
+#### 3.5.3 Expiration Time Configuration
+
+**Current Implementation (Hardcoded)**
+- **Session Expiration**: 24 hours
+- **Preview PDF Expiration**: 1 hour
+- **Download Link Expiration**: 7 days
+- **Preview QR Code Expiration**: 7 days
+- **Paid QR Code Expiration**: 5 years
+- **Audio Playback Expiration**: 1 hour
+- **Cleanup Threshold**: 7 days minimum age
+
+**Future Enhancement (Configurable)**
+- All expiration times should be configurable through environment variables
+- Default values will match current hardcoded values
+- Allows for easy adjustment without code changes
+
+#### 3.5.4 Cleanup and Maintenance
 
 **Manual Cleanup Process**
 - **Trigger**: Manual execution (no automated tasks)
-- **Scope**: Files older than 7 days in temporary storage
+- **Scope**: Orphaned files older than 7 days in temporary storage
 - **Safety Check**: Verify no associated paid orders before deletion
 - **Files Deleted**: Temporary photos, audio, waveforms older than 7 days
 - **Monitoring**: Log all cleanup activities for audit
@@ -177,14 +202,14 @@ Empower people to create meaningful, personalized keepsakes that capture special
 - **Action**: Manual review and cleanup of permanent files
 - **Retention**: 5+ years minimum, manual decision for longer retention
 
-#### 3.5.4 Storage Cost Optimization
+#### 3.5.5 Storage Cost Optimization
 - **Compression**: Images optimized to 95% JPEG quality
 - **Format Standardization**: Audio normalized to 44.1kHz MP3
 - **Lifecycle Policies**: S3 lifecycle rules for cost management
 - **Monitoring**: Track storage costs and usage patterns
 - **Cleanup Efficiency**: Aggressive cleanup to minimize storage costs
 
-#### 3.5.5 Data Security and Privacy
+#### 3.5.6 Data Security and Privacy
 - **Encryption**: All files encrypted at rest (AES-256)
 - **Access Control**: Presigned URLs with time-limited access
 - **No Permanent Analysis**: Audio content not permanently analyzed or stored

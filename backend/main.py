@@ -27,8 +27,9 @@ from .services.visual_template_service import VisualTemplateService
 from .services.storage_manager import StorageManager
 from .config import settings
 
-# Create database tables
-Base.metadata.create_all(bind=engine)
+# Create database tables (skip in test mode)
+if not os.getenv("TESTING", False):
+    Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="AudioPoster API",
@@ -137,11 +138,16 @@ async def update_session(
         raise HTTPException(status_code=400, detail="Audio processing not complete. Please wait and try again.")
     
     try:
-        session_manager.update_session(db, session, data.dict(exclude_unset=True))
+        update_data = data.dict(exclude_unset=True)
+        print(f"DEBUG: Update data after exclude_unset: {update_data}")
+        session_manager.update_session(db, session, update_data)
         return {"status": "updated"}
     except ValueError as e:
         print(f"DEBUG: ValueError in update_session: {e}")
         raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        print(f"DEBUG: Unexpected error in update_session: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 @app.post("/api/session/{token}/validate")
 async def validate_session_for_preview(
@@ -308,6 +314,10 @@ async def get_preview(token: str, db: Session = Depends(get_db)):
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
     
+    # Refresh session to ensure we have the latest data from database
+    # This is important because Celery workers might have updated the session
+    db.refresh(session)
+    
     # Check detailed status with specific error messages
     if not session.photo_s3_key:
         raise HTTPException(
@@ -383,8 +393,14 @@ async def get_preview(token: str, db: Session = Depends(get_db)):
         )
     
     try:
+        print(f"DEBUG: Starting preview generation for session {token}")
+        print(f"DEBUG: Session data after refresh - photo_s3_key: {session.photo_s3_key}, audio_s3_key: {session.audio_s3_key}, waveform_s3_key: {session.waveform_s3_key}")
+        
         # Generate preview PDF with watermark
+        print(f"DEBUG: Calling pdf_generator.generate_preview_pdf")
         pdf_url = await pdf_generator.generate_preview_pdf(session)
+        print(f"DEBUG: PDF generation successful, URL: {pdf_url}")
+        
         expires_at = (datetime.utcnow() + timedelta(hours=1)).isoformat()
         
         return {
@@ -393,6 +409,10 @@ async def get_preview(token: str, db: Session = Depends(get_db)):
         }
         
     except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"Preview generation error for session {token}: {error_trace}")
+        print(f"Session state at error - photo_s3_key: {session.photo_s3_key}, audio_s3_key: {session.audio_s3_key}, waveform_s3_key: {session.waveform_s3_key}")
         raise HTTPException(status_code=500, detail=f"Preview generation failed: {str(e)}")
 
 # Payment & Orders
