@@ -381,17 +381,17 @@ class PDFGenerator:
         """Add diagonal watermark across the page"""
         canvas_obj.saveState()
         
-        # Set watermark properties
-        canvas_obj.setFont("Helvetica", 36)
-        canvas_obj.setFillColorRGB(0.8, 0.8, 0.8, 0.4)  # Light gray, 40% opacity
+        # Set watermark properties according to specifications
+        canvas_obj.setFont("Helvetica", 24)  # 24pt font
+        canvas_obj.setFillColorRGB(0.8, 0.8, 0.8, 0.2)  # Light gray #CCCCCC, 20% opacity
         
-        # Rotate and position watermark
+        # Rotate and position watermark diagonally across entire poster
         canvas_obj.translate(width / 2, height / 2)
         canvas_obj.rotate(45)
         
         # Draw watermark text
         text = "PREVIEW - AudioPoster.com"
-        text_width = canvas_obj.stringWidth(text, "Helvetica", 36)
+        text_width = canvas_obj.stringWidth(text, "Helvetica", 24)
         canvas_obj.drawString(-text_width / 2, 0, text)
         
         canvas_obj.restoreState()
@@ -442,11 +442,10 @@ class PDFGenerator:
                 if self.file_uploader.file_exists(order.permanent_audio_s3_key):
                     return self.file_uploader.generate_presigned_url(
                         order.permanent_audio_s3_key,
-                        expiration=86400 * 365  # 1 year expiration
+                        expiration=86400 * 365 * 5  # 5 years expiration
                     )
                 else:
-                    print(f"WARNING: Permanent audio file missing: {order.permanent_audio_s3_key}")
-                    return f"{settings.base_url}/audio-not-found"
+                    raise Exception(f"Permanent audio file missing: {order.permanent_audio_s3_key}")
             elif session.audio_s3_key:
                 # Preview version - use session audio URL
                 # First check if the file exists
@@ -456,14 +455,12 @@ class PDFGenerator:
                         expiration=86400 * 7  # 7 days expiration
                     )
                 else:
-                    print(f"WARNING: Session audio file missing: {session.audio_s3_key}")
-                    return f"{settings.base_url}/audio-not-found"
+                    raise Exception(f"Session audio file missing: {session.audio_s3_key}")
             else:
-                # Fallback - return a placeholder
-                return f"{settings.base_url}/audio-not-found"
+                raise Exception("No audio file available for QR code generation")
         except Exception as e:
             print(f"Error generating QR URL: {e}")
-            return f"{settings.base_url}/audio-error"
+            raise Exception(f"Failed to generate QR code URL: {str(e)}")
     
     def _has_visual_template(self, template_id: str) -> bool:
         """Check if a visual template exists for the given template ID"""

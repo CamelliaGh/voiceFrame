@@ -95,10 +95,11 @@ Empower people to create meaningful, personalized keepsakes that capture special
   - Volume level optimization
 
 #### 3.2.2 QR Code Generation
-- **QR Code Content Options**
-  - Unique URL to audio playback page (default)
-  - Direct audio file link 
-  - Spotify/Apple Music link (if detectable)
+- **QR Code Content**
+  - Direct S3 presigned URL to audio file (primary implementation)
+  - 7-day expiration for preview versions
+  - 5-year expiration for paid versions
+  - No fallback - throws error if file is missing (ensures QR codes are always playable)
 
 - **QR Code Specifications**
   - High contrast black/white
@@ -137,6 +138,67 @@ Empower people to create meaningful, personalized keepsakes that capture special
 - Applied during PDF generation, not as overlay
 - Cannot be easily removed by users
 - Maintains poster readability for preview purposes
+
+### 3.5 File Storage Policy
+
+#### 3.5.1 Storage Architecture
+- **Temporary Storage**: Local container storage for preview generation
+- **Permanent Storage**: AWS S3 for paid content and long-term access
+- **Hybrid Approach**: Files start temporary, migrate to permanent on payment
+
+#### 3.5.2 File Lifecycle Management
+
+**Unpaid Users (Preview Mode)**
+- **Storage Location**: Local temporary storage (`/tmp/audioposter/temp/`)
+- **Retention Period**: 7 days from upload
+- **File Types**: Photos, audio files, waveforms
+- **Cleanup Process**: Manual cleanup after 7 days (no session-based deletion)
+- **QR Code Access**: 7-day presigned URLs for audio files
+
+**Paid Users (Final Download)**
+- **Storage Location**: AWS S3 permanent storage
+- **Retention Period**: 5+ years (manual management, no automatic deletion)
+- **File Types**: All original files + generated PDFs
+- **Migration Process**: Automatic transfer from temporary to permanent storage
+- **QR Code Access**: 5-year presigned URLs for audio files
+
+#### 3.5.3 Cleanup and Maintenance
+
+**Manual Cleanup Process**
+- **Trigger**: Manual execution (no automated tasks)
+- **Scope**: Files older than 7 days in temporary storage
+- **Safety Check**: Verify no associated paid orders before deletion
+- **Files Deleted**: Temporary photos, audio, waveforms older than 7 days
+- **Monitoring**: Log all cleanup activities for audit
+
+**Permanent File Management**
+- **Process**: Manual verification and management of paid order files
+- **Frequency**: As needed (no automated tasks)
+- **Action**: Manual review and cleanup of permanent files
+- **Retention**: 5+ years minimum, manual decision for longer retention
+
+#### 3.5.4 Storage Cost Optimization
+- **Compression**: Images optimized to 95% JPEG quality
+- **Format Standardization**: Audio normalized to 44.1kHz MP3
+- **Lifecycle Policies**: S3 lifecycle rules for cost management
+- **Monitoring**: Track storage costs and usage patterns
+- **Cleanup Efficiency**: Aggressive cleanup to minimize storage costs
+
+#### 3.5.5 Data Security and Privacy
+- **Encryption**: All files encrypted at rest (AES-256)
+- **Access Control**: Presigned URLs with time-limited access
+- **No Permanent Analysis**: Audio content not permanently analyzed or stored
+- **GDPR Compliance**: Files deleted according to retention policies
+- **Audit Trail**: Log all file operations for compliance
+
+#### 3.5.6 File Migration Implementation
+- **Trigger**: Automatic migration upon successful payment completion
+- **Process**: Copy files from temporary local storage to S3 permanent storage
+- **Files Migrated**: Original photo, audio file, generated waveform, and final PDF
+- **Database Update**: Update Order model with permanent S3 keys
+- **Validation**: Verify all files successfully migrated before marking order complete
+- **Error Handling**: Rollback payment if migration fails
+- **Logging**: Comprehensive audit trail of all migration operations
 
 ## 4. Monetization Strategy
 
@@ -188,7 +250,15 @@ Upload → Validation → Format Conversion → Waveform Analysis →
 SVG Generation → QR Code Creation → PDF Assembly → Storage
 ```
 
-#### 5.1.3 Scalability Considerations
+#### 5.1.3 File Storage Implementation
+- **Local Storage**: Docker container `/tmp/audioposter/temp/` for temporary files during preview generation
+- **S3 Integration**: AWS S3 for permanent storage and waveform files
+- **File Existence Validation**: Dual-check system (local + S3) for file availability
+- **Background Processing**: Celery tasks for audio processing (cleanup tasks are manual)
+- **Error Handling**: Explicit errors when files are missing (no fallbacks for QR codes)
+- **File Migration**: Automatic transfer from local temp to S3 permanent storage upon payment
+
+#### 5.1.4 Scalability Considerations
 - Horizontal scaling with load balancers
 - CDN integration for static assets
 - Database read replicas for high traffic
@@ -215,7 +285,7 @@ SVG Generation → QR Code Creation → PDF Assembly → Storage
 - **No User Data Collection**: No accounts, no personal data storage beyond email for delivery
 - **Minimal Email Storage**: Email addresses stored only for order fulfillment (7-30 days)
 - **File Encryption**: All uploaded files encrypted at rest
-- **Automatic Deletion**: Uploaded files deleted after 24 hours for unpaid users
+- **Automatic Deletion**: Uploaded files deleted after 7 days for unpaid users (with 24-hour session timeout)
 - **Session Privacy**: No audio content analysis or permanent storage
 - **Order Records**: Minimal anonymous order data for support (Order ID + email + purchase date)
 
@@ -245,9 +315,10 @@ SVG Generation → QR Code Creation → PDF Assembly → Storage
 
 ### 6.2 Simplified Architecture (No User Accounts)
 - **Session-Based State**: All user data stored in browser session
-- **Temporary File Storage**: Uploaded files stored for 24 hours only
+- **Temporary File Storage**: Uploaded files stored for 7 days (with 24-hour session timeout)
 - **Purchase Tracking**: Anonymous order IDs for support purposes
 - **Email-Based Support**: Customer service via email/order ID lookup
+- **File Migration**: Automatic transfer to permanent storage upon payment
 
 ## 7. Marketing & Growth Strategy
 

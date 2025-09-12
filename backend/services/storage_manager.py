@@ -51,8 +51,8 @@ class StorageManager:
     async def store_audio_temporarily(self, audio: UploadFile, session_token: str) -> str:
         """Store audio temporarily for preview generation"""
         try:
-            # Validate file
-            if not audio.content_type.startswith('audio/'):
+            # Validate file - check content_type before reading
+            if not audio.content_type or not audio.content_type.startswith('audio/'):
                 raise HTTPException(status_code=400, detail="File must be an audio file")
             
             # Save to temporary storage
@@ -70,42 +70,111 @@ class StorageManager:
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Temporary audio storage failed: {str(e)}")
     
-    async def migrate_to_permanent_storage(self, session_token: str) -> dict:
-        """Migrate temporary files to permanent S3 storage after payment"""
+    async def migrate_all_session_files(self, session_token: str, order_id: str) -> dict:
+        """Migrate all files for a session to permanent storage after payment"""
         try:
             permanent_keys = {}
+            migration_log = []
             
             # Migrate photo
             temp_photo_key = f"temp_photos/{session_token}.jpg"
             temp_photo_path = os.path.join(self.temp_storage_path, temp_photo_key)
             
             if os.path.exists(temp_photo_path):
-                permanent_photo_key = f"photos/{session_token}.jpg"
+                permanent_photo_key = f"permanent/photos/{order_id}.jpg"
                 await self._upload_to_s3_permanent(temp_photo_path, permanent_photo_key, 'image/jpeg')
-                permanent_keys['photo'] = permanent_photo_key
+                permanent_keys['permanent_photo_s3_key'] = permanent_photo_key
+                migration_log.append(f"Migrated photo: {temp_photo_key} -> {permanent_photo_key}")
                 
                 # Clean up temporary file
                 os.remove(temp_photo_path)
+                migration_log.append(f"Cleaned up temp photo: {temp_photo_path}")
             
             # Migrate audio
-            temp_audio_key = f"temp_audio/{session_token}.*"
             temp_audio_dir = os.path.join(self.temp_storage_path, "temp_audio")
             
             if os.path.exists(temp_audio_dir):
                 for filename in os.listdir(temp_audio_dir):
                     if filename.startswith(session_token):
                         temp_audio_path = os.path.join(temp_audio_dir, filename)
-                        permanent_audio_key = f"audio/{session_token}.{filename.split('.')[-1]}"
-                        await self._upload_to_s3_permanent(temp_audio_path, permanent_audio_key, 'audio/mpeg')
-                        permanent_keys['audio'] = permanent_audio_key
+                        file_extension = filename.split('.')[-1]
+                        permanent_audio_key = f"permanent/audio/{order_id}.{file_extension}"
+                        
+                        # Determine content type based on extension
+                        content_type = self._get_audio_content_type(file_extension)
+                        await self._upload_to_s3_permanent(temp_audio_path, permanent_audio_key, content_type)
+                        permanent_keys['permanent_audio_s3_key'] = permanent_audio_key
+                        migration_log.append(f"Migrated audio: {temp_audio_path} -> {permanent_audio_key}")
                         
                         # Clean up temporary file
                         os.remove(temp_audio_path)
+                        migration_log.append(f"Cleaned up temp audio: {temp_audio_path}")
+            
+            # Migrate waveform (if exists in S3)
+            waveform_s3_key = f"waveforms/{session_token}.png"
+            if self.file_uploader.file_exists(waveform_s3_key):
+                permanent_waveform_key = f"permanent/waveforms/{order_id}.png"
+                await self._copy_s3_file(waveform_s3_key, permanent_waveform_key)
+                permanent_keys['permanent_waveform_s3_key'] = permanent_waveform_key
+                migration_log.append(f"Migrated waveform: {waveform_s3_key} -> {permanent_waveform_key}")
+            
+            # Log migration success
+            print(f"Migration completed for order {order_id}: {len(permanent_keys)} files migrated")
+            for log_entry in migration_log:
+                print(f"  - {log_entry}")
             
             return permanent_keys
             
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Migration to permanent storage failed: {str(e)}")
+            error_msg = f"Migration to permanent storage failed: {str(e)}"
+            print(f"Migration error for order {order_id}: {error_msg}")
+            raise HTTPException(status_code=500, detail=error_msg)
+    
+    async def migrate_file_to_permanent(self, temp_key: str, permanent_key: str, content_type: str) -> bool:
+        """Migrate a single file from temp to permanent storage"""
+        try:
+            temp_path = os.path.join(self.temp_storage_path, temp_key)
+            
+            if not os.path.exists(temp_path):
+                print(f"Temporary file not found: {temp_path}")
+                return False
+            
+            await self._upload_to_s3_permanent(temp_path, permanent_key, content_type)
+            print(f"Successfully migrated: {temp_key} -> {permanent_key}")
+            return True
+            
+        except Exception as e:
+            print(f"Failed to migrate file {temp_key}: {str(e)}")
+            return False
+    
+    def verify_migration_success(self, permanent_keys: list) -> bool:
+        """Verify all permanent files exist in S3"""
+        try:
+            for key in permanent_keys:
+                if key and not self.file_uploader.file_exists(key):
+                    print(f"Migration verification failed: {key} not found in S3")
+                    return False
+            print(f"Migration verification successful: {len(permanent_keys)} files verified")
+            return True
+            
+        except Exception as e:
+            print(f"Migration verification error: {str(e)}")
+            return False
+    
+    async def rollback_migration(self, permanent_keys: list) -> bool:
+        """Rollback migration by deleting permanent files"""
+        try:
+            for key in permanent_keys:
+                if key and self.file_uploader.file_exists(key):
+                    self.file_uploader.delete_file(key)
+                    print(f"Rolled back permanent file: {key}")
+            
+            print(f"Migration rollback completed: {len(permanent_keys)} files removed")
+            return True
+            
+        except Exception as e:
+            print(f"Migration rollback error: {str(e)}")
+            return False
     
     def get_temp_file_path(self, temp_key: str) -> Optional[str]:
         """Get local file path for temporary file"""
@@ -186,6 +255,34 @@ class StorageManager:
         if filename:
             return filename.split('.')[-1].lower()
         return 'mp3'
+    
+    def _get_audio_content_type(self, extension: str) -> str:
+        """Get content type based on audio file extension"""
+        content_types = {
+            'mp3': 'audio/mpeg',
+            'wav': 'audio/wav',
+            'm4a': 'audio/mp4',
+            'aac': 'audio/aac',
+            'ogg': 'audio/ogg',
+            'flac': 'audio/flac'
+        }
+        return content_types.get(extension.lower(), 'audio/mpeg')
+    
+    async def _copy_s3_file(self, source_key: str, dest_key: str):
+        """Copy file within S3 from source to destination"""
+        if self.file_uploader.s3_client:
+            copy_source = {
+                'Bucket': settings.s3_bucket,
+                'Key': source_key
+            }
+            
+            self.file_uploader.s3_client.copy_object(
+                CopySource=copy_source,
+                Bucket=settings.s3_bucket,
+                Key=dest_key,
+                ServerSideEncryption='AES256',
+                ACL='private'
+            )
     
     def cleanup_temp_files(self, session_token: str):
         """Clean up temporary files for a session"""

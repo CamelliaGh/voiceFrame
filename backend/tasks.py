@@ -229,8 +229,9 @@ def send_email_task(self, email: str, download_url: str, expires_at_iso: str, or
 @celery_app.task
 def cleanup_expired_sessions():
     """
-    Periodic task to clean up expired sessions and their files
-    Schedule this to run daily
+    Manual task to clean up expired session database records only
+    Files are cleaned up separately by the 7-day cleanup task
+    This task only removes database records for expired sessions
     """
     db = get_db()
     try:
@@ -240,39 +241,23 @@ def cleanup_expired_sessions():
         ).all()
         
         cleanup_count = 0
-        audio_cleanup_count = 0
         
         for session in expired_sessions:
             try:
                 # Check if this session has been converted to a paid order
-                # If so, the audio should already be in permanent storage
                 has_paid_order = db.query(Order).filter(
                     Order.session_token == session.session_token,
-                    Order.status == 'completed',
-                    Order.permanent_audio_s3_key.isnot(None)
+                    Order.status == 'completed'
                 ).first()
                 
-                # Delete associated files from S3/storage
-                from .services.file_uploader import FileUploader
-                file_uploader = FileUploader()
+                if has_paid_order:
+                    print(f"Keeping session record for paid order: {session.session_token}")
+                    continue
                 
-                if session.photo_s3_key:
-                    file_uploader.delete_file(session.photo_s3_key)
-                
-                # Only delete audio if it hasn't been moved to permanent storage
-                if session.audio_s3_key and not has_paid_order:
-                    file_uploader.delete_file(session.audio_s3_key)
-                    audio_cleanup_count += 1
-                    print(f"Deleted temporary audio: {session.audio_s3_key}")
-                elif session.audio_s3_key and has_paid_order:
-                    print(f"Keeping audio for paid order: {session.audio_s3_key}")
-                
-                if session.waveform_s3_key:
-                    file_uploader.delete_file(session.waveform_s3_key)
-                
-                # Delete session record
+                # Only delete session database record - files cleaned up separately
                 db.delete(session)
                 cleanup_count += 1
+                print(f"Deleted expired session record: {session.session_token}")
                 
             except Exception as e:
                 print(f"Error cleaning up session {session.session_token}: {e}")
@@ -283,7 +268,7 @@ def cleanup_expired_sessions():
         return {
             "status": "completed",
             "sessions_cleaned": cleanup_count,
-            "audio_files_deleted": audio_cleanup_count,
+            "note": "Only database records cleaned - files handled by 7-day cleanup task",
             "timestamp": datetime.utcnow().isoformat()
         }
         
@@ -297,41 +282,18 @@ def cleanup_expired_sessions():
 @celery_app.task
 def cleanup_orphaned_audio_files():
     """
-    Comprehensive audio file cleanup task that:
-    1. Verifies permanent audio files are properly stored
-    2. Cleans up orphaned temporary audio files
-    3. Ensures database consistency
+    Manual cleanup task for orphaned temporary audio files only
+    Only deletes files older than 7 days to prevent accidental deletion
+    Permanent files are never automatically deleted
     """
     db = get_db()
     try:
         from .services.file_uploader import FileUploader
-        from .services.permanent_audio_service import PermanentAudioService
         
         file_uploader = FileUploader()
-        permanent_audio_service = PermanentAudioService()
-        
         orphaned_count = 0
-        verified_permanent_count = 0
         
-        # 1. Verify all permanent audio files exist in S3
-        permanent_orders = db.query(Order).filter(
-            Order.permanent_audio_s3_key.isnot(None),
-            Order.status == 'completed'
-        ).all()
-        
-        for order in permanent_orders:
-            try:
-                # Check if permanent audio file exists in S3
-                if file_uploader.file_exists(order.permanent_audio_s3_key):
-                    verified_permanent_count += 1
-                else:
-                    print(f"WARNING: Permanent audio file missing: {order.permanent_audio_s3_key}")
-                    # Could implement recovery logic here
-            except Exception as e:
-                print(f"Error verifying permanent audio for order {order.id}: {e}")
-        
-        # 2. Clean up orphaned temporary audio files
-        # Get all temporary audio files from S3
+        # Clean up orphaned temporary audio files older than 7 days
         try:
             temp_audio_files = file_uploader.list_files_with_prefix('temp_audio/')
             
@@ -343,7 +305,6 @@ def cleanup_orphaned_audio_files():
                 
                 if not session_exists:
                     # Check if this file was moved to permanent storage
-                    # by looking for orders with matching session tokens
                     file_name = file_key.split('/')[-1].replace('.mp3', '')
                     
                     # Try to find if this was converted to permanent storage
@@ -371,27 +332,10 @@ def cleanup_orphaned_audio_files():
         except Exception as e:
             print(f"Error during orphaned file cleanup: {e}")
         
-        # 3. Clean up orphaned permanent audio files (files in S3 but not in DB)
-        try:
-            permanent_audio_files = file_uploader.list_files_with_prefix('permanent-audio/')
-            
-            for file_key in permanent_audio_files:
-                # Check if any order references this file
-                order_exists = db.query(Order).filter(
-                    Order.permanent_audio_s3_key == file_key
-                ).first()
-                
-                if not order_exists:
-                    print(f"WARNING: Orphaned permanent audio file found: {file_key}")
-                    # Don't auto-delete permanent files - require manual review
-                    
-        except Exception as e:
-            print(f"Error during permanent file verification: {e}")
-        
         return {
             "status": "completed",
-            "permanent_files_verified": verified_permanent_count,
             "orphaned_files_deleted": orphaned_count,
+            "note": "Only temporary files older than 7 days are deleted",
             "timestamp": datetime.utcnow().isoformat()
         }
         

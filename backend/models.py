@@ -34,8 +34,18 @@ class Order(Base):
     download_expires_at = Column(DateTime, nullable=True)
     pdf_s3_key = Column(String(500), nullable=True)
     
-    # Permanent audio storage for QR codes
+    # Permanent file storage for migration system
+    permanent_photo_s3_key = Column(String(500), nullable=True)
     permanent_audio_s3_key = Column(String(500), nullable=True)
+    permanent_waveform_s3_key = Column(String(500), nullable=True)
+    permanent_pdf_s3_key = Column(String(500), nullable=True)
+    
+    # Migration tracking
+    migration_status = Column(String(50), default='pending')  # pending, completed, failed
+    migration_completed_at = Column(DateTime, nullable=True)
+    migration_error = Column(Text, nullable=True)
+    
+    # Session reference
     session_token = Column(String(255), nullable=True)  # Link to original session
     audio_secure_hash = Column(String(64), nullable=True)  # SHA-256 for integrity
     

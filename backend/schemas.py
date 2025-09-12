@@ -7,7 +7,7 @@ class SessionResponse(BaseModel):
     expires_at: str
     custom_text: Optional[str] = None
     photo_shape: Optional[Literal['square', 'circle']] = 'square'
-    pdf_size: Optional[Literal['A4', 'Letter', 'A3']] = 'A4'
+    pdf_size: Optional[Literal['A4', 'A4_Landscape', 'Letter', 'Letter_Landscape', 'A3', 'A3_Landscape']] = 'A4'
     template_id: Optional[str] = 'classic'
     background_id: Optional[str] = 'none'
     photo_url: Optional[str] = None

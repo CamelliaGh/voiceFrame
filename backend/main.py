@@ -334,6 +334,54 @@ async def get_preview(token: str, db: Session = Depends(get_db)):
             }
         )
     
+    # Validate that files actually exist (check both local temp storage and S3)
+    from .services.file_uploader import FileUploader
+    from .services.storage_manager import StorageManager
+    file_uploader = FileUploader()
+    storage_manager = StorageManager()
+    
+    # Check photo file existence
+    photo_exists = False
+    if session.photo_s3_key.startswith('temp_'):
+        # Check local temp storage
+        photo_path = storage_manager.get_temp_file_path(session.photo_s3_key)
+        photo_exists = photo_path and os.path.exists(photo_path)
+    else:
+        # Check S3
+        photo_exists = file_uploader.file_exists(session.photo_s3_key)
+    
+    if not photo_exists:
+        raise HTTPException(
+            status_code=400, 
+            detail="Photo file is missing. Please upload a new photo.",
+            headers={"X-Missing-Component": "photo_file"}
+        )
+    
+    # Check audio file existence
+    audio_exists = False
+    if session.audio_s3_key.startswith('temp_'):
+        # Check local temp storage
+        audio_path = storage_manager.get_temp_file_path(session.audio_s3_key)
+        audio_exists = audio_path and os.path.exists(audio_path)
+    else:
+        # Check S3
+        audio_exists = file_uploader.file_exists(session.audio_s3_key)
+    
+    if not audio_exists:
+        raise HTTPException(
+            status_code=400, 
+            detail="Audio file is missing. Please upload a new audio file.",
+            headers={"X-Missing-Component": "audio_file"}
+        )
+    
+    # Check waveform file existence (waveforms are always in S3)
+    if not file_uploader.file_exists(session.waveform_s3_key):
+        raise HTTPException(
+            status_code=400, 
+            detail="Waveform file is missing. Please wait for audio processing to complete.",
+            headers={"X-Missing-Component": "waveform_file"}
+        )
+    
     try:
         # Generate preview PDF with watermark
         pdf_url = await pdf_generator.generate_preview_pdf(session)
@@ -422,27 +470,102 @@ async def complete_order(
         if not session:
             raise HTTPException(status_code=404, detail="Session not found for order")
         
+        # Validate that required files exist before generating final PDF
+        from .services.file_uploader import FileUploader
+        from .services.storage_manager import StorageManager
+        file_uploader = FileUploader()
+        storage_manager = StorageManager()
+        
+        # Check photo file existence
+        photo_exists = False
+        if session.photo_s3_key and session.photo_s3_key.startswith('temp_'):
+            photo_path = storage_manager.get_temp_file_path(session.photo_s3_key)
+            photo_exists = photo_path and os.path.exists(photo_path)
+        elif session.photo_s3_key:
+            photo_exists = file_uploader.file_exists(session.photo_s3_key)
+        
+        if not photo_exists:
+            raise HTTPException(
+                status_code=400, 
+                detail="Photo file is missing. Cannot generate final PDF.",
+                headers={"X-Missing-Component": "photo_file"}
+            )
+        
+        # Check audio file existence
+        audio_exists = False
+        if session.audio_s3_key and session.audio_s3_key.startswith('temp_'):
+            audio_path = storage_manager.get_temp_file_path(session.audio_s3_key)
+            audio_exists = audio_path and os.path.exists(audio_path)
+        elif session.audio_s3_key:
+            audio_exists = file_uploader.file_exists(session.audio_s3_key)
+        
+        if not audio_exists:
+            raise HTTPException(
+                status_code=400, 
+                detail="Audio file is missing. Cannot generate final PDF.",
+                headers={"X-Missing-Component": "audio_file"}
+            )
+        
+        # Check waveform file existence (waveforms are always in S3)
+        if not session.waveform_s3_key or not file_uploader.file_exists(session.waveform_s3_key):
+            raise HTTPException(
+                status_code=400, 
+                detail="Waveform file is missing. Cannot generate final PDF.",
+                headers={"X-Missing-Component": "waveform_file"}
+            )
+        
         # Migrate all temporary files to permanent storage
         try:
-            permanent_keys = await storage_manager.migrate_to_permanent_storage(session.session_token)
+            print(f"Starting file migration for order {order_id}")
+            permanent_keys = await storage_manager.migrate_all_session_files(session.session_token, order_id)
             
-            # Update session with permanent keys
-            if 'photo' in permanent_keys:
-                session.photo_s3_key = permanent_keys['photo']
-            if 'audio' in permanent_keys:
-                session.audio_s3_key = permanent_keys['audio']
+            # Update order with permanent file keys
+            order.permanent_photo_s3_key = permanent_keys.get('permanent_photo_s3_key')
+            order.permanent_audio_s3_key = permanent_keys.get('permanent_audio_s3_key')
+            order.permanent_waveform_s3_key = permanent_keys.get('permanent_waveform_s3_key')
+            order.session_token = session.session_token
+            order.migration_status = 'completed'
+            order.migration_completed_at = datetime.utcnow()
             
-            # Migrate audio to permanent storage for QR codes
-            if 'audio' in permanent_keys:
-                permanent_audio_key, audio_hash = await permanent_audio_service.migrate_to_permanent_storage(session, order)
-                order.permanent_audio_s3_key = permanent_audio_key
-                order.session_token = session.session_token
-                order.audio_secure_hash = audio_hash
+            # Verify migration success
+            permanent_file_keys = [
+                order.permanent_photo_s3_key,
+                order.permanent_audio_s3_key,
+                order.permanent_waveform_s3_key
+            ]
+            
+            if not storage_manager.verify_migration_success(permanent_file_keys):
+                raise Exception("Migration verification failed - not all files were successfully migrated")
             
             db.commit()
+            print(f"File migration completed successfully for order {order_id}")
+            
         except Exception as e:
-            print(f"Warning: File migration failed for order {order_id}: {e}")
-            # Continue with PDF generation even if migration fails
+            error_msg = f"File migration failed for order {order_id}: {str(e)}"
+            print(error_msg)
+            
+            # Update order with migration failure
+            order.migration_status = 'failed'
+            order.migration_error = error_msg
+            db.commit()
+            
+            # Rollback any partially migrated files
+            try:
+                permanent_file_keys = [
+                    order.permanent_photo_s3_key,
+                    order.permanent_audio_s3_key,
+                    order.permanent_waveform_s3_key
+                ]
+                await storage_manager.rollback_migration(permanent_file_keys)
+            except Exception as rollback_error:
+                print(f"Rollback failed for order {order_id}: {rollback_error}")
+            
+            # Don't continue with PDF generation if migration fails
+            raise HTTPException(
+                status_code=500, 
+                detail="File migration failed. Please try again or contact support.",
+                headers={"X-Migration-Error": "true"}
+            )
         
         pdf_url = await pdf_generator.generate_final_pdf(session, order)
         
@@ -758,23 +881,9 @@ async def update_session_template(token: str, template_id: str, db: Session = De
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to update template: {str(e)}")
 
-@app.get("/audio-not-found")
-async def audio_not_found():
-    """Handle missing audio files gracefully"""
-    return {
-        "error": "Audio file not found",
-        "message": "The requested audio file is no longer available. This may be because the session has expired or the file was not properly uploaded.",
-        "status": "not_found"
-    }
-
-@app.get("/audio-error")
-async def audio_error():
-    """Handle audio access errors"""
-    return {
-        "error": "Audio access error",
-        "message": "There was an error accessing the audio file. Please try again later.",
-        "status": "error"
-    }
+# Removed audio-not-found and audio-error endpoints
+# These were causing wrong fallback URLs in QR codes
+# Now the system properly validates files and throws errors instead
 
 if __name__ == "__main__":
     import uvicorn

@@ -319,20 +319,25 @@ class VisualPDFGenerator:
             print(f"Error adding text: {e}")
     
     def _add_watermark_to_image(self, image: Image.Image):
-        """Add diagonal watermark to image"""
+        """Add diagonal watermark to image according to specifications"""
         try:
             # Create a rotated watermark image
             watermark_img = Image.new('RGBA', image.size, (0, 0, 0, 0))
             watermark_draw = ImageDraw.Draw(watermark_img)
             
-            # Watermark text
-            text = "PRELIMINARY"
+            # Watermark text according to specifications
+            text = "PREVIEW - AudioPoster.com"
+            
+            # Use 24pt font (convert to pixels: 24pt ≈ 32px at 96 DPI)
+            font_size = 32
             try:
-                # Scale font size based on image dimensions
-                font_size = min(image.width, image.height) // 10
+                # Try to use a sans-serif font
                 font = ImageFont.truetype("Arial", font_size)
             except:
-                font = ImageFont.load_default()
+                try:
+                    font = ImageFont.truetype("Helvetica", font_size)
+                except:
+                    font = ImageFont.load_default()
             
             # Calculate text dimensions
             bbox = watermark_draw.textbbox((0, 0), text, font=font)
@@ -343,15 +348,16 @@ class VisualPDFGenerator:
             x = (image.width - text_width) // 2
             y = (image.height - text_height) // 2
             
-            # Draw watermark text with light gray color
-            watermark_draw.text((x, y), text, font=font, fill=(200, 200, 200, 180))
+            # Draw watermark text with light gray color #CCCCCC and 20% opacity
+            # RGB(204, 204, 204) with alpha 51 (20% of 255)
+            watermark_draw.text((x, y), text, font=font, fill=(204, 204, 204, 51))
             
             # Rotate the watermark image 45 degrees
             rotated_watermark = watermark_img.rotate(45, expand=False, fillcolor=(0, 0, 0, 0))
             
             # Paste the rotated watermark onto the original image
             image.paste(rotated_watermark, (0, 0), rotated_watermark)
-            print("Diagonal watermark added")
+            print("Diagonal watermark added with specifications: 24pt, #CCCCCC, 20% opacity")
             
         except Exception as e:
             print(f"Error adding watermark: {e}")
@@ -479,11 +485,10 @@ class VisualPDFGenerator:
                 if self.file_uploader.file_exists(order.permanent_audio_s3_key):
                     return self.file_uploader.generate_presigned_url(
                         order.permanent_audio_s3_key,
-                        expiration=86400 * 365  # 1 year expiration
+                        expiration=86400 * 365 * 5  # 5 years expiration
                     )
                 else:
-                    print(f"WARNING: Permanent audio file missing: {order.permanent_audio_s3_key}")
-                    return f"{settings.base_url}/audio-not-found"
+                    raise Exception(f"Permanent audio file missing: {order.permanent_audio_s3_key}")
             elif session.audio_s3_key:
                 # Preview version - use session audio URL
                 # First check if the file exists
@@ -493,11 +498,9 @@ class VisualPDFGenerator:
                         expiration=86400 * 7  # 7 days expiration
                     )
                 else:
-                    print(f"WARNING: Session audio file missing: {session.audio_s3_key}")
-                    return f"{settings.base_url}/audio-not-found"
+                    raise Exception(f"Session audio file missing: {session.audio_s3_key}")
             else:
-                # Fallback - return a placeholder
-                return f"{settings.base_url}/audio-not-found"
+                raise Exception("No audio file available for QR code generation")
         except Exception as e:
             print(f"Error generating QR URL: {e}")
-            return f"{settings.base_url}/audio-error"
+            raise Exception(f"Failed to generate QR code URL: {str(e)}")

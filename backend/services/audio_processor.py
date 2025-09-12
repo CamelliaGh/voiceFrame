@@ -49,8 +49,10 @@ class AudioProcessor:
             # Upload waveform to storage
             waveform_key = await self._upload_waveform(waveform_buffer, session_token)
             
-            # Cleanup temporary files
-            os.unlink(audio_path)
+            # Don't delete the original audio file - we need it for QR code generation
+            # Only delete if it's a temporary downloaded file (not the original temp file)
+            if not s3_key.startswith('temp_'):
+                os.unlink(audio_path)
             
             return {
                 'duration': len(y_trimmed) / sr,
