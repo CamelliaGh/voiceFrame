@@ -45,9 +45,32 @@ export default function PreviewSection({ onNext, onBack }: PreviewSectionProps) 
     try {
       const response = await getPreviewUrl(session.session_token)
       setPreviewUrl(response.preview_url)
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to generate preview:', err)
-      setError('Failed to generate preview. Please try again.')
+      
+      // Extract specific error message from the response
+      let errorMessage = 'Failed to generate preview. Please try again.'
+      
+      if (err.response?.data?.detail) {
+        const detail = err.response.data.detail
+        if (detail.includes('Audio file is missing')) {
+          errorMessage = 'Audio file is missing. Please upload your audio file again.'
+        } else if (detail.includes('Waveform file is missing')) {
+          errorMessage = 'Audio is still processing. Please wait a moment and try again.'
+        } else if (detail.includes('Photo file is missing')) {
+          errorMessage = 'Photo file is missing. Please upload your photo again.'
+        } else if (detail.includes('Failed to upload audio to S3')) {
+          errorMessage = 'Failed to upload audio file. Please check your connection and try again.'
+        } else if (detail.includes('Session audio file missing')) {
+          errorMessage = 'Audio file was not properly uploaded. Please try uploading your audio again.'
+        } else {
+          errorMessage = detail
+        }
+      } else if (err.message) {
+        errorMessage = `Error: ${err.message}`
+      }
+      
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }

@@ -498,35 +498,18 @@ class VisualPDFGenerator:
                 print(f"DEBUG: Using session audio key: {session.audio_s3_key}")
                 print(f"DEBUG: Checking if file exists...")
                 
-                # Check if it's a temporary file and handle accordingly
-                if session.audio_s3_key.startswith('temp_'):
-                    from .storage_manager import StorageManager
-                    storage_manager = StorageManager()
-                    temp_path = storage_manager.get_temp_file_path(session.audio_s3_key)
-                    file_exists = temp_path and os.path.exists(temp_path)
-                    print(f"DEBUG: Temporary file path: {temp_path}")
-                    print(f"DEBUG: File exists check result: {file_exists}")
-                    
-                    if file_exists:
-                        # For temporary files, we need to upload to S3 first or use a different approach
-                        # For now, let's skip QR code generation for temporary files
-                        print(f"DEBUG: Temporary audio file found, but QR code generation not supported for temp files")
-                        return "https://audioposter.com"  # Fallback URL
-                    else:
-                        raise Exception(f"Temporary audio file missing: {session.audio_s3_key} (path: {temp_path})")
+                # All audio files are now in S3, so check S3 directly
+                file_exists = self.file_uploader.file_exists(session.audio_s3_key)
+                print(f"DEBUG: S3 file exists check result: {file_exists}")
+                
+                if file_exists:
+                    print(f"DEBUG: Generating presigned URL for session audio")
+                    return self.file_uploader.generate_presigned_url(
+                        session.audio_s3_key,
+                        expiration=86400 * 7  # 7 days expiration
+                    )
                 else:
-                    # Check S3 file
-                    file_exists = self.file_uploader.file_exists(session.audio_s3_key)
-                    print(f"DEBUG: S3 file exists check result: {file_exists}")
-                    
-                    if file_exists:
-                        print(f"DEBUG: Generating presigned URL for session audio")
-                        return self.file_uploader.generate_presigned_url(
-                            session.audio_s3_key,
-                            expiration=86400 * 7  # 7 days expiration
-                        )
-                    else:
-                        raise Exception(f"Session audio file missing: {session.audio_s3_key}")
+                    raise Exception(f"Session audio file missing: {session.audio_s3_key}")
             else:
                 raise Exception("No audio file available for QR code generation")
         except Exception as e:

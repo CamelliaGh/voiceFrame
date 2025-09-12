@@ -157,17 +157,8 @@ class ImageProcessor:
             size: Output dimensions
         """
         try:
-            # Check if this is a temporary file
-            if image_path.startswith('temp_'):
-                # This is a temporary file, get the local path
-                from .storage_manager import StorageManager
-                storage_manager = StorageManager()
-                temp_path = storage_manager.get_temp_file_path(image_path)
-                if temp_path and os.path.exists(temp_path):
-                    image = Image.open(temp_path)
-                else:
-                    raise HTTPException(status_code=404, detail="Temporary image file not found")
-            elif self.file_uploader.s3_client:
+            # All files are now in S3 (including temp files)
+            if self.file_uploader.s3_client:
                 # Download from S3
                 temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.jpg')
                 self.file_uploader.s3_client.download_fileobj(
@@ -179,7 +170,7 @@ class ImageProcessor:
                 image = Image.open(temp_file.name)
                 os.unlink(temp_file.name)
             else:
-                # Load from local storage
+                # Fallback: Load from local storage for development
                 local_path = os.path.join(self.file_uploader.local_storage_path, image_path)
                 image = Image.open(local_path)
             
@@ -292,20 +283,9 @@ class ImageProcessor:
             raise HTTPException(status_code=500, detail=f"Thumbnail creation failed: {str(e)}")
     
     def get_image_from_s3(self, s3_key: str) -> Image.Image:
-        """Download and return an image from S3 or temporary storage"""
+        """Download and return an image from S3 (all files now stored in S3)"""
         try:
-            # Check if this is a temporary file
-            if s3_key.startswith('temp_'):
-                # This is a temporary file, get the local path
-                from .storage_manager import StorageManager
-                storage_manager = StorageManager()
-                temp_path = storage_manager.get_temp_file_path(s3_key)
-                if temp_path and os.path.exists(temp_path):
-                    return Image.open(temp_path)
-                else:
-                    raise HTTPException(status_code=404, detail="Temporary image file not found")
-            
-            # Handle permanent S3 files
+            # All files are now in S3 (including temp files)
             if self.file_uploader.s3_client:
                 # Download from S3
                 response = self.file_uploader.s3_client.get_object(
@@ -315,7 +295,7 @@ class ImageProcessor:
                 image_data = response['Body'].read()
                 return Image.open(BytesIO(image_data))
             else:
-                # Load from local storage
+                # Fallback: Load from local storage for development
                 local_path = os.path.join(self.file_uploader.local_storage_path, s3_key)
                 return Image.open(local_path)
         except Exception as e:

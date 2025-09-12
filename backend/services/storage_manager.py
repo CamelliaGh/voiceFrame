@@ -55,18 +55,45 @@ class StorageManager:
             if not audio.content_type or not audio.content_type.startswith('audio/'):
                 raise HTTPException(status_code=400, detail="File must be an audio file")
             
-            # Save to temporary storage
+            # Generate temp key for S3
             temp_key = f"temp_audio/{session_token}.{self._get_audio_extension(audio.filename)}"
-            temp_path = os.path.join(self.temp_storage_path, temp_key)
-            os.makedirs(os.path.dirname(temp_path), exist_ok=True)
             
-            # Write audio file
-            with open(temp_path, "wb") as buffer:
-                content = await audio.read()
-                buffer.write(content)
+            # Upload directly to S3 using file_uploader
+            if self.file_uploader.s3_client:
+                # Reset file position
+                await audio.seek(0)
+                
+                # Upload to S3
+                try:
+                    self.file_uploader.s3_client.upload_fileobj(
+                        audio.file,
+                        settings.s3_bucket,
+                        temp_key,
+                        ExtraArgs={
+                            'ContentType': audio.content_type,
+                            'ServerSideEncryption': 'AES256'
+                        }
+                    )
+                    print(f"DEBUG: Audio uploaded to S3: {temp_key}")
+                except Exception as s3_error:
+                    print(f"ERROR: S3 upload failed: {s3_error}")
+                    raise HTTPException(status_code=500, detail=f"Failed to upload audio to S3: {str(s3_error)}")
+            else:
+                # Fallback to local storage for development
+                temp_path = os.path.join(self.temp_storage_path, temp_key)
+                os.makedirs(os.path.dirname(temp_path), exist_ok=True)
+                
+                # Write audio file
+                await audio.seek(0)
+                with open(temp_path, "wb") as buffer:
+                    content = await audio.read()
+                    buffer.write(content)
+                print(f"DEBUG: Audio stored locally: {temp_path}")
             
             return temp_key
             
+        except HTTPException:
+            raise
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Temporary audio storage failed: {str(e)}")
     

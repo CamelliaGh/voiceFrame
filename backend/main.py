@@ -24,7 +24,6 @@ from .services.stripe_service import StripeService
 from .services.email_service import EmailService
 from .services.permanent_audio_service import PermanentAudioService
 from .services.visual_template_service import VisualTemplateService
-from .services.storage_manager import StorageManager
 from .config import settings
 
 # Create database tables (skip in test mode)
@@ -61,7 +60,6 @@ stripe_service = StripeService()
 email_service = EmailService()
 permanent_audio_service = PermanentAudioService()
 template_service = VisualTemplateService()
-storage_manager = StorageManager()
 
 @app.get("/")
 async def root():
@@ -212,15 +210,15 @@ async def upload_photo(
         if file_extension not in allowed_extensions:
             raise HTTPException(status_code=400, detail=f"Unsupported image format. Allowed: {', '.join(allowed_extensions)}")
         
-        # Store photo temporarily for preview generation
-        temp_photo_key = await storage_manager.store_photo_temporarily(photo, token)
+        # Store photo temporarily for preview generation using FileUploader (S3)
+        temp_photo_key = await file_uploader.upload_file(photo, "temp_photos")
         
         # Update session with temporary key
         session.photo_s3_key = temp_photo_key
         db.commit()
         
         # Get temporary URL for preview
-        temp_photo_url = await storage_manager.get_temp_file_url(temp_photo_key)
+        temp_photo_url = file_uploader.generate_presigned_url(temp_photo_key, expiration=3600)
         
         return UploadResponse(
             status="success",
@@ -268,8 +266,8 @@ async def upload_audio(
         if audio.size < 1024:  # 1KB
             raise HTTPException(status_code=400, detail="Audio file too small (minimum 1KB)")
         
-        # Store audio temporarily for preview generation
-        temp_audio_key = await storage_manager.store_audio_temporarily(audio, token)
+        # Store audio temporarily for preview generation using FileUploader (S3)
+        temp_audio_key = await file_uploader.upload_file(audio, "temp_audio")
         
         # Update session with temporary key
         session.audio_s3_key = temp_audio_key
@@ -344,40 +342,20 @@ async def get_preview(token: str, db: Session = Depends(get_db)):
             }
         )
     
-    # Validate that files actually exist (check both local temp storage and S3)
+    # Validate that files actually exist in S3 (all files now stored in S3)
     from .services.file_uploader import FileUploader
-    from .services.storage_manager import StorageManager
     file_uploader = FileUploader()
-    storage_manager = StorageManager()
     
-    # Check photo file existence
-    photo_exists = False
-    if session.photo_s3_key.startswith('temp_'):
-        # Check local temp storage
-        photo_path = storage_manager.get_temp_file_path(session.photo_s3_key)
-        photo_exists = photo_path and os.path.exists(photo_path)
-    else:
-        # Check S3
-        photo_exists = file_uploader.file_exists(session.photo_s3_key)
-    
-    if not photo_exists:
+    # Check photo file existence in S3
+    if not file_uploader.file_exists(session.photo_s3_key):
         raise HTTPException(
             status_code=400, 
             detail="Photo file is missing. Please upload a new photo.",
             headers={"X-Missing-Component": "photo_file"}
         )
     
-    # Check audio file existence
-    audio_exists = False
-    if session.audio_s3_key.startswith('temp_'):
-        # Check local temp storage
-        audio_path = storage_manager.get_temp_file_path(session.audio_s3_key)
-        audio_exists = audio_path and os.path.exists(audio_path)
-    else:
-        # Check S3
-        audio_exists = file_uploader.file_exists(session.audio_s3_key)
-    
-    if not audio_exists:
+    # Check audio file existence in S3
+    if not file_uploader.file_exists(session.audio_s3_key):
         raise HTTPException(
             status_code=400, 
             detail="Audio file is missing. Please upload a new audio file.",
@@ -490,43 +468,27 @@ async def complete_order(
         if not session:
             raise HTTPException(status_code=404, detail="Session not found for order")
         
-        # Validate that required files exist before generating final PDF
+        # Validate that required files exist in S3 before generating final PDF
         from .services.file_uploader import FileUploader
-        from .services.storage_manager import StorageManager
         file_uploader = FileUploader()
-        storage_manager = StorageManager()
         
-        # Check photo file existence
-        photo_exists = False
-        if session.photo_s3_key and session.photo_s3_key.startswith('temp_'):
-            photo_path = storage_manager.get_temp_file_path(session.photo_s3_key)
-            photo_exists = photo_path and os.path.exists(photo_path)
-        elif session.photo_s3_key:
-            photo_exists = file_uploader.file_exists(session.photo_s3_key)
-        
-        if not photo_exists:
+        # Check photo file existence in S3
+        if not session.photo_s3_key or not file_uploader.file_exists(session.photo_s3_key):
             raise HTTPException(
                 status_code=400, 
                 detail="Photo file is missing. Cannot generate final PDF.",
                 headers={"X-Missing-Component": "photo_file"}
             )
         
-        # Check audio file existence
-        audio_exists = False
-        if session.audio_s3_key and session.audio_s3_key.startswith('temp_'):
-            audio_path = storage_manager.get_temp_file_path(session.audio_s3_key)
-            audio_exists = audio_path and os.path.exists(audio_path)
-        elif session.audio_s3_key:
-            audio_exists = file_uploader.file_exists(session.audio_s3_key)
-        
-        if not audio_exists:
+        # Check audio file existence in S3
+        if not session.audio_s3_key or not file_uploader.file_exists(session.audio_s3_key):
             raise HTTPException(
                 status_code=400, 
                 detail="Audio file is missing. Cannot generate final PDF.",
                 headers={"X-Missing-Component": "audio_file"}
             )
         
-        # Check waveform file existence (waveforms are always in S3)
+        # Check waveform file existence in S3
         if not session.waveform_s3_key or not file_uploader.file_exists(session.waveform_s3_key):
             raise HTTPException(
                 status_code=400, 
