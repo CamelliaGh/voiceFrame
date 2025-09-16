@@ -87,12 +87,12 @@ class PDFGenerator:
             qr_url = self._generate_qr_url(session, order)
             await self._add_qr_code(c, qr_url, template_config, width, height)
             
-            # Add watermark if needed
-            if add_watermark:
-                self._add_watermark(c, width, height)
-            
             # Add template-specific decorations
             self._add_template_decorations(c, template_config, width, height)
+            
+            # Add watermark if needed (LAST - on top of everything)
+            if add_watermark:
+                self._add_watermark(c, width, height)
             
             c.save()
             buffer.seek(0)
@@ -383,7 +383,9 @@ class PDFGenerator:
         
         # Set watermark properties according to specifications
         canvas_obj.setFont("Helvetica", 24)  # 24pt font
-        canvas_obj.setFillColorRGB(0.8, 0.8, 0.8, 0.2)  # Light gray #CCCCCC, 20% opacity
+        # Light gray #CCCCCC with 40% opacity for better visibility
+        canvas_obj.setFillColorRGB(0.8, 0.8, 0.8)  # Light gray #CCCCCC
+        canvas_obj.setFillAlpha(0.4)  # 40% opacity for better visibility
         
         # Rotate and position watermark diagonally across entire poster
         canvas_obj.translate(width / 2, height / 2)

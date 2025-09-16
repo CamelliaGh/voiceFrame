@@ -42,7 +42,22 @@ class FileUploader:
                 await self._upload_to_local(file, file_key)
             
             return file_key
+        
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"File upload failed: {str(e)}")
+    
+    async def upload_file_with_key(self, file: UploadFile, file_key: str) -> str:
+        """Upload file to S3 or local storage with a specific key/path"""
+        try:
+            if self.s3_client:
+                # Upload to S3
+                await self._upload_to_s3(file, file_key)
+            else:
+                # Store locally for development
+                await self._upload_to_local(file, file_key)
             
+            return file_key
+        
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"File upload failed: {str(e)}")
     

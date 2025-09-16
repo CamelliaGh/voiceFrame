@@ -51,7 +51,7 @@ class AudioProcessor:
             
             # Don't delete the original audio file - we need it for QR code generation
             # Only delete if it's a temporary downloaded file (not the original temp file)
-            if not s3_key.startswith('temp_'):
+            if not audio_s3_key.startswith('temp_'):
                 os.unlink(audio_path)
             
             return {
@@ -73,18 +73,18 @@ class AudioProcessor:
     
     async def _download_audio_file(self, s3_key: str) -> str:
         """Download audio file to temporary location"""
-        # Check if this is a temporary file
+        # First check if this is a local temporary file
         if s3_key.startswith('temp_'):
-            # This is a temporary file, get the local path
             from .storage_manager import StorageManager
             storage_manager = StorageManager()
             temp_path = storage_manager.get_temp_file_path(s3_key)
             if temp_path and os.path.exists(temp_path):
+                print(f"Using local temp file: {temp_path}")
                 return temp_path
             else:
-                raise HTTPException(status_code=404, detail="Temporary audio file not found")
+                print(f"Local temp file not found, will download from S3: {s3_key}")
         
-        # Handle permanent S3 files
+        # Handle S3 files (both temporary and permanent)
         if self.file_uploader.s3_client:
             # Download from S3
             temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.mp3')

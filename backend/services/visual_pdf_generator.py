@@ -63,7 +63,7 @@ class VisualPDFGenerator:
             if session.custom_text:
                 await self._add_text_to_template(base_image, session.custom_text, template)
             
-            # Add watermark if needed
+            # Add watermark if needed (LAST - on top of everything)
             if add_watermark:
                 self._add_watermark_to_image(base_image)
             
@@ -321,6 +321,8 @@ class VisualPDFGenerator:
     def _add_watermark_to_image(self, image: Image.Image):
         """Add diagonal watermark to image according to specifications"""
         try:
+            print(f"DEBUG: Starting watermark - image mode: {image.mode}, size: {image.size}")
+            
             # Create a rotated watermark image
             watermark_img = Image.new('RGBA', image.size, (0, 0, 0, 0))
             watermark_draw = ImageDraw.Draw(watermark_img)
@@ -339,6 +341,8 @@ class VisualPDFGenerator:
                 except:
                     font = ImageFont.load_default()
             
+            print(f"DEBUG: Using font size: {font_size}")
+            
             # Calculate text dimensions
             bbox = watermark_draw.textbbox((0, 0), text, font=font)
             text_width = bbox[2] - bbox[0]
@@ -348,25 +352,46 @@ class VisualPDFGenerator:
             x = (image.width - text_width) // 2
             y = (image.height - text_height) // 2
             
-            # Draw watermark text with light gray color #CCCCCC and 20% opacity
-            # RGB(204, 204, 204) with alpha 51 (20% of 255)
-            watermark_draw.text((x, y), text, font=font, fill=(204, 204, 204, 51))
+            print(f"DEBUG: Watermark position: ({x}, {y}), text size: {text_width}x{text_height}")
+            
+            # Draw watermark text with light gray color #CCCCCC and 40% opacity for better visibility
+            # RGB(204, 204, 204) with alpha 102 (40% of 255) - increased for visibility while maintaining readability
+            watermark_draw.text((x, y), text, font=font, fill=(204, 204, 204, 102))
+            print("DEBUG: Watermark text drawn on watermark layer")
             
             # Rotate the watermark image 45 degrees
             rotated_watermark = watermark_img.rotate(45, expand=False, fillcolor=(0, 0, 0, 0))
             
-            # Paste the rotated watermark onto the original image
+            # Ensure the base image supports alpha for proper blending
+            original_mode = image.mode
+            if image.mode != 'RGBA':
+                image = image.convert('RGBA')
+                print(f"DEBUG: Converted image from {original_mode} to RGBA")
+            
+            # Paste the watermark onto the original image with alpha blending
             image.paste(rotated_watermark, (0, 0), rotated_watermark)
-            print("Diagonal watermark added with specifications: 24pt, #CCCCCC, 20% opacity")
+            print("DEBUG: Watermark pasted onto base image")
+            print("Diagonal watermark added with specifications: 24pt, #CCCCCC, 40% opacity")
             
         except Exception as e:
             print(f"Error adding watermark: {e}")
+            import traceback
+            traceback.print_exc()
     
     async def _convert_image_to_pdf(self, image: Image.Image, template: Dict) -> str:
         """Convert image to PDF"""
         try:
-            # Convert to RGB if needed
-            if image.mode != 'RGB':
+            # Convert to RGB if needed, but preserve alpha compositing
+            print(f"DEBUG: Converting image to PDF - current mode: {image.mode}")
+            if image.mode == 'RGBA':
+                print("DEBUG: Image has alpha channel - compositing onto white background")
+                # Create a white background for proper alpha compositing
+                rgb_image = Image.new('RGB', image.size, (255, 255, 255))
+                rgb_image.paste(image, mask=image.split()[-1])  # Use alpha channel as mask
+                image = rgb_image
+                print("DEBUG: Alpha compositing completed")
+            elif image.mode != 'RGB':
+                print(f"DEBUG: Converting from {image.mode} to RGB")
                 image = image.convert('RGB')
             
             # Handle different page sizes and orientations

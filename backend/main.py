@@ -211,7 +211,11 @@ async def upload_photo(
             raise HTTPException(status_code=400, detail=f"Unsupported image format. Allowed: {', '.join(allowed_extensions)}")
         
         # Store photo temporarily for preview generation using FileUploader (S3)
-        temp_photo_key = await file_uploader.upload_file(photo, "temp_photos")
+        # Follow PRD naming: temp_photos/{session_token}.jpg
+        temp_photo_key = f"temp_photos/{token}.jpg"
+        
+        # Upload with specific key name
+        await file_uploader.upload_file_with_key(photo, temp_photo_key)
         
         # Update session with temporary key
         session.photo_s3_key = temp_photo_key
@@ -267,7 +271,12 @@ async def upload_audio(
             raise HTTPException(status_code=400, detail="Audio file too small (minimum 1KB)")
         
         # Store audio temporarily for preview generation using FileUploader (S3)
-        temp_audio_key = await file_uploader.upload_file(audio, "temp_audio")
+        # Follow PRD naming: temp_audio/{session_token}.{extension}
+        file_extension = os.path.splitext(audio.filename.lower())[1]
+        temp_audio_key = f"temp_audio/{token}{file_extension}"
+        
+        # Upload with specific key name
+        await file_uploader.upload_file_with_key(audio, temp_audio_key)
         
         # Update session with temporary key
         session.audio_s3_key = temp_audio_key
