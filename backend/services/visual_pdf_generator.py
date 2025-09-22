@@ -24,12 +24,19 @@ class VisualPDFGenerator:
                           order: Optional[Order] = None) -> str:
         """Generate PDF using visual template"""
         try:
+            # Debug session data
+            print(f"DEBUG: Session data - template_id: {session.template_id}, custom_text: '{session.custom_text}', font_id: {getattr(session, 'font_id', 'NOT_SET')}")
+            print(f"DEBUG: add_watermark parameter: {add_watermark}")
+            print(f"DEBUG: Starting visual PDF generation process...")
+            
             # Get template configuration
+            print(f"DEBUG: Looking for template with ID: {session.template_id}")
             template = self.template_service.get_template(session.template_id)
             if not template:
                 raise ValueError(f"Template {session.template_id} not found")
             
-            print(f"Template configuration: {template}")
+            print(f"DEBUG: Template configuration: {template}")
+            print(f"DEBUG: Template placeholders: {template.get('placeholders', {})}")
             
             # Load template image
             template_path = self.template_service.get_template_path(session.template_id)
@@ -61,11 +68,22 @@ class VisualPDFGenerator:
             
             # Add text
             if session.custom_text:
-                await self._add_text_to_template(base_image, session.custom_text, template)
+                print(f"DEBUG: Adding text '{session.custom_text}' to template")
+                await self._add_text_to_template(base_image, session.custom_text, template, session)
+            else:
+                print(f"DEBUG: No custom text to add (session.custom_text: {session.custom_text})")
             
             # Add watermark if needed (LAST - on top of everything)
             if add_watermark:
-                self._add_watermark_to_image(base_image)
+                print("DEBUG: Adding watermark to image...")
+                # Convert to RGBA BEFORE adding watermark to preserve transparency
+                if base_image.mode != 'RGBA':
+                    print(f"DEBUG: Converting base image from {base_image.mode} to RGBA before watermark")
+                    base_image = base_image.convert('RGBA')
+                base_image = self._add_watermark_to_image(base_image)
+                print("DEBUG: Watermark added successfully!")
+            else:
+                print("DEBUG: No watermark requested (add_watermark=False)")
             
             # Convert to PDF
             pdf_path = await self._convert_image_to_pdf(base_image, template)
@@ -214,9 +232,13 @@ class VisualPDFGenerator:
         except Exception as e:
             print(f"Error adding QR code: {e}")
     
-    async def _add_text_to_template(self, base_image: Image.Image, text: str, template: Dict):
+    async def _add_text_to_template(self, base_image: Image.Image, text: str, template: Dict, session: SessionModel):
         """Add text to template at specified coordinates"""
+        print(f"DEBUG: _add_text_to_template called with text: '{text}'")
+        print(f"DEBUG: Template placeholders: {template.get('placeholders', {})}")
+        
         placeholder = template['placeholders']['text']
+        print(f"DEBUG: Text placeholder: {placeholder}")
         
         try:
             # Create drawing context
@@ -224,67 +246,59 @@ class VisualPDFGenerator:
             
             # Try to load custom font with fallback options
             font = None
-            font_name = placeholder.get('font', 'Arial')
+            # Use session font_id if available, otherwise fall back to template font
+            font_name = session.font_id if hasattr(session, 'font_id') and session.font_id else placeholder.get('font', 'script')
             font_size = placeholder.get('font_size', 32)
+            print(f"DEBUG: Using font_name: {font_name}, font_size: {font_size}")
             
             # Get the project root directory
             project_root = Path(__file__).parent.parent.parent
             
             # Map font names to system fonts or font files
             font_mapping = {
-                'script': project_root / 'fonts' / 'script.ttf',  # Handwritten/script style
-                'elegant': project_root / 'fonts' / 'elegant.ttf',  # Elegant serif
-                'modern': project_root / 'fonts' / 'modern.ttf',  # Modern sans-serif
-                'Arial': 'Arial',
-                'Helvetica': 'Helvetica',
-                'Times': 'Times New Roman',
-                'Courier': 'Courier New'
+                'script': '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',  # Try DejaVu font
+                'elegant': '/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf',  # Try DejaVu serif
+                'modern': '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',  # Try DejaVu sans
+                'vintage': '/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf',  # Try DejaVu serif
+                'classic': '/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf',  # Try DejaVu serif
+                'Arial': '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
+                'Helvetica': '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
+                'Times': '/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf',
+                'Courier': '/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf'
             }
             
             font_path = font_mapping.get(font_name, font_name)
             
             try:
-                if isinstance(font_path, Path) and font_path.exists():
-                    # Try to load from fonts directory
-                    print(f"Loading font from: {font_path}")
-                    font = ImageFont.truetype(str(font_path), font_size)
-                    print(f"Successfully loaded font: {font_name} at size {font_size}")
-                elif isinstance(font_path, str) and font_path.endswith('.ttf'):
-                    # Try to load from fonts directory with string path
-                    full_path = project_root / 'fonts' / font_path
-                    if full_path.exists():
-                        print(f"Loading font from: {full_path}")
-                        font = ImageFont.truetype(str(full_path), font_size)
-                        print(f"Successfully loaded font: {font_name} at size {font_size}")
-                else:
-                    # Try system font
-                    print(f"Loading system font: {font_path}")
-                    font = ImageFont.truetype(font_path, font_size)
-                    print(f"Successfully loaded system font: {font_name} at size {font_size}")
+                # Try system font directly
+                print(f"Loading system font: {font_path}")
+                font = ImageFont.truetype(font_path, font_size)
+                print(f"Successfully loaded system font: {font_name} at size {font_size}")
             except Exception as e:
                 print(f"Failed to load font {font_name}: {e}")
-                # Try alternative script fonts
-                if font_name == 'script':
+                # Try alternative fonts based on font type
+                if font_name in ['script', 'elegant']:
                     try:
-                        # Try some common script fonts on macOS
-                        script_fonts = [
-                            'Bradley Hand',
-                            'Brush Script MT',
-                            'Chalkduster',
-                            'Marker Felt',
-                            'Papyrus'
+                        # Try DejaVu fonts that should be available in Docker
+                        alt_fonts = [
+                            '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
+                            '/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf',
+                            '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+                            '/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf',
+                            '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf',
+                            '/usr/share/fonts/truetype/liberation/LiberationSerif-Bold.ttf'
                         ]
-                        for alt_font in script_fonts:
+                        for alt_font in alt_fonts:
                             try:
                                 font = ImageFont.truetype(alt_font, font_size)
-                                print(f"Successfully loaded alternative script font: {alt_font}")
+                                print(f"Successfully loaded alternative font: {alt_font}")
                                 break
                             except:
                                 continue
                         else:
-                            # If no script font works, use a serif font
-                            font = ImageFont.truetype('Times New Roman', font_size)
-                            print(f"Using Times New Roman as script fallback")
+                            # If no alternative font works, use default font
+                            font = ImageFont.load_default()
+                            print(f"Using default font as fallback")
                     except:
                         # Last resort - use default font
                         font = ImageFont.load_default()
@@ -311,14 +325,17 @@ class VisualPDFGenerator:
             
             y = placeholder['y'] + (placeholder['height'] - text_height) // 2
             
-            # Draw text
-            draw.text((x, y), text, font=font, fill=placeholder.get('color', '#000000'))
-            print(f"Text added at ({x}, {y}): {text} with font {font_name} size {font_size}")
+            # Draw text with the specified color from template
+            text_color = placeholder.get('color', '#000000')
+            print(f"DEBUG: Drawing text at position ({x}, {y}) with font {font_name} size {font_size}")
+            print(f"DEBUG: Using color: {text_color}")
+            draw.text((x, y), text, font=font, fill=text_color)
+            print(f"DEBUG: Text successfully added at ({x}, {y}): '{text}' with font {font_name} size {font_size}")
             
         except Exception as e:
             print(f"Error adding text: {e}")
     
-    def _add_watermark_to_image(self, image: Image.Image):
+    def _add_watermark_to_image(self, image: Image.Image) -> Image.Image:
         """Add diagonal watermark to image according to specifications"""
         try:
             print(f"DEBUG: Starting watermark - image mode: {image.mode}, size: {image.size}")
@@ -327,21 +344,43 @@ class VisualPDFGenerator:
             watermark_img = Image.new('RGBA', image.size, (0, 0, 0, 0))
             watermark_draw = ImageDraw.Draw(watermark_img)
             
-            # Watermark text according to specifications
-            text = "PREVIEW - AudioPoster.com"
+            # Watermark text - back to working version
+            text = "PREVIEW"
             
-            # Use 24pt font (convert to pixels: 24pt ≈ 32px at 96 DPI)
-            font_size = 32
+            # Use a larger font size for better visibility
+            # Scale font size based on image dimensions
+            base_font_size = 48  # Larger base size
+            # Scale font size based on image diagonal (hypotenuse)
+            image_diagonal = (image.width ** 2 + image.height ** 2) ** 0.5
+            # Scale factor: for 800x600 image (diagonal ~1000), use base size
+            # For 2480x3507 image (diagonal ~4300), scale up proportionally
+            scale_factor = image_diagonal / 1000.0
+            font_size = int(base_font_size * scale_factor)
+            # Ensure minimum and maximum font sizes - bigger for visibility
+            font_size = max(48, min(font_size, 150))
             try:
-                # Try to use a sans-serif font
-                font = ImageFont.truetype("Arial", font_size)
+                # Try to use DejaVu Sans (available in most Linux containers)
+                font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", font_size)
+                print(f"DEBUG: Successfully loaded DejaVu Sans Bold font at size {font_size}")
             except:
                 try:
-                    font = ImageFont.truetype("Helvetica", font_size)
+                    # Try Arial
+                    font = ImageFont.truetype("Arial", font_size)
+                    print(f"DEBUG: Successfully loaded Arial font at size {font_size}")
                 except:
-                    font = ImageFont.load_default()
+                    try:
+                        # Try Helvetica
+                        font = ImageFont.truetype("Helvetica", font_size)
+                        print(f"DEBUG: Successfully loaded Helvetica font at size {font_size}")
+                    except:
+                        # Last resort: use default font but with a smaller size that works
+                        font = ImageFont.load_default()
+                        print(f"DEBUG: Using default font (size may not be {font_size})")
+                        # For default font, use a much smaller size that actually works
+                        font_size = 24  # Default font works better with smaller sizes
+                        print(f"DEBUG: Adjusted font size to {font_size} for default font")
             
-            print(f"DEBUG: Using font size: {font_size}")
+            print(f"DEBUG: Using scaled font size: {font_size} (image size: {image.width}x{image.height}, diagonal: {image_diagonal:.0f}, scale factor: {scale_factor:.2f})")
             
             # Calculate text dimensions
             bbox = watermark_draw.textbbox((0, 0), text, font=font)
@@ -354,29 +393,40 @@ class VisualPDFGenerator:
             
             print(f"DEBUG: Watermark position: ({x}, {y}), text size: {text_width}x{text_height}")
             
-            # Draw watermark text with light gray color #CCCCCC and 40% opacity for better visibility
-            # RGB(204, 204, 204) with alpha 102 (40% of 255) - increased for visibility while maintaining readability
-            watermark_draw.text((x, y), text, font=font, fill=(204, 204, 204, 102))
+            # Draw a large gray rectangle first for watermark background
+            rect_width = min(text_width + 100, image.width - 200)
+            rect_height = min(text_height + 50, image.height - 200)
+            rect_x = max(100, x - 50)
+            rect_y = max(100, y - 25)
+            watermark_draw.rectangle([rect_x, rect_y, rect_x + rect_width, rect_y + rect_height], 
+                                   fill=(128, 128, 128, 128))  # Semi-transparent gray background
+            print(f"DEBUG: Drew gray rectangle at ({rect_x}, {rect_y}) with size {rect_width}x{rect_height}")
+            
+            # Draw watermark text with SOLID GRAY color for watermark
+            # RGB(128, 128, 128) with alpha 255 (100% opaque) - SOLID GRAY
+            watermark_draw.text((x, y), text, font=font, fill=(128, 128, 128, 255))
             print("DEBUG: Watermark text drawn on watermark layer")
             
-            # Rotate the watermark image 45 degrees
-            rotated_watermark = watermark_img.rotate(45, expand=False, fillcolor=(0, 0, 0, 0))
+            # No rotation - keep it horizontal
             
-            # Ensure the base image supports alpha for proper blending
+            # Use PIL's alpha_composite for proper transparency blending
             original_mode = image.mode
             if image.mode != 'RGBA':
                 image = image.convert('RGBA')
                 print(f"DEBUG: Converted image from {original_mode} to RGBA")
             
-            # Paste the watermark onto the original image with alpha blending
-            image.paste(rotated_watermark, (0, 0), rotated_watermark)
-            print("DEBUG: Watermark pasted onto base image")
-            print("Diagonal watermark added with specifications: 24pt, #CCCCCC, 40% opacity")
+            # Use alpha_composite instead of paste for better transparency handling
+            image = Image.alpha_composite(image, watermark_img)
+            print("DEBUG: Watermark alpha-composited onto base image")
+            print(f"Horizontal watermark added with specifications: {font_size}px font, gray background, center position")
+            
+            return image
             
         except Exception as e:
             print(f"Error adding watermark: {e}")
             import traceback
             traceback.print_exc()
+            return image  # Return original image on error
     
     async def _convert_image_to_pdf(self, image: Image.Image, template: Dict) -> str:
         """Convert image to PDF"""
@@ -389,7 +439,7 @@ class VisualPDFGenerator:
                 rgb_image = Image.new('RGB', image.size, (255, 255, 255))
                 rgb_image.paste(image, mask=image.split()[-1])  # Use alpha channel as mask
                 image = rgb_image
-                print("DEBUG: Alpha compositing completed")
+                print("DEBUG: Alpha compositing completed - watermark should be preserved")
             elif image.mode != 'RGB':
                 print(f"DEBUG: Converting from {image.mode} to RGB")
                 image = image.convert('RGB')
@@ -504,7 +554,7 @@ class VisualPDFGenerator:
     def _generate_qr_url(self, session: SessionModel, order: Optional[Order] = None) -> str:
         """Generate direct audio file URL for QR code"""
         try:
-            print(f"DEBUG: Visual PDF _generate_qr_url called with session.audio_s3_key: {session.audio_s3_key}")
+            print(f"DEBUG: Visual PDF _generate_qr_url called with session.audio_s3_key: {session.audio_s3_key if session else 'None'}")
             print(f"DEBUG: order: {order}")
             
             if order and order.permanent_audio_s3_key:
@@ -518,7 +568,7 @@ class VisualPDFGenerator:
                     )
                 else:
                     raise Exception(f"Permanent audio file missing: {order.permanent_audio_s3_key}")
-            elif session.audio_s3_key:
+            elif session and session.audio_s3_key:
                 # Preview version - use session audio URL
                 print(f"DEBUG: Using session audio key: {session.audio_s3_key}")
                 print(f"DEBUG: Checking if file exists...")

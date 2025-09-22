@@ -1,0 +1,210 @@
+---
+description: Build process and dependency management rules
+globs: docker-compose.yml, Dockerfile*, requirements*.txt, package.json, package-lock.json
+alwaysApply: true
+---
+
+# Build Process Rules
+
+## **Dependency Management**
+- **All dependencies MUST be properly declared and locked**
+  ```python
+  # ✅ DO: Pin dependency versions in requirements.txt
+  fastapi==0.104.1
+  pydantic==2.5.0
+  sqlalchemy==2.0.23
+  pytest==7.4.3
+  
+  # ❌ DON'T: Use loose version constraints
+  fastapi>=0.100.0  # Can cause version conflicts
+  ```
+
+## **Docker Environment Consistency**
+- **Tests MUST run in the same environment as production**
+  ```yaml
+  # ✅ DO: Use consistent Docker environment for tests
+  version: '3.8'
+  services:
+    backend:
+      build: .
+      environment:
+        - DATABASE_URL=postgresql://user:pass@db:5432/voiceframe
+        - REDIS_URL=redis://redis:6379
+      depends_on:
+        - db
+        - redis
+    
+    test:
+      build: 
+        context: .
+        dockerfile: Dockerfile.test
+      environment:
+        - DATABASE_URL=sqlite:///./test.db
+        - TESTING=true
+      volumes:
+        - .:/app
+  ```
+
+## **Test Environment Setup**
+- **Test environment MUST mirror production dependencies**
+  ```dockerfile
+  # ✅ DO: Use same base image and dependencies for tests
+  FROM python:3.11-slim
+  
+  # Install production dependencies
+  COPY requirements.txt .
+  RUN pip install -r requirements.txt
+  
+  # Install test dependencies
+  COPY requirements-test.txt .
+  RUN pip install -r requirements-test.txt
+  
+  # Set working directory
+  WORKDIR /app
+  
+  # Copy application code
+  COPY . .
+  
+  # Run tests
+  CMD ["python", "-m", "pytest", "backend/tests/", "-v"]
+  ```
+
+## **Pre-commit Hooks**
+- **Implement pre-commit hooks to catch errors early**
+  ```yaml
+  # .pre-commit-config.yaml
+  repos:
+    - repo: local
+      hooks:
+        - id: test-imports
+          name: Test Import Validation
+          entry: python -c "import backend.tests.test_file_migration; print('All imports valid')"
+          language: system
+          files: ^backend/tests/.*\.py$
+        
+        - id: test-syntax
+          name: Python Syntax Check
+          entry: python -m py_compile
+          language: system
+          files: ^backend/.*\.py$
+  ```
+
+## **CI/CD Pipeline**
+- **Automated testing MUST run before deployment**
+  ```yaml
+  # .github/workflows/test.yml
+  name: Test Suite
+  
+  on: [push, pull_request]
+  
+  jobs:
+    test:
+      runs-on: ubuntu-latest
+      
+      steps:
+        - uses: actions/checkout@v3
+        
+        - name: Set up Python
+          uses: actions/setup-python@v4
+          with:
+            python-version: '3.11'
+        
+        - name: Install dependencies
+          run: |
+            pip install -r requirements.txt
+            pip install -r requirements-test.txt
+        
+        - name: Run tests
+          run: python -m pytest backend/tests/ -v
+        
+        - name: Check imports
+          run: |
+            python -c "from backend.tests.test_file_migration import TestClient; print('Import check passed')"
+  ```
+
+## **Dependency Validation**
+- **Validate all imports before running tests**
+  ```python
+  # scripts/validate_imports.py
+  import ast
+  import sys
+  from pathlib import Path
+  
+  def validate_imports(file_path):
+      """Validate that all imports in a file are available"""
+      try:
+          with open(file_path, 'r') as f:
+              content = f.read()
+          
+          # Parse the file
+          tree = ast.parse(content)
+          
+          # Check imports
+          for node in ast.walk(tree):
+              if isinstance(node, ast.Import):
+                  for alias in node.names:
+                      try:
+                          __import__(alias.name)
+                      except ImportError as e:
+                          print(f"Missing import in {file_path}: {alias.name}")
+                          return False
+              elif isinstance(node, ast.ImportFrom):
+                  if node.module:
+                      try:
+                          __import__(node.module)
+                      except ImportError as e:
+                          print(f"Missing import in {file_path}: {node.module}")
+                          return False
+          
+          return True
+      except Exception as e:
+          print(f"Error validating {file_path}: {e}")
+          return False
+  
+  if __name__ == "__main__":
+      test_files = Path("backend/tests").glob("*.py")
+      all_valid = True
+      
+      for test_file in test_files:
+          if not validate_imports(test_file):
+              all_valid = False
+      
+      if not all_valid:
+          sys.exit(1)
+      else:
+          print("All imports validated successfully")
+  ```
+
+## **Build Verification**
+- **Verify build process catches common errors**
+  ```bash
+  # scripts/build_check.sh
+  #!/bin/bash
+  
+  echo "Running build verification..."
+  
+  # Check Python syntax
+  echo "Checking Python syntax..."
+  python -m py_compile backend/**/*.py
+  
+  # Check imports
+  echo "Checking imports..."
+  python scripts/validate_imports.py
+  
+  # Run tests in Docker
+  echo "Running tests in Docker..."
+  docker-compose -f docker-compose.yml run --rm test
+  
+  echo "Build verification complete!"
+  ```
+
+## **Error Prevention Checklist**
+Before building/deploying, verify:
+- [ ] All dependencies are properly declared
+- [ ] Test environment matches production
+- [ ] Pre-commit hooks are configured
+- [ ] CI/CD pipeline runs tests
+- [ ] Import validation script passes
+- [ ] Build verification script passes
+- [ ] Docker environment is consistent
+- [ ] Test dependencies are installed

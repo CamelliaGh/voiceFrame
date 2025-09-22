@@ -1,0 +1,80 @@
+---
+description: Essential project context and technology stack for VoiceFrame
+alwaysApply: true
+---
+
+# VoiceFrame Project Context
+
+## Project Overview
+- **Name**: VoiceFrame - Audio Poster Generator
+- **Type**: Full-stack web application for creating visual posters from audio files
+- **Architecture**: React frontend + FastAPI backend + PostgreSQL database
+
+## Technology Stack
+
+### Frontend
+- **Framework**: React 18 with TypeScript
+- **Build Tool**: Vite
+- **Styling**: Tailwind CSS
+- **Testing**: Vitest + React Testing Library
+- **State Management**: React Context API
+- **HTTP Client**: Axios
+
+### Backend
+- **Framework**: FastAPI (Python 3.11+)
+- **Database**: PostgreSQL with SQLAlchemy ORM
+- **Migrations**: Alembic
+- **Testing**: pytest
+- **Task Queue**: Celery (for background processing)
+- **File Storage**: AWS S3
+- **Payment Processing**: Stripe
+
+### Development & Deployment
+- **Containerization**: Docker + Docker Compose
+- **Database**: PostgreSQL
+- **Web Server**: Nginx (production)
+- **Environment Management**: Python virtual environments
+- **Package Management**: npm (frontend), pip (backend)
+
+### Key Services
+- **Audio Processing**: Custom audio analysis and visualization
+- **PDF Generation**: Dynamic poster creation with templates
+- **File Management**: S3 integration for file storage
+- **Session Management**: User session handling
+- **Email Service**: User notifications
+- **Visual Templates**: Multiple poster design templates
+
+### Development Workflow
+- **Task Management**: Taskmaster AI with tagged task lists
+- **Testing Strategy**: Unit tests, integration tests, component tests
+- **Code Quality**: ESLint, Prettier, TypeScript strict mode
+- **Version Control**: Git with conventional commits
+
+### Project Structure
+```
+voiceFrame/
+├── src/                    # React frontend
+├── backend/               # FastAPI backend
+├── templates/             # Poster design templates
+├── backgrounds/           # Background images
+├── docs/                  # Documentation
+└── .taskmaster/          # Task management
+```
+
+### Key Dependencies
+- **Frontend**: React, TypeScript, Tailwind, Vite, Vitest
+- **Backend**: FastAPI, SQLAlchemy, Alembic, Celery, Stripe, boto3
+- **Database**: PostgreSQL, psycopg2
+- **Testing**: pytest, vitest, @testing-library/react
+
+### Environment Setup
+- **Frontend**: `npm install && npm run dev`
+- **Backend**: `pip install -r requirements.txt && uvicorn backend.main:app`
+- **Database**: PostgreSQL running via Docker
+- **Testing**: `npm test` (frontend), `python -m pytest` (backend)
+
+### Important Notes
+- Project uses Docker for dependency isolation
+- Repository should remain private
+- All tasks should include comprehensive testing
+- Follow the established dev_workflow.mdc process

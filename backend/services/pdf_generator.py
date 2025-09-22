@@ -40,10 +40,12 @@ class PDFGenerator:
         """Generate watermarked preview PDF"""
         # Check if visual template exists
         if self._has_visual_template(session.template_id):
-            print(f"Using visual template for {session.template_id}")
+            print(f"DEBUG: Using visual template for {session.template_id}")
+            print(f"DEBUG: Calling visual_generator.generate_pdf with add_watermark=True")
             return await self.visual_generator.generate_pdf(session, add_watermark=True)
         else:
-            print(f"Using code-based template for {session.template_id}")
+            print(f"DEBUG: Using code-based template for {session.template_id}")
+            print(f"DEBUG: Calling _generate_pdf with add_watermark=True")
             return await self._generate_pdf(session, add_watermark=True)
     
     async def generate_final_pdf(self, session: SessionModel, order: Order) -> str:
@@ -438,7 +440,7 @@ class PDFGenerator:
     def _generate_qr_url(self, session: SessionModel, order: Optional[Order] = None) -> str:
         """Generate direct audio file URL for QR code"""
         try:
-            print(f"DEBUG: _generate_qr_url called with session.audio_s3_key: {session.audio_s3_key}")
+            print(f"DEBUG: _generate_qr_url called with session.audio_s3_key: {session.audio_s3_key if session else 'None'}")
             print(f"DEBUG: order: {order}")
             
             if order and order.permanent_audio_s3_key:
@@ -452,7 +454,7 @@ class PDFGenerator:
                     )
                 else:
                     raise Exception(f"Permanent audio file missing: {order.permanent_audio_s3_key}")
-            elif session.audio_s3_key:
+            elif session and session.audio_s3_key:
                 # Preview version - use session audio URL
                 print(f"DEBUG: Using session audio key: {session.audio_s3_key}")
                 print(f"DEBUG: Checking if file exists...")

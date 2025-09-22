@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # PostgreSQL Database
   db:
@@ -50,6 +48,7 @@ services:
     volumes:
       - ./backend:/app/backend
       - ./templates:/app/templates
+      - ./fonts:/app/fonts
       - file_storage:/tmp/audioposter
     depends_on:
       db:
@@ -77,6 +76,7 @@ services:
       - S3_REGION=us-east-2
     volumes:
       - ./backend:/app/backend
+      - ./fonts:/app/fonts
       - file_storage:/tmp/audioposter
     depends_on:
       db:
@@ -101,6 +101,29 @@ services:
       redis:
         condition: service_healthy
     restart: unless-stopped
+
+  # Test environment
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    environment:
+      - DATABASE_URL=sqlite:///./test.db
+      - TESTING=true
+      - DEBUG=true
+      # Add AWS S3 credentials for testing
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - S3_BUCKET=audioposter-bucket
+      - S3_REGION=us-east-2
+    volumes:
+      - ./backend:/app/backend
+      - ./templates:/app/templates
+      - ./fonts:/app/fonts
+      - ./scripts:/app/scripts
+      - ./requirements-test.txt:/app/requirements-test.txt
+    working_dir: /app
+    command: tail -f /dev/null  # Keep container running for interactive testing
 
   # Nginx for serving static files and reverse proxy (production)
   nginx:

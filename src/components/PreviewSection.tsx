@@ -78,7 +78,7 @@ export default function PreviewSection({ onNext, onBack }: PreviewSectionProps) 
 
   useEffect(() => {
     generatePreview()
-  }, [session])
+  }, [session?.custom_text, session?.pdf_size, session?.template_id, session?.background_id, session?.photo_s3_key, session?.waveform_s3_key])
 
   const handleDownloadPreview = () => {
     if (previewUrl) {

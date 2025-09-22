@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Type, ArrowLeft, ArrowRight, Image, FileText } from 'lucide-react'
 import { useSession } from '../contexts/SessionContext'
 import { cn } from '../lib/utils'
+import { SessionData } from '../lib/api'
+import RealTimePreview from './RealTimePreview'
 
 interface CustomizationPanelProps {
   onNext: () => void
@@ -9,18 +11,88 @@ interface CustomizationPanelProps {
 }
 
 const textSuggestions = [
+  // Romantic & Love
   "Our Song ♪",
-  "First Dance 💕",
-  "Wedding Day",
-  "Anniversary Memory",
   "I Love You",
   "Forever & Always",
-  "Our Love Story",
-  "Special Moment",
   "Together Forever",
-  "You & Me",
   "My Heart",
-  "Perfect Day"
+  "You & Me",
+  "Love Always",
+  "My Everything",
+  "Heart & Soul",
+  "True Love",
+  "Soulmates",
+  "Love Story",
+  "Made for Each Other",
+  "In Love",
+  "Love You More",
+  
+  // Wedding & Marriage
+  "Wedding Day",
+  "First Dance 💕",
+  "Mr. & Mrs.",
+  "Happily Ever After",
+  "Just Married",
+  "Wedding Memories",
+  "Our Big Day",
+  "I Do",
+  "Married Life",
+  "Husband & Wife",
+  "Wedding Song",
+  "Our Vows",
+  "Wedding Day Magic",
+  
+  // Anniversary & Special Dates
+  "Anniversary Memory",
+  "One Year Together",
+  "5 Years Strong",
+  "10 Years of Love",
+  "Golden Anniversary",
+  "Our Anniversary",
+  "Celebrating Us",
+  "Years of Happiness",
+  "Anniversary Song",
+  "Special Date",
+  "Our Milestone",
+  
+  // Family & Children
+  "Baby's First Song",
+  "Welcome Little One",
+  "Our Family",
+  "Mommy & Daddy Love You",
+  "Sweet Dreams Baby",
+  "Little Angel",
+  "Family Love",
+  "Our Child",
+  "Growing Family",
+  "Baby Love",
+  "Family Song",
+  
+  // Memories & Moments
+  "Special Moment",
+  "Perfect Day",
+  "Our Memories",
+  "Best Day Ever",
+  "Unforgettable",
+  "Precious Moments",
+  "Sweet Memories",
+  "Amazing Day",
+  "Wonderful Time",
+  "Happy Times",
+  "Beautiful Memory",
+  "Magical Moment",
+  "Cherished Memory",
+  "Special Time",
+  "Incredible Day"
+]
+
+const fontOptions = [
+  { id: 'script', name: 'Script', description: 'Handwritten style' },
+  { id: 'elegant', name: 'Elegant', description: 'Sophisticated serif' },
+  { id: 'modern', name: 'Modern', description: 'Clean sans-serif' },
+  { id: 'vintage', name: 'Vintage', description: 'Classic antique feel' },
+  { id: 'classic', name: 'Classic', description: 'Traditional serif' }
 ]
 
 const backgroundOptions = [
@@ -64,6 +136,10 @@ const getFramedTemplateId = (pdfSize: string) => {
       return 'framed_a4_landscape'
     case 'A4':
       return 'framed_a4_portrait'
+    case 'A3_Landscape':
+      return 'framed_a3_landscape'
+    case 'A3':
+      return 'framed_a3_portrait'
     case 'Letter_Landscape':
       return 'framed_letter_landscape'
     case 'Letter':
@@ -78,22 +154,98 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
   const [customText, setCustomText] = useState(session?.custom_text || '')
   const [pdfSize, setPdfSize] = useState<'A4' | 'A4_Landscape' | 'Letter' | 'Letter_Landscape' | 'A3' | 'A3_Landscape'>(session?.pdf_size || 'A4')
   const [backgroundId, setBackgroundId] = useState(session?.background_id || 'none')
+  const [fontId, setFontId] = useState(session?.font_id || 'script')
   const [characterCount, setCharacterCount] = useState(0)
+  const [isUpdating, setIsUpdating] = useState(false)
 
   useEffect(() => {
     setCharacterCount(customText.length)
   }, [customText])
 
+  // Debounced update function for real-time preview
+  const debouncedUpdate = useCallback(
+    (() => {
+      let timeoutId: NodeJS.Timeout
+      return (data: Partial<SessionData>) => {
+        clearTimeout(timeoutId)
+        timeoutId = setTimeout(async () => {
+          if (!session) return
+          try {
+            setIsUpdating(true)
+            await updateSessionData(data)
+          } catch (error) {
+            console.error('Failed to update session:', error)
+          } finally {
+            setIsUpdating(false)
+          }
+        }, 500) // 500ms delay
+      }
+    })(),
+    [session, updateSessionData]
+  )
+
   const handleTextChange = (text: string) => {
     if (text.length <= 200) {
       setCustomText(text)
+      // Update session in real-time for preview
+      debouncedUpdate({
+        custom_text: text.trim(),
+        pdf_size: pdfSize,
+        template_id: getFramedTemplateId(pdfSize),
+        background_id: backgroundId,
+        font_id: fontId
+      })
     }
   }
 
   const handleSuggestionClick = (suggestion: string) => {
     if (suggestion.length <= 200) {
       setCustomText(suggestion)
+      // Update session in real-time for preview
+      debouncedUpdate({
+        custom_text: suggestion.trim(),
+        pdf_size: pdfSize,
+        template_id: getFramedTemplateId(pdfSize),
+        background_id: backgroundId,
+        font_id: fontId
+      })
     }
+  }
+
+  const handlePdfSizeChange = (newPdfSize: 'A4' | 'A4_Landscape' | 'Letter' | 'Letter_Landscape' | 'A3' | 'A3_Landscape') => {
+    setPdfSize(newPdfSize)
+    // Update session in real-time for preview
+    debouncedUpdate({
+      custom_text: customText.trim(),
+      pdf_size: newPdfSize,
+      template_id: getFramedTemplateId(newPdfSize),
+      background_id: backgroundId,
+      font_id: fontId
+    })
+  }
+
+  const handleBackgroundChange = (newBackgroundId: string) => {
+    setBackgroundId(newBackgroundId)
+    // Update session in real-time for preview
+    debouncedUpdate({
+      custom_text: customText.trim(),
+      pdf_size: pdfSize,
+      template_id: getFramedTemplateId(pdfSize),
+      background_id: newBackgroundId,
+      font_id: fontId
+    })
+  }
+
+  const handleFontChange = (newFontId: string) => {
+    setFontId(newFontId)
+    // Update session in real-time for preview
+    debouncedUpdate({
+      custom_text: customText.trim(),
+      pdf_size: pdfSize,
+      template_id: getFramedTemplateId(pdfSize),
+      background_id: backgroundId,
+      font_id: newFontId
+    })
   }
 
   const handleSave = async () => {
@@ -115,7 +267,8 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
       custom_text: customText.trim(),
       pdf_size: pdfSize,
       template_id: finalTemplateId,
-      background_id: backgroundId
+      background_id: backgroundId,
+      font_id: fontId
     })
   }
 
@@ -136,9 +289,15 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
         <p className="text-gray-600">
           Personalize your audio poster with custom text, size, and background options.
         </p>
+        {isUpdating && (
+          <div className="mt-2 flex items-center justify-center space-x-2 text-sm text-primary-600">
+            <div className="w-4 h-4 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
+            <span>Updating preview...</span>
+          </div>
+        )}
       </div>
 
-      <div className="max-w-2xl mx-auto">
+      <div className="grid lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
         {/* Customization Options */}
         <div className="space-y-6">
           {/* Custom Text */}
@@ -216,7 +375,7 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
                       name="pdfSize"
                       value={size.value}
                       checked={pdfSize === size.value}
-                      onChange={(e) => setPdfSize(e.target.value as 'A4' | 'A4_Landscape' | 'Letter' | 'Letter_Landscape' | 'A3' | 'A3_Landscape')}
+                      onChange={(e) => handlePdfSizeChange(e.target.value as 'A4' | 'A4_Landscape' | 'Letter' | 'Letter_Landscape' | 'A3' | 'A3_Landscape')}
                       className="text-primary-600 focus:ring-primary-500"
                     />
                     <span className="font-medium">{size.label}</span>
@@ -249,7 +408,7 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
                     name="background"
                     value={background.id}
                     checked={backgroundId === background.id}
-                    onChange={(e) => setBackgroundId(e.target.value)}
+                    onChange={(e) => handleBackgroundChange(e.target.value)}
                     className="text-primary-600 focus:ring-primary-500"
                   />
                   
@@ -278,6 +437,47 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
             </div>
           </div>
 
+          {/* Font Selection */}
+          <div className="card">
+            <div className="flex items-center space-x-2 mb-4">
+              <Type className="w-5 h-5 text-primary-600" />
+              <h3 className="text-lg font-semibold text-gray-900">Font Style</h3>
+            </div>
+            
+            <div className="space-y-3">
+              {fontOptions.map((font) => (
+                <label
+                  key={font.id}
+                  className={cn(
+                    'flex items-center space-x-3 p-3 border rounded-lg cursor-pointer transition-colors duration-200',
+                    fontId === font.id
+                      ? 'border-primary-500 bg-primary-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  )}
+                >
+                  <input
+                    type="radio"
+                    name="font"
+                    value={font.id}
+                    checked={fontId === font.id}
+                    onChange={(e) => handleFontChange(e.target.value)}
+                    className="text-primary-600 focus:ring-primary-500"
+                  />
+                  
+                  <div className="flex-1">
+                    <div className="font-medium text-gray-900">{font.name}</div>
+                    <div className="text-sm text-gray-500">{font.description}</div>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+
+        </div>
+
+        {/* Real-time Preview */}
+        <div className="lg:sticky lg:top-8 lg:h-fit">
+          <RealTimePreview />
         </div>
       </div>
 

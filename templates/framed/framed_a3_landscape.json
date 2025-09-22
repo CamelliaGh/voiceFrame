@@ -1,0 +1,39 @@
+{
+  "name": "Framed Template - A3 Landscape",
+  "description": "Elegant framed design for A3 landscape orientation",
+  "template_file": "framed_template_a4_landscape.png",
+  "page_size": "A3_Landscape",
+  "is_premium": false,
+  "premium_price_cents": null,
+  "premium_features": [],
+  "placeholders": {
+    "text": {
+      "x": 753,
+      "y": 50,
+      "width": 1999,
+      "height": 150,
+      "font": "script",
+      "font_size": 300,
+      "color": "#000000",
+      "alignment": "center"
+    },
+    "photo": {
+      "x": 603,
+      "y": 400,
+      "width": 2299,
+      "height": 1400
+    },
+    "waveform": {
+      "x": 753,
+      "y": 1850,
+      "width": 1999,
+      "height": 200
+    },
+    "qr_code": {
+      "x": 1603,
+      "y": 2150,
+      "width": 299,
+      "height": 300
+    }
+  }
+}

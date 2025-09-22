@@ -18,6 +18,7 @@ from .schemas import (
 from .services.session_manager import SessionManager
 from .services.file_uploader import FileUploader
 from .services.audio_processor import AudioProcessor
+from .services.storage_manager import StorageManager
 from .services.image_processor import ImageProcessor
 from .services.pdf_generator import PDFGenerator
 from .services.stripe_service import StripeService
@@ -25,6 +26,9 @@ from .services.email_service import EmailService
 from .services.permanent_audio_service import PermanentAudioService
 from .services.visual_template_service import VisualTemplateService
 from .config import settings
+
+# Initialize services
+storage_manager = StorageManager()
 
 # Create database tables (skip in test mode)
 if not os.getenv("TESTING", False):
@@ -118,7 +122,7 @@ async def update_session(
     db: Session = Depends(get_db)
 ):
     """Update session customization data"""
-    print(f"DEBUG: Received data: {data.dict()}")
+    print(f"DEBUG: Received data: {data.model_dump()}")
     
     session = session_manager.get_session(db, token)
     if not session:
@@ -136,9 +140,11 @@ async def update_session(
         raise HTTPException(status_code=400, detail="Audio processing not complete. Please wait and try again.")
     
     try:
-        update_data = data.dict(exclude_unset=True)
+        update_data = data.model_dump(exclude_unset=True)
         print(f"DEBUG: Update data after exclude_unset: {update_data}")
+        print(f"DEBUG: Session before update - custom_text: '{session.custom_text}', font_id: '{session.font_id}'")
         session_manager.update_session(db, session, update_data)
+        print(f"DEBUG: Session after update - custom_text: '{session.custom_text}', font_id: '{session.font_id}'")
         return {"status": "updated"}
     except ValueError as e:
         print(f"DEBUG: ValueError in update_session: {e}")
@@ -190,26 +196,26 @@ async def upload_photo(
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
     
+    # Validate file
+    if not photo.filename:
+        raise HTTPException(status_code=400, detail="No file selected")
+    
+    if photo.size == 0:
+        raise HTTPException(status_code=400, detail="File is empty")
+    
+    if not photo.content_type or not photo.content_type.startswith('image/'):
+        raise HTTPException(status_code=400, detail="File must be an image (JPEG, PNG, etc.)")
+    
+    if photo.size > 50 * 1024 * 1024:  # 50MB
+        raise HTTPException(status_code=400, detail="File too large (max 50MB)")
+    
+    # Validate file extension
+    allowed_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'}
+    file_extension = os.path.splitext(photo.filename.lower())[1]
+    if file_extension not in allowed_extensions:
+        raise HTTPException(status_code=400, detail=f"Unsupported image format. Allowed: {', '.join(allowed_extensions)}")
+    
     try:
-        # Validate file
-        if not photo.filename:
-            raise HTTPException(status_code=400, detail="No file selected")
-        
-        if photo.size == 0:
-            raise HTTPException(status_code=400, detail="File is empty")
-        
-        if not photo.content_type or not photo.content_type.startswith('image/'):
-            raise HTTPException(status_code=400, detail="File must be an image (JPEG, PNG, etc.)")
-        
-        if photo.size > 50 * 1024 * 1024:  # 50MB
-            raise HTTPException(status_code=400, detail="File too large (max 50MB)")
-        
-        # Validate file extension
-        allowed_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'}
-        file_extension = os.path.splitext(photo.filename.lower())[1]
-        if file_extension not in allowed_extensions:
-            raise HTTPException(status_code=400, detail=f"Unsupported image format. Allowed: {', '.join(allowed_extensions)}")
-        
         # Store photo temporarily for preview generation using FileUploader (S3)
         # Follow PRD naming: temp_photos/{session_token}.jpg
         temp_photo_key = f"temp_photos/{token}.jpg"
@@ -246,30 +252,30 @@ async def upload_audio(
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
     
+    # Validate file
+    if not audio.filename:
+        raise HTTPException(status_code=400, detail="No audio file selected")
+    
+    if audio.size == 0:
+        raise HTTPException(status_code=400, detail="Audio file is empty")
+    
+    if not audio.content_type or not audio.content_type.startswith('audio/'):
+        raise HTTPException(status_code=400, detail="File must be an audio file (MP3, WAV, etc.)")
+    
+    if audio.size > 100 * 1024 * 1024:  # 100MB
+        raise HTTPException(status_code=400, detail="Audio file too large (max 100MB)")
+    
+    # Validate file extension
+    allowed_extensions = {'.mp3', '.wav', '.m4a', '.aac', '.ogg', '.flac'}
+    file_extension = os.path.splitext(audio.filename.lower())[1]
+    if file_extension not in allowed_extensions:
+        raise HTTPException(status_code=400, detail=f"Unsupported audio format. Allowed: {', '.join(allowed_extensions)}")
+    
+    # Check minimum file size (at least 1KB)
+    if audio.size < 1024:  # 1KB
+        raise HTTPException(status_code=400, detail="Audio file too small (minimum 1KB)")
+    
     try:
-        # Validate file
-        if not audio.filename:
-            raise HTTPException(status_code=400, detail="No audio file selected")
-        
-        if audio.size == 0:
-            raise HTTPException(status_code=400, detail="Audio file is empty")
-        
-        if not audio.content_type or not audio.content_type.startswith('audio/'):
-            raise HTTPException(status_code=400, detail="File must be an audio file (MP3, WAV, etc.)")
-        
-        if audio.size > 100 * 1024 * 1024:  # 100MB
-            raise HTTPException(status_code=400, detail="Audio file too large (max 100MB)")
-        
-        # Validate file extension
-        allowed_extensions = {'.mp3', '.wav', '.m4a', '.aac', '.ogg', '.flac'}
-        file_extension = os.path.splitext(audio.filename.lower())[1]
-        if file_extension not in allowed_extensions:
-            raise HTTPException(status_code=400, detail=f"Unsupported audio format. Allowed: {', '.join(allowed_extensions)}")
-        
-        # Check minimum file size (at least 1KB)
-        if audio.size < 1024:  # 1KB
-            raise HTTPException(status_code=400, detail="Audio file too small (minimum 1KB)")
-        
         # Store audio temporarily for preview generation using FileUploader (S3)
         # Follow PRD naming: temp_audio/{session_token}.{extension}
         file_extension = os.path.splitext(audio.filename.lower())[1]
@@ -323,7 +329,9 @@ async def get_preview(token: str, db: Session = Depends(get_db)):
     
     # Refresh session to ensure we have the latest data from database
     # This is important because Celery workers might have updated the session
+    print(f"DEBUG: Session before refresh - custom_text: '{session.custom_text}', font_id: '{session.font_id}'")
     db.refresh(session)
+    print(f"DEBUG: Session after refresh - custom_text: '{session.custom_text}', font_id: '{session.font_id}'")
     
     # Check detailed status with specific error messages
     if not session.photo_s3_key:
@@ -385,6 +393,7 @@ async def get_preview(token: str, db: Session = Depends(get_db)):
         
         # Generate preview PDF with watermark
         print(f"DEBUG: Calling pdf_generator.generate_preview_pdf")
+        print(f"DEBUG: Session template_id: {session.template_id}")
         pdf_url = await pdf_generator.generate_preview_pdf(session)
         print(f"DEBUG: PDF generation successful, URL: {pdf_url}")
         

@@ -32,6 +32,7 @@ class TestSessionModel(TestBase):
     pdf_size = Column(String(20), default='A4')
     template_id = Column(String(50), default='classic')
     background_id = Column(String(50), default='none')
+    font_id = Column(String(50), default='script')
     audio_duration = Column(Float, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     expires_at = Column(DateTime, default=lambda: datetime.utcnow() + timedelta(hours=24))
@@ -115,7 +116,7 @@ def client(db_session):
 def sample_session(db_session):
     """Create a sample session for testing"""
     session = TestSessionModel(
-        id="test-session-id",
+        id=str(uuid.uuid4()),
         session_token="test-session-token",
         photo_s3_key="temp_photos/test.jpg",
         audio_s3_key="temp_audio/test.mp3",
@@ -136,7 +137,7 @@ def sample_session(db_session):
 def sample_order(db_session):
     """Create a sample order for testing"""
     order = TestOrder(
-        id="test-order-id",
+        id=str(uuid.uuid4()),
         email="test@example.com",
         amount_cents=999,
         status="completed",

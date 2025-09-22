@@ -1,0 +1,170 @@
+---
+description: Test data creation and fixture management rules
+globs: backend/tests/**/*.py
+alwaysApply: true
+---
+
+# Test Data Rules
+
+## **UUID Field Handling in Tests**
+- **Test data MUST use proper UUID objects for UUID fields**
+  ```python
+  # ✅ DO: Use proper UUID generation in test fixtures
+  import uuid
+  
+  @pytest.fixture
+  def mock_session(self):
+      return SessionModel(
+          id=str(uuid.uuid4()),  # Proper UUID as string
+          session_token="test-session-token",
+          # ... other fields
+      )
+  
+  # ❌ DON'T: Use plain strings for UUID fields
+  @pytest.fixture
+  def mock_session(self):
+      return SessionModel(
+          id="test-session-id",  # Causes 'str' object has no attribute 'hex' error
+          session_token="test-session-token",
+          # ... other fields
+      )
+  ```
+
+## **Mock Attribute Patching**
+- **When mocking instance attributes, patch the instance, not the class**
+  ```python
+  # ✅ DO: Mock instance attributes directly
+  def test_pdf_generation(self, pdf_generator):
+      # Mock the file_uploader instance attribute
+      pdf_generator.file_uploader.file_exists.return_value = True
+      pdf_generator.file_uploader.generate_presigned_url.return_value = "https://example.com/test"
+      
+      # Use the mocked instance
+      result = pdf_generator.some_method()
+      
+      # Verify calls
+      pdf_generator.file_uploader.generate_presigned_url.assert_called_once()
+  
+  # ❌ DON'T: Try to patch class attributes that are instance attributes
+  @patch.object(PDFGenerator, 'file_uploader')  # This fails because file_uploader is created in __init__
+  def test_pdf_generation(self, mock_file_uploader, pdf_generator):
+      # This will cause AttributeError
+      mock_file_uploader.file_exists.return_value = True
+  ```
+
+## **Alternative Mocking Strategies**
+- **Use dependency injection mocking when appropriate**
+  ```python
+  # ✅ DO: Mock at the point of injection
+  @patch('backend.main.storage_manager')
+  def test_migration(self, mock_storage_manager):
+      mock_storage_manager.migrate_all_session_files.return_value = {
+          "permanent_photo_s3_key": "permanent/photos/test.jpg"
+      }
+  
+  # ✅ DO: Use patch with proper target
+  @patch('backend.services.pdf_generator.FileUploader')
+  def test_pdf_generation(self, mock_file_uploader_class):
+      mock_instance = mock_file_uploader_class.return_value
+      mock_instance.file_exists.return_value = True
+      mock_instance.generate_presigned_url.return_value = "https://example.com/test"
+  ```
+
+## **Validation Error Testing**
+- **Test validation errors with correct exception types and messages**
+  ```python
+  # ✅ DO: Use correct exception type and message for Pydantic V2
+  from pydantic import ValidationError
+  
+  def test_validation_errors():
+      # For Literal fields, use ValidationError with Pydantic's message
+      with pytest.raises(ValidationError, match="Input should be 'square' or 'circle'"):
+          SessionUpdate(photo_shape="invalid")
+      
+      # For custom validators, use ValueError with custom message
+      with pytest.raises(ValueError, match="Invalid template"):
+          SessionUpdate(template_id="invalid")
+  
+  # ❌ DON'T: Use wrong exception type or message
+  def test_validation_errors():
+      # This fails because Literal fields use ValidationError, not ValueError
+      with pytest.raises(ValueError, match="Photo shape must be either"):
+          SessionUpdate(photo_shape="invalid")
+  ```
+
+## **Test Data Consistency**
+- **Ensure test data matches production data structure**
+  ```python
+  # ✅ DO: Use consistent test data structure
+  @pytest.fixture
+  def mock_session(self):
+      return SessionModel(
+          id=str(uuid.uuid4()),
+          session_token="test-session-token",
+          photo_s3_key="temp_photos/test.jpg",
+          audio_s3_key="temp_audio/test.mp3",
+          waveform_s3_key="waveforms/test.png",
+          custom_text="Test text",
+          photo_shape="square",
+          pdf_size="A4",
+          template_id="framed_a4_portrait",
+          background_id="none",
+          audio_duration=30.5,
+          created_at=datetime.utcnow(),
+          expires_at=datetime.utcnow() + timedelta(hours=24)
+      )
+  ```
+
+## **Import Management in Tests**
+- **All test files MUST import required dependencies**
+  ```python
+  # ✅ DO: Import all required dependencies
+  import pytest
+  import uuid
+  from datetime import datetime, timedelta
+  from unittest.mock import patch, MagicMock, AsyncMock
+  from fastapi.testclient import TestClient
+  from pydantic import ValidationError
+  
+  from ..models import SessionModel, Order
+  from ..schemas import SessionUpdate
+  from ..services.pdf_generator import PDFGenerator
+  ```
+
+## **Async Test Support**
+- **Use proper async test decorators and mocking**
+  ```python
+  # ✅ DO: Use AsyncMock for async methods
+  from unittest.mock import AsyncMock
+  
+  @pytest.mark.asyncio
+  async def test_async_functionality():
+      mock_service = AsyncMock()
+      mock_service.process_audio.return_value = "processed_audio.mp3"
+      
+      result = await some_async_function(mock_service)
+      assert result is not None
+  ```
+
+## **Database Test Models**
+- **Test database models MUST match production models**
+  ```python
+  # ✅ DO: Ensure test models match production field types
+  class TestSessionModel(TestBase):
+      __tablename__ = "sessions"
+      
+      id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+      session_token = Column(String(255), unique=True, nullable=False, index=True)
+      # Match all field types from production SessionModel
+  ```
+
+## **Error Prevention Checklist**
+Before writing tests, verify:
+- [ ] UUID fields use proper UUID objects
+- [ ] Mock attributes are patched correctly (instance vs class)
+- [ ] Validation errors use correct exception types
+- [ ] Test data structure matches production
+- [ ] All required imports are present
+- [ ] Async tests use proper decorators
+- [ ] Test database models match production models
+- [ ] Mock objects have all required attributes

@@ -2,13 +2,15 @@
 
 This directory contains custom fonts for the Audio Poster templates.
 
-## Required Fonts
+## Available Fonts
 
-To match the photo layout exactly, you'll need these font files:
+The following fonts are now available for PDF generation:
 
-1. **script.ttf** - A handwritten/script style font for elegant text like "Hi honey it's Daddy, I love you"
-2. **elegant.ttf** - An elegant serif font for formal designs
-3. **modern.ttf** - A modern sans-serif font for contemporary designs
+1. **script.ttf** - Script/handwriting style font for decorative text
+2. **elegant.ttf** - Playfair Display - elegant serif font for sophisticated designs  
+3. **modern.ttf** - Open Sans - clean, modern sans-serif font for readability
+4. **vintage.ttf** - Cinzel - classic serif font with vintage/antique feel
+5. **classic.ttf** - Lora - elegant serif font with excellent readability
 
 ## Font Sources
 

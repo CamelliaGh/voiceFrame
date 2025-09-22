@@ -5,6 +5,7 @@ import pytest
 from unittest.mock import patch, MagicMock, AsyncMock
 from datetime import datetime
 import os
+from fastapi.testclient import TestClient
 
 from ..services.storage_manager import StorageManager
 from ..models import SessionModel, Order
@@ -20,8 +21,9 @@ class TestStorageManagerMigration:
     
     @pytest.fixture
     def mock_session(self):
+        import uuid
         return SessionModel(
-            id="test-session-id",
+            id=str(uuid.uuid4()),
             session_token="test-session-token",
             photo_s3_key="temp_photos/test.jpg",
             audio_s3_key="temp_audio/test.mp3",
@@ -35,8 +37,9 @@ class TestStorageManagerMigration:
     
     @pytest.fixture
     def mock_order(self):
+        import uuid
         return Order(
-            id="test-order-id",
+            id=str(uuid.uuid4()),
             email="test@example.com",
             amount_cents=999,
             status="pending",
@@ -222,12 +225,23 @@ class TestFileMigrationIntegration:
         }
         mock_verify_migration.return_value = True
         
+        # Create a test order first
+        import uuid
+        from .conftest import TestOrder
+        
+        test_order = TestOrder(
+            id=str(uuid.uuid4()),
+            email="test@example.com",
+            amount_cents=999,
+            status="pending"
+        )
+        
         # Mock PDF generation
         with patch('backend.main.pdf_generator.generate_final_pdf') as mock_generate_pdf:
             mock_generate_pdf.return_value = "https://example.com/test.pdf"
             
             response = client.post(
-                "/api/orders/test-order-id/complete",
+                f"/api/orders/{test_order.id}/complete",
                 json={"payment_intent_id": "pi_test"}
             )
             
@@ -258,8 +272,19 @@ class TestFileMigrationIntegration:
         # Mock file migration failure
         mock_migrate_files.side_effect = Exception("Migration failed")
         
+        # Create a test order first
+        import uuid
+        from .conftest import TestOrder
+        
+        test_order = TestOrder(
+            id=str(uuid.uuid4()),
+            email="test@example.com",
+            amount_cents=999,
+            status="pending"
+        )
+        
         response = client.post(
-            "/api/orders/test-order-id/complete",
+            f"/api/orders/{test_order.id}/complete",
             json={"payment_intent_id": "pi_test"}
         )
         

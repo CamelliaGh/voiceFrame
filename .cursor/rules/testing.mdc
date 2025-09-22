@@ -1,0 +1,159 @@
+---
+description: Testing best practices and error prevention rules
+globs: backend/tests/**/*.py, **/*test*.py
+alwaysApply: true
+---
+
+# Testing Rules
+
+## **Import Consistency**
+- **All test files MUST import required dependencies at the top**
+  - `TestClient` from `fastapi.testclient` when using FastAPI tests
+  - All mock classes (`patch`, `MagicMock`, `AsyncMock`) from `unittest.mock`
+  - All model classes used in tests
+  - All service classes being tested
+
+- **Import Order:**
+  ```python
+  # Standard library imports
+  import pytest
+  import os
+  from datetime import datetime
+  from unittest.mock import patch, MagicMock, AsyncMock
+  
+  # Third-party imports
+  from fastapi.testclient import TestClient
+  
+  # Local imports
+  from ..main import app
+  from ..models import SessionModel, Order
+  from ..schemas import SessionUpdate
+  from ..services.storage_manager import StorageManager
+  ```
+
+## **Test Client Usage**
+- **When using `TestClient` in tests, it MUST be imported**
+  ```python
+  # ✅ DO: Import TestClient
+  from fastapi.testclient import TestClient
+  
+  @pytest.fixture
+  def client(self):
+      from ..main import app
+      return TestClient(app)
+  
+  # ❌ DON'T: Use TestClient without importing
+  @pytest.fixture
+  def client(self):
+      from ..main import app
+      return TestClient(app)  # NameError: name 'TestClient' is not defined
+  ```
+
+## **Database Schema Consistency**
+- **UUID fields MUST use proper UUID objects, not strings**
+  ```python
+  # ✅ DO: Use UUID objects for UUID fields
+  import uuid
+  
+  session = SessionModel(
+      id=str(uuid.uuid4()),  # Convert UUID to string
+      session_token="test-token"
+  )
+  
+  # ❌ DON'T: Use plain strings for UUID fields
+  session = SessionModel(
+      id="test-session-id",  # Causes 'str' object has no attribute 'hex' error
+      session_token="test-token"
+  )
+  ```
+
+## **Mock Attribute Consistency**
+- **When mocking classes, ensure all required attributes exist**
+  ```python
+  # ✅ DO: Mock all required attributes
+  @patch('backend.services.pdf_generator.PDFGenerator')
+  def test_pdf_generation(self, mock_pdf_generator):
+      mock_instance = mock_pdf_generator.return_value
+      mock_instance.file_uploader = MagicMock()  # Ensure attribute exists
+      mock_instance.generate_pdf.return_value = "test.pdf"
+  
+  # ❌ DON'T: Mock without required attributes
+  @patch('backend.services.pdf_generator.PDFGenerator')
+  def test_pdf_generation(self, mock_pdf_generator):
+      # Missing file_uploader attribute causes AttributeError
+      mock_pdf_generator.return_value.generate_pdf.return_value = "test.pdf"
+  ```
+
+## **Test Structure Requirements**
+- **All test classes MUST have proper setup**
+  ```python
+  class TestExample:
+      """Test class with proper setup"""
+      
+      @pytest.fixture
+      def setup_data(self):
+          """Setup test data"""
+          return {
+              "session_id": str(uuid.uuid4()),
+              "token": "test-token"
+          }
+      
+      def test_example_functionality(self, setup_data):
+          """Test specific functionality"""
+          # Test implementation
+          assert True
+  ```
+
+## **Validation Error Handling**
+- **When testing validation errors, match the actual error format**
+  ```python
+  # ✅ DO: Match actual Pydantic error format
+  with pytest.raises(ValidationError, match="Input should be 'square' or 'circle'"):
+      SessionUpdate(photo_shape="invalid")
+  
+  # ❌ DON'T: Use custom error messages that don't match
+  with pytest.raises(ValueError, match="Photo shape must be either"):
+      SessionUpdate(photo_shape="invalid")  # Won't match Pydantic's actual error
+  ```
+
+## **Async Test Support**
+- **For async tests, use proper async test decorators**
+  ```python
+  # ✅ DO: Use pytest.mark.asyncio for async tests
+  import pytest
+  
+  @pytest.mark.asyncio
+  async def test_async_functionality():
+      result = await async_function()
+      assert result is not None
+  
+  # ❌ DON'T: Define async tests without proper decorators
+  async def test_async_functionality():  # Will be skipped
+      result = await async_function()
+      assert result is not None
+  ```
+
+## **Fixture Dependencies**
+- **Ensure fixture dependencies are properly declared**
+  ```python
+  # ✅ DO: Declare fixture dependencies
+  @pytest.fixture
+  def client(db_session):  # Depends on db_session fixture
+      def override_get_db():
+          yield db_session
+      app.dependency_overrides[get_db] = override_get_db
+      with TestClient(app) as test_client:
+          yield test_client
+      app.dependency_overrides.clear()
+  ```
+
+## **Error Prevention Checklist**
+Before writing tests, verify:
+- [ ] All required imports are present
+- [ ] TestClient is imported if used
+- [ ] UUID fields use proper UUID objects
+- [ ] Mock objects have all required attributes
+- [ ] Validation error tests match actual error formats
+- [ ] Async tests use proper decorators
+- [ ] Fixture dependencies are declared
+- [ ] Test database models match production models

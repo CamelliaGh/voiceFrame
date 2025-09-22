@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, validator, Field
+from pydantic import BaseModel, EmailStr, field_validator, Field
 from typing import Optional, Literal
 from datetime import datetime
 
@@ -10,6 +10,7 @@ class SessionResponse(BaseModel):
     pdf_size: Optional[Literal['A4', 'A4_Landscape', 'Letter', 'Letter_Landscape', 'A3', 'A3_Landscape']] = 'A4'
     template_id: Optional[str] = 'classic'
     background_id: Optional[str] = 'none'
+    font_id: Optional[str] = 'script'
     photo_url: Optional[str] = None
     waveform_url: Optional[str] = None
     audio_duration: Optional[float] = None
@@ -20,8 +21,10 @@ class SessionUpdate(BaseModel):
     pdf_size: Optional[Literal['A4', 'A4_Landscape', 'Letter', 'Letter_Landscape', 'A3', 'A3_Landscape']] = Field(None, description="PDF page size")
     template_id: Optional[str] = Field(None, description="Template identifier")
     background_id: Optional[str] = Field(None, description="Background identifier")
+    font_id: Optional[str] = Field(None, description="Font identifier")
     
-    @validator('custom_text')
+    @field_validator('custom_text')
+    @classmethod
     def validate_custom_text(cls, v):
         if v is not None:
             # Remove leading/trailing whitespace
@@ -33,7 +36,8 @@ class SessionUpdate(BaseModel):
                 raise ValueError('Custom text cannot be only whitespace')
         return v
     
-    @validator('template_id')
+    @field_validator('template_id')
+    @classmethod
     def validate_template_id(cls, v):
         if v is not None:
             valid_templates = [
@@ -46,7 +50,8 @@ class SessionUpdate(BaseModel):
                 raise ValueError(f'Invalid template. Must be one of: {", ".join(valid_templates)}')
         return v
     
-    @validator('background_id')
+    @field_validator('background_id')
+    @classmethod
     def validate_background_id(cls, v):
         if v is not None:
             valid_backgrounds = ['none', 'abstract-blurred', 'roses-wooden', 'cute-hearts', 'flat-lay-hearts']
@@ -54,13 +59,24 @@ class SessionUpdate(BaseModel):
                 raise ValueError(f'Invalid background. Must be one of: {", ".join(valid_backgrounds)}')
         return v
     
-    @validator('photo_shape')
+    @field_validator('font_id')
+    @classmethod
+    def validate_font_id(cls, v):
+        if v is not None:
+            valid_fonts = ['script', 'elegant', 'modern', 'vintage', 'classic']
+            if v not in valid_fonts:
+                raise ValueError(f'Invalid font. Must be one of: {", ".join(valid_fonts)}')
+        return v
+    
+    @field_validator('photo_shape')
+    @classmethod
     def validate_photo_shape(cls, v):
         if v is not None and v not in ['square', 'circle']:
             raise ValueError('Photo shape must be either "square" or "circle"')
         return v
     
-    @validator('pdf_size')
+    @field_validator('pdf_size')
+    @classmethod
     def validate_pdf_size(cls, v):
         if v is not None and v not in ['A4', 'A4_Landscape', 'Letter', 'Letter_Landscape', 'A3', 'A3_Landscape']:
             raise ValueError(f'Invalid PDF size: {v}. Must be one of: A4, A4_Landscape, Letter, Letter_Landscape, A3, A3_Landscape')

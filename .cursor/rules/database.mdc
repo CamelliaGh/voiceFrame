@@ -1,0 +1,152 @@
+---
+description: Database schema and model consistency rules
+globs: backend/models.py, backend/schemas.py, backend/tests/**/*.py, alembic/versions/*.py
+alwaysApply: true
+---
+
+# Database Rules
+
+## **UUID Field Handling**
+- **UUID fields MUST use proper UUID objects in models, strings in schemas**
+  ```python
+  # ✅ DO: Use UUID type in SQLAlchemy models
+  from sqlalchemy import Column, String
+  import uuid
+  
+  class SessionModel(Base):
+      id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+      # OR use UUID type if supported by database
+      # id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+  
+  # ✅ DO: Use string type in Pydantic schemas
+  from pydantic import BaseModel
+  
+  class SessionCreate(BaseModel):
+      id: str  # UUID as string in API
+  ```
+
+## **Database Model Consistency**
+- **Test models MUST match production model field types**
+  ```python
+  # ✅ DO: Ensure test models match production models
+  class TestSessionModel(TestBase):
+      __tablename__ = "sessions"
+      
+      id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+      session_token = Column(String(255), unique=True, nullable=False, index=True)
+      # Match all field types from production SessionModel
+  ```
+
+## **Migration Safety**
+- **Database migrations MUST be reversible and safe**
+  ```python
+  # ✅ DO: Use safe migration patterns
+  def upgrade():
+      # Add new column with default value
+      op.add_column('sessions', sa.Column('new_field', sa.String(50), nullable=True))
+      
+      # Update existing records
+      op.execute("UPDATE sessions SET new_field = 'default_value' WHERE new_field IS NULL")
+      
+      # Make column non-nullable after data migration
+      op.alter_column('sessions', 'new_field', nullable=False)
+  
+  def downgrade():
+      op.drop_column('sessions', 'new_field')
+  ```
+
+## **Schema Validation**
+- **Pydantic schemas MUST use proper field validators**
+  ```python
+  # ✅ DO: Use Pydantic V2 field validators
+  from pydantic import BaseModel, field_validator
+  
+  class SessionUpdate(BaseModel):
+      photo_shape: Literal['square', 'circle']
+      
+      @field_validator('photo_shape')
+      @classmethod
+      def validate_photo_shape(cls, v):
+          if v not in ['square', 'circle']:
+              raise ValueError("Photo shape must be either 'square' or 'circle'")
+          return v
+  ```
+
+## **Test Data Creation**
+- **Test data MUST use proper UUID generation**
+  ```python
+  # ✅ DO: Generate proper UUIDs for test data
+  import uuid
+  
+  @pytest.fixture
+  def mock_session(self):
+      return SessionModel(
+          id=str(uuid.uuid4()),  # Proper UUID as string
+          session_token="test-session-token",
+          # ... other fields
+      )
+  
+  # ❌ DON'T: Use plain strings for UUID fields
+  @pytest.fixture
+  def mock_session(self):
+      return SessionModel(
+          id="test-session-id",  # Causes database errors
+          session_token="test-session-token",
+          # ... other fields
+      )
+  ```
+
+## **Database Session Management**
+- **Database sessions MUST be properly managed in tests**
+  ```python
+  # ✅ DO: Use proper session management
+  @pytest.fixture(scope="function")
+  def db_session():
+      TestBase.metadata.create_all(bind=engine)
+      session = TestingSessionLocal()
+      try:
+          yield session
+      finally:
+          session.close()
+          TestBase.metadata.drop_all(bind=engine)
+  ```
+
+## **Foreign Key Relationships**
+- **Foreign key relationships MUST be properly defined**
+  ```python
+  # ✅ DO: Define proper foreign key relationships
+  from sqlalchemy import ForeignKey
+  from sqlalchemy.orm import relationship
+  
+  class Order(Base):
+      __tablename__ = "orders"
+      
+      id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+      session_token = Column(String(255), ForeignKey('sessions.session_token'))
+      
+      # Define relationship
+      session = relationship("SessionModel", back_populates="orders")
+  ```
+
+## **Index Management**
+- **Database indexes MUST be properly defined for performance**
+  ```python
+  # ✅ DO: Define indexes for frequently queried fields
+  class SessionModel(Base):
+      __tablename__ = "sessions"
+      
+      session_token = Column(String(255), unique=True, nullable=False, index=True)
+      created_at = Column(DateTime, default=datetime.utcnow, index=True)
+      expires_at = Column(DateTime, default=lambda: datetime.utcnow() + timedelta(hours=24), index=True)
+  ```
+
+## **Error Prevention Checklist**
+Before database changes, verify:
+- [ ] UUID fields use proper UUID objects in models
+- [ ] Test models match production model field types
+- [ ] Migrations are reversible and safe
+- [ ] Pydantic schemas use proper field validators
+- [ ] Test data uses proper UUID generation
+- [ ] Database sessions are properly managed
+- [ ] Foreign key relationships are properly defined
+- [ ] Indexes are defined for performance-critical fields

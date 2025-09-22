@@ -18,6 +18,7 @@ class SessionModel(Base):
     pdf_size = Column(String(20), default='A4')
     template_id = Column(String(50), default='classic')
     background_id = Column(String(50), default='none')
+    font_id = Column(String(50), default='script')
     audio_duration = Column(Float, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     expires_at = Column(DateTime, default=lambda: datetime.utcnow() + timedelta(hours=24))

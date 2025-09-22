@@ -1,0 +1,238 @@
+---
+description: Docker environment consistency rules to prevent container runtime errors
+globs: Dockerfile*, docker-compose.yml, requirements*.txt
+alwaysApply: true
+---
+
+# Docker Environment Consistency Rules
+
+## **Multi-Stage Build Requirements**
+- **Use consistent base images across all Dockerfiles**
+  ```dockerfile
+  # ✅ DO: Use same Python version across all containers
+  FROM python:3.11-slim
+  
+  # ✅ DO: Use same system package installation pattern
+  RUN apt-get update && apt-get install -y \
+      ffmpeg \
+      libsndfile1 \
+      libsndfile1-dev \
+      gcc \
+      g++ \
+      libpq-dev \
+      curl \
+      && apt-get clean \
+      && rm -rf /var/lib/apt/lists/*
+  ```
+
+## **Requirements File Consistency**
+- **ALL Docker containers MUST install from correct requirements files**
+  ```dockerfile
+  # ✅ DO: Production containers use requirements.txt
+  COPY requirements.txt .
+  RUN pip install --no-cache-dir -r requirements.txt
+  
+  # ✅ DO: Test containers use BOTH files
+  COPY requirements.txt .
+  COPY backend/requirements-test.txt backend/
+  RUN pip install --no-cache-dir -r requirements.txt
+  RUN pip install --no-cache-dir -r backend/requirements-test.txt
+  ```
+
+## **Service Environment Parity**
+- **All services MUST have identical dependency environments**
+  ```yaml
+  # ✅ DO: All services use same build context
+  services:
+    api:
+      build: .
+      # Same environment as other services
+    
+    celery-worker:
+      build: .  # CRITICAL: Same image as API
+      # Same environment variables
+    
+    celery-beat:
+      build: .  # CRITICAL: Same image as API
+      # Same environment variables
+  ```
+
+## **System Dependencies Validation**
+- **ALL required system packages MUST be installed**
+  ```dockerfile
+  # ✅ DO: Install ALL system dependencies for Python packages
+  RUN apt-get update && apt-get install -y \
+      ffmpeg \              # For audio processing (librosa, pydub)
+      libsndfile1 \         # For soundfile package
+      libsndfile1-dev \     # For soundfile compilation
+      gcc \                 # For compiling Python packages
+      g++ \                 # For compiling Python packages
+      libpq-dev \           # For psycopg2-binary
+      curl \                # For health checks
+      && apt-get clean \
+      && rm -rf /var/lib/apt/lists/*
+  ```
+
+## **Environment Variable Consistency**
+- **All services MUST have identical environment variables**
+  ```yaml
+  # ✅ DO: Consistent environment across all services
+  environment:
+    - DATABASE_URL=postgresql://audioposter:audioposter_password@db:5432/audioposter
+    - REDIS_URL=redis://redis:6379
+    - DEBUG=true
+    - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+    - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+    - S3_BUCKET=audioposter-bucket
+    - S3_REGION=us-east-2
+  ```
+
+## **Volume Mount Consistency**
+- **All services MUST have access to required directories**
+  ```yaml
+  # ✅ DO: Consistent volume mounts across services
+  volumes:
+    - ./backend:/app/backend
+    - ./templates:/app/templates
+    - ./fonts:/app/fonts
+    - file_storage:/tmp/audioposter
+  ```
+
+## **Health Check Requirements**
+- **All services MUST have appropriate health checks**
+  ```yaml
+  # ✅ DO: Health checks for all services
+  healthcheck:
+    test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+    interval: 30s
+    timeout: 10s
+    retries: 3
+  ```
+
+## **Dependency Installation Order**
+- **Install system packages BEFORE Python packages**
+  ```dockerfile
+  # ✅ DO: Correct installation order
+  # 1. Install system dependencies
+  RUN apt-get update && apt-get install -y \
+      ffmpeg libsndfile1 libsndfile1-dev gcc g++ libpq-dev curl
+  
+  # 2. Copy requirements files
+  COPY requirements.txt .
+  COPY backend/requirements-test.txt backend/
+  
+  # 3. Install Python dependencies
+  RUN pip install --no-cache-dir -r requirements.txt
+  RUN pip install --no-cache-dir -r backend/requirements-test.txt
+  ```
+
+## **Build Cache Optimization**
+- **Use multi-stage builds for better caching**
+  ```dockerfile
+  # ✅ DO: Optimize build caching
+  # Copy requirements first for better caching
+  COPY requirements.txt .
+  COPY backend/requirements-test.txt backend/
+  
+  # Install dependencies (this layer is cached)
+  RUN pip install --no-cache-dir -r requirements.txt
+  RUN pip install --no-cache-dir -r backend/requirements-test.txt
+  
+  # Copy application code last
+  COPY . .
+  ```
+
+## **Container Startup Validation**
+- **Validate all imports on container startup**
+  ```dockerfile
+  # ✅ DO: Add import validation to startup
+  CMD ["sh", "-c", "python -c 'import psutil, pydub, scipy, matplotlib, reportlab, qrcode, boto3, stripe, sendgrid; print(\"All imports successful\")' && uvicorn backend.main:app --host 0.0.0.0 --port 8000"]
+  ```
+
+## **Service Dependencies**
+- **Define proper service startup order**
+  ```yaml
+  # ✅ DO: Proper dependency chain
+  depends_on:
+    db:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+  ```
+
+## **Development vs Production Parity**
+- **Development containers MUST mirror production**
+  ```yaml
+  # ✅ DO: Same build context for dev and prod
+  services:
+    api:
+      build: .  # Same Dockerfile for dev and prod
+      # Different only in environment variables
+  ```
+
+## **Error Prevention Checklist**
+Before building containers, verify:
+- [ ] All services use same base image
+- [ ] All services install from correct requirements files
+- [ ] All system dependencies are installed
+- [ ] Environment variables are consistent
+- [ ] Volume mounts are consistent
+- [ ] Health checks are configured
+- [ ] Service dependencies are defined
+- [ ] Import validation is included
+
+## **Common Docker Issues to Avoid**
+- **Missing system packages for Python libraries**
+  ```dockerfile
+  # ❌ DON'T: Missing system dependencies
+  FROM python:3.11-slim
+  RUN pip install librosa  # Will fail - needs ffmpeg, libsndfile1
+  ```
+
+- **Inconsistent requirements between services**
+  ```yaml
+  # ❌ DON'T: Different build contexts
+  api:
+    build: .
+  celery-worker:
+    build: ./worker  # Different Dockerfile - can cause issues
+  ```
+
+- **Missing environment variables**
+  ```yaml
+  # ❌ DON'T: Inconsistent environment
+  api:
+    environment:
+      - DATABASE_URL=postgresql://...
+  celery-worker:
+    # Missing DATABASE_URL - will fail
+  ```
+
+## **Docker Build Validation**
+```bash
+# Validate all containers build successfully
+docker-compose build
+
+# Test import validation
+docker-compose run api python -c "import psutil, pydub, scipy, matplotlib, reportlab, qrcode, boto3, stripe, sendgrid; print('All imports successful')"
+
+# Test service startup
+docker-compose up -d
+docker-compose logs api
+docker-compose logs celery-worker
+```
+
+## **Emergency Container Fixes**
+When containers fail to start:
+1. **Check build logs for missing dependencies**
+2. **Verify requirements files are consistent**
+3. **Ensure system packages are installed**
+4. **Validate environment variables**
+5. **Test imports manually in container**
+6. **Rebuild with --no-cache if needed**
+
+## **Monitoring Container Health**
+- **Set up alerts for container startup failures**
+- **Monitor import errors in container logs**
+- **Track dependency-related container crashes**
+- **Regular container health checks in CI/CD**

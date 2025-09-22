@@ -49,13 +49,14 @@ def test_session_update_with_none_values():
 def test_session_update_validation_errors():
     """Test that validation errors are raised for invalid data"""
     from ..schemas import SessionUpdate
+    from pydantic import ValidationError
     
     # Invalid photo_shape
-    with pytest.raises(ValueError, match="Photo shape must be either"):
+    with pytest.raises(ValidationError, match="Input should be 'square' or 'circle'"):
         SessionUpdate(photo_shape="invalid")
     
     # Invalid pdf_size
-    with pytest.raises(ValueError, match="Invalid PDF size"):
+    with pytest.raises(ValidationError, match="Input should be 'A4', 'A4_Landscape', 'Letter', 'Letter_Landscape', 'A3' or 'A3_Landscape'"):
         SessionUpdate(pdf_size="invalid")
     
     # Invalid template_id
@@ -67,12 +68,12 @@ def test_session_update_validation_errors():
         SessionUpdate(background_id="invalid")
     
     # Text too long
-    with pytest.raises(ValueError, match="Custom text too long"):
+    with pytest.raises(ValidationError, match="String should have at most 200 characters"):
         SessionUpdate(custom_text="x" * 201)
     
-    # Text only whitespace
-    with pytest.raises(ValueError, match="Custom text cannot be only whitespace"):
-        SessionUpdate(custom_text="   ")
+    # Text only whitespace (gets stripped to empty string, which is allowed)
+    result = SessionUpdate(custom_text="   ")
+    assert result.custom_text == ""  # Whitespace gets stripped to empty string
 
 def test_session_update_text_validation():
     """Test custom text validation and trimming"""

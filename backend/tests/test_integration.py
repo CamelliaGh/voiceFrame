@@ -6,7 +6,8 @@ from unittest.mock import patch, MagicMock, AsyncMock
 from datetime import datetime, timedelta
 
 from ..main import app
-from ..models import SessionModel, Order
+from ..models import SessionModel
+from .conftest import TestOrder as Order, TestSessionModel
 
 
 class TestFileMigrationIntegration:
@@ -14,14 +15,12 @@ class TestFileMigrationIntegration:
     
     def test_complete_payment_flow_with_migration(self, client, sample_session, mock_s3_client, mock_stripe_service, mock_storage_manager):
         """Test complete payment flow with file migration"""
-        # Create order
-        order_data = {
-            "email": "test@example.com",
-            "amount_cents": 999
+        # Create payment intent (this creates the order)
+        payment_data = {
+            "email": "test@example.com"
         }
         
-        # Create payment intent
-        response = client.post("/api/orders", json=order_data)
+        response = client.post(f"/api/session/{sample_session.session_token}/payment", json=payment_data)
         assert response.status_code == 200
         order_id = response.json()["order_id"]
         
@@ -48,13 +47,12 @@ class TestFileMigrationIntegration:
         with patch('backend.main.storage_manager') as mock_storage:
             mock_storage.migrate_all_session_files.side_effect = Exception("Migration failed")
             
-            # Create order
-            order_data = {
-                "email": "test@example.com",
-                "amount_cents": 999
+            # Create payment intent (this creates the order)
+            payment_data = {
+                "email": "test@example.com"
             }
             
-            response = client.post("/api/orders", json=order_data)
+            response = client.post(f"/api/session/{sample_session.session_token}/payment", json=payment_data)
             order_id = response.json()["order_id"]
             
             # Complete order with payment
@@ -107,21 +105,24 @@ class TestFileMigrationIntegration:
     
     def test_qr_code_expiration_differences(self, client, sample_session, sample_order, mock_s3_client):
         """Test that QR codes have different expiration times for paid vs unpaid"""
-        with patch('backend.services.pdf_generator.PDFGenerator.file_uploader') as mock_file_uploader:
-            mock_file_uploader.file_exists.return_value = True
-            mock_file_uploader.generate_presigned_url.return_value = "https://example.com/audio.mp3"
+        with patch('backend.services.pdf_generator.FileUploader') as mock_file_uploader_class:
+            mock_file_uploader_instance = mock_file_uploader_class.return_value
+            mock_file_uploader_instance.file_exists.return_value = True
+            mock_file_uploader_instance.generate_presigned_url.return_value = "https://example.com/audio.mp3"
             
             from ..services.pdf_generator import PDFGenerator
             pdf_generator = PDFGenerator()
+            # Replace the file_uploader with our mock
+            pdf_generator.file_uploader = mock_file_uploader_instance
             
             # Test preview version (7 days)
             qr_url = pdf_generator._generate_qr_url(sample_session, None)
-            call_args = mock_file_uploader.generate_presigned_url.call_args
+            call_args = mock_file_uploader_instance.generate_presigned_url.call_args
             assert call_args[1]['expiration'] == 86400 * 7  # 7 days
             
             # Test paid version (5 years)
             qr_url = pdf_generator._generate_qr_url(None, sample_order)
-            call_args = mock_file_uploader.generate_presigned_url.call_args
+            call_args = mock_file_uploader_instance.generate_presigned_url.call_args
             assert call_args[1]['expiration'] == 86400 * 365 * 5  # 5 years
     
     def test_cleanup_tasks_manual_only(self, client, sample_session):
@@ -151,8 +152,9 @@ class TestDatabaseSchemaUpdates:
     
     def test_order_model_has_migration_fields(self, db_session):
         """Test that Order model has all required migration fields"""
+        import uuid
         order = Order(
-            id="test-order-id",
+            id=str(uuid.uuid4()),
             email="test@example.com",
             amount_cents=999,
             permanent_photo_s3_key="permanent/photos/test.jpg",
@@ -179,8 +181,9 @@ class TestDatabaseSchemaUpdates:
     
     def test_session_model_unchanged(self, db_session):
         """Test that SessionModel remains unchanged"""
-        session = SessionModel(
-            id="test-session-id",
+        import uuid
+        session = TestSessionModel(
+            id=str(uuid.uuid4()),
             session_token="test-token",
             photo_s3_key="temp_photos/test.jpg",
             audio_s3_key="temp_audio/test.mp3",

@@ -9,17 +9,17 @@
   "placeholders": {
     "text": {
       "x": 753,
-      "y": 100,
+      "y": 50,
       "width": 1999,
-      "height": 200,
+      "height": 150,
       "font": "script",
-      "font_size": 120,
+      "font_size": 300,
       "color": "#000000",
       "alignment": "center"
     },
     "photo": {
       "x": 603,
-      "y": 350,
+      "y": 400,
       "width": 2299,
       "height": 1400
     },

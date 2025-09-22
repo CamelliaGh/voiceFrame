@@ -9,6 +9,7 @@ from .models import SessionModel, Order
 from .services.audio_processor import AudioProcessor
 from .services.pdf_generator import PDFGenerator
 from .services.email_service import EmailService
+from .services.file_uploader import FileUploader
 from .config import settings
 
 # Configure Celery

@@ -1,0 +1,182 @@
+---
+description: Mocking and testing service dependencies rules
+globs: backend/tests/**/*.py, backend/services/**/*.py
+alwaysApply: true
+---
+
+# Mocking Rules
+
+## **Service Mocking**
+- **When mocking services, ensure ALL required attributes are mocked**
+  ```python
+  # ✅ DO: Mock all required attributes
+  @patch('backend.services.pdf_generator.PDFGenerator')
+  def test_pdf_generation(self, mock_pdf_generator):
+      mock_instance = mock_pdf_generator.return_value
+      # Mock all attributes that might be accessed
+      mock_instance.file_uploader = MagicMock()
+      mock_instance.template_service = MagicMock()
+      mock_instance.generate_pdf.return_value = "test.pdf"
+  
+  # ❌ DON'T: Mock without required attributes
+  @patch('backend.services.pdf_generator.PDFGenerator')
+  def test_pdf_generation(self, mock_pdf_generator):
+      # Missing file_uploader attribute causes AttributeError
+      mock_pdf_generator.return_value.generate_pdf.return_value = "test.pdf"
+  ```
+
+## **Dependency Injection Mocking**
+- **Mock dependencies at the point of injection, not at the class level**
+  ```python
+  # ✅ DO: Mock at injection point
+  @patch('backend.main.storage_manager')
+  def test_migration(self, mock_storage_manager):
+      mock_storage_manager.migrate_all_session_files.return_value = {
+          "permanent_photo_s3_key": "permanent/photos/test.jpg"
+      }
+  
+  # ❌ DON'T: Mock at class level without ensuring attributes exist
+  @patch('backend.services.storage_manager.StorageManager')
+  def test_migration(self, mock_storage_manager):
+      # May cause AttributeError if attributes are accessed
+      mock_storage_manager.migrate_all_session_files.return_value = {}
+  ```
+
+## **Async Mocking**
+- **Use AsyncMock for async methods**
+  ```python
+  # ✅ DO: Use AsyncMock for async methods
+  from unittest.mock import AsyncMock
+  
+  @patch('backend.services.audio_processor.AudioProcessor')
+  def test_async_processing(self, mock_audio_processor):
+      mock_instance = mock_audio_processor.return_value
+      mock_instance.process_audio = AsyncMock(return_value="processed_audio.mp3")
+  
+  # ❌ DON'T: Use regular MagicMock for async methods
+  @patch('backend.services.audio_processor.AudioProcessor')
+  def test_async_processing(self, mock_audio_processor):
+      mock_instance = mock_audio_processor.return_value
+      mock_instance.process_audio = MagicMock(return_value="processed_audio.mp3")  # Won't work with async
+  ```
+
+## **File System Mocking**
+- **Mock file system operations consistently**
+  ```python
+  # ✅ DO: Mock file system operations
+  @patch('backend.services.storage_manager.os.path.exists')
+  @patch('backend.services.storage_manager.os.listdir')
+  @patch('backend.services.storage_manager.os.remove')
+  def test_file_operations(self, mock_remove, mock_listdir, mock_exists):
+      mock_exists.return_value = True
+      mock_listdir.return_value = ['file1.jpg', 'file2.mp3']
+      mock_remove.return_value = None
+  ```
+
+## **S3 Service Mocking**
+- **Mock S3 operations with proper return values**
+  ```python
+  # ✅ DO: Mock S3 with proper return values
+  @patch('backend.services.file_uploader.boto3.client')
+  def test_s3_operations(self, mock_boto_client):
+      mock_s3 = mock_boto_client.return_value
+      mock_s3.upload_fileobj.return_value = None
+      mock_s3.generate_presigned_url.return_value = "https://example.com/test-url"
+      mock_s3.head_object.return_value = {"ContentLength": 1024}
+      mock_s3.list_objects_v2.return_value = {"Contents": []}
+      mock_s3.delete_object.return_value = None
+  ```
+
+## **Database Mocking**
+- **Mock database operations with proper session management**
+  ```python
+  # ✅ DO: Mock database operations properly
+  @patch('backend.database.get_db')
+  def test_database_operations(self, mock_get_db):
+      mock_session = MagicMock()
+      mock_get_db.return_value = mock_session
+      mock_session.query.return_value.filter.return_value.first.return_value = mock_session_data
+  ```
+
+## **Email Service Mocking**
+- **Mock email services with proper return values**
+  ```python
+  # ✅ DO: Mock email services
+  @patch('backend.main.email_service')
+  def test_email_sending(self, mock_email_service):
+      mock_email_service.send_download_email.return_value = True
+      mock_email_service.send_notification.return_value = True
+  ```
+
+## **Stripe Service Mocking**
+- **Mock Stripe operations with realistic return values**
+  ```python
+  # ✅ DO: Mock Stripe with realistic responses
+  @patch('backend.main.stripe_service')
+  def test_stripe_operations(self, mock_stripe_service):
+      mock_stripe_service.verify_payment.return_value = {"status": "succeeded"}
+      mock_stripe_service.create_payment_intent.return_value = {
+          "id": "pi_test_123",
+          "client_secret": "pi_test_secret_123"
+      }
+  ```
+
+## **Template Service Mocking**
+- **Mock template services with proper configuration**
+  ```python
+  # ✅ DO: Mock template services
+  @patch('backend.services.visual_template_service.VisualTemplateService')
+  def test_template_operations(self, mock_template_service):
+      mock_instance = mock_template_service.return_value
+      mock_instance.load_template.return_value = {
+          "name": "Test Template",
+          "placeholders": {"text": {"x": 100, "y": 100}}
+      }
+  ```
+
+## **Mock Cleanup**
+- **Ensure mocks are properly cleaned up**
+  ```python
+  # ✅ DO: Use context managers for mock cleanup
+  def test_with_context_manager(self):
+      with patch('backend.services.storage_manager.StorageManager') as mock_storage:
+          mock_storage.return_value.migrate_files.return_value = {}
+          # Test implementation
+      # Mock is automatically cleaned up
+  
+  # ✅ DO: Use patch decorators for automatic cleanup
+  @patch('backend.services.storage_manager.StorageManager')
+  def test_with_decorator(self, mock_storage):
+      mock_storage.return_value.migrate_files.return_value = {}
+      # Test implementation
+      # Mock is automatically cleaned up
+  ```
+
+## **Mock Verification**
+- **Verify mock calls when necessary**
+  ```python
+  # ✅ DO: Verify important mock calls
+  @patch('backend.services.storage_manager.StorageManager')
+  def test_migration_called(self, mock_storage):
+      mock_instance = mock_storage.return_value
+      mock_instance.migrate_all_session_files.return_value = {}
+      
+      # Test implementation
+      result = some_function_that_calls_migration()
+      
+      # Verify the mock was called
+      mock_instance.migrate_all_session_files.assert_called_once()
+  ```
+
+## **Error Prevention Checklist**
+Before mocking, verify:
+- [ ] All required attributes are mocked
+- [ ] Async methods use AsyncMock
+- [ ] File system operations are mocked
+- [ ] S3 operations return proper values
+- [ ] Database operations are mocked properly
+- [ ] Email services return expected values
+- [ ] Stripe services return realistic responses
+- [ ] Template services return proper configurations
+- [ ] Mocks are properly cleaned up
+- [ ] Important calls are verified when necessary

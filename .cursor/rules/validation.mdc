@@ -1,0 +1,195 @@
+---
+description: Pydantic validation and error handling rules
+globs: backend/schemas.py, backend/tests/**/*.py
+alwaysApply: true
+---
+
+# Validation Rules
+
+## **Pydantic V2 Migration**
+- **Use Pydantic V2 field validators instead of deprecated V1 validators**
+  ```python
+  # ✅ DO: Use Pydantic V2 field validators
+  from pydantic import BaseModel, field_validator
+  from typing import Literal
+  
+  class SessionUpdate(BaseModel):
+      photo_shape: Literal['square', 'circle']
+      pdf_size: Literal['A4', 'A3', 'Letter']
+      
+      @field_validator('photo_shape')
+      @classmethod
+      def validate_photo_shape(cls, v):
+          if v not in ['square', 'circle']:
+              raise ValueError("Photo shape must be either 'square' or 'circle'")
+          return v
+  
+  # ❌ DON'T: Use deprecated Pydantic V1 validators
+  from pydantic import validator  # Deprecated
+  
+  class SessionUpdate(BaseModel):
+      @validator('photo_shape')  # Deprecated
+      def validate_photo_shape(cls, v):
+          # This will cause deprecation warnings
+          pass
+  ```
+
+## **Validation Error Testing**
+- **Test validation errors with actual Pydantic error messages**
+  ```python
+  # ✅ DO: Match actual Pydantic V2 error messages
+  from pydantic import ValidationError
+  
+  def test_validation_errors():
+      with pytest.raises(ValidationError, match="Input should be 'square' or 'circle'"):
+          SessionUpdate(photo_shape="invalid")
+  
+  # ❌ DON'T: Use custom error messages that don't match
+  def test_validation_errors():
+      with pytest.raises(ValueError, match="Photo shape must be either"):
+          SessionUpdate(photo_shape="invalid")  # Won't match Pydantic's actual error
+  ```
+
+## **Literal Type Validation**
+- **Use Literal types for enum-like validation**
+  ```python
+  # ✅ DO: Use Literal types for strict validation
+  from typing import Literal
+  
+  class SessionUpdate(BaseModel):
+      photo_shape: Literal['square', 'circle']
+      pdf_size: Literal['A4', 'A3', 'Letter', 'A4_Landscape', 'A3_Landscape', 'Letter_Landscape']
+      template_id: Literal['classic', 'modern', 'elegant', 'vintage', 'framed_a4_portrait']
+  
+  # ❌ DON'T: Use string types without validation
+  class SessionUpdate(BaseModel):
+      photo_shape: str  # Too permissive, allows invalid values
+  ```
+
+## **Custom Validation Messages**
+- **Provide clear, user-friendly validation messages**
+  ```python
+  # ✅ DO: Provide clear validation messages
+  @field_validator('custom_text')
+  @classmethod
+  def validate_custom_text(cls, v):
+      if v is not None and len(v.strip()) == 0:
+          raise ValueError("Custom text cannot be empty or only whitespace")
+      if v is not None and len(v) > 500:
+          raise ValueError("Custom text cannot exceed 500 characters")
+      return v
+  
+  # ❌ DON'T: Use generic or unclear error messages
+  @field_validator('custom_text')
+  @classmethod
+  def validate_custom_text(cls, v):
+      if not v:
+          raise ValueError("Invalid")  # Too generic
+  ```
+
+## **Optional Field Validation**
+- **Handle optional fields properly**
+  ```python
+  # ✅ DO: Handle optional fields with proper validation
+  from typing import Optional
+  
+  class SessionUpdate(BaseModel):
+      custom_text: Optional[str] = None
+      audio_duration: Optional[float] = None
+      
+      @field_validator('custom_text')
+      @classmethod
+      def validate_custom_text(cls, v):
+          if v is not None:
+              if len(v.strip()) == 0:
+                  raise ValueError("Custom text cannot be empty")
+              if len(v) > 500:
+                  raise ValueError("Custom text cannot exceed 500 characters")
+          return v
+  
+  # ❌ DON'T: Skip validation for optional fields
+  class SessionUpdate(BaseModel):
+      custom_text: Optional[str] = None
+      # No validation - allows invalid data
+  ```
+
+## **Model Configuration**
+- **Use ConfigDict instead of deprecated class-based config**
+  ```python
+  # ✅ DO: Use ConfigDict for model configuration
+  from pydantic import BaseModel, ConfigDict
+  
+  class SessionUpdate(BaseModel):
+      model_config = ConfigDict(
+          str_strip_whitespace=True,
+          validate_assignment=True,
+          extra='forbid'
+      )
+  
+  # ❌ DON'T: Use deprecated class-based config
+  class SessionUpdate(BaseModel):
+      class Config:  # Deprecated
+          str_strip_whitespace = True
+  ```
+
+## **Serialization Methods**
+- **Use model_dump instead of deprecated dict method**
+  ```python
+  # ✅ DO: Use model_dump for serialization
+  def update_session(session_data: SessionUpdate):
+      update_data = session_data.model_dump(exclude_unset=True)
+      # Process update_data
+  
+  # ❌ DON'T: Use deprecated dict method
+  def update_session(session_data: SessionUpdate):
+      update_data = session_data.dict(exclude_unset=True)  # Deprecated
+  ```
+
+## **Validation Error Handling in Tests**
+- **Test both successful and failed validation scenarios**
+  ```python
+  # ✅ DO: Test both success and failure cases
+  def test_session_update_validation():
+      # Test successful validation
+      valid_data = SessionUpdate(
+          photo_shape="square",
+          pdf_size="A4",
+          custom_text="Valid text"
+      )
+      assert valid_data.photo_shape == "square"
+      
+      # Test validation errors
+      with pytest.raises(ValidationError) as exc_info:
+          SessionUpdate(photo_shape="invalid")
+      
+      assert "Input should be 'square' or 'circle'" in str(exc_info.value)
+  ```
+
+## **Field Dependencies**
+- **Validate field dependencies when necessary**
+  ```python
+  # ✅ DO: Validate field dependencies
+  from pydantic import model_validator
+  
+  class SessionUpdate(BaseModel):
+      template_id: str
+      pdf_size: str
+      
+      @model_validator(mode='after')
+      def validate_template_size_compatibility(self):
+          if self.template_id == 'framed_a4_portrait' and self.pdf_size not in ['A4', 'A4_Landscape']:
+              raise ValueError("Framed A4 portrait template only supports A4 sizes")
+          return self
+  ```
+
+## **Error Prevention Checklist**
+Before validation changes, verify:
+- [ ] Using Pydantic V2 field validators
+- [ ] Test error messages match actual Pydantic errors
+- [ ] Literal types used for enum-like validation
+- [ ] Clear, user-friendly validation messages
+- [ ] Optional fields properly validated
+- [ ] ConfigDict used instead of class-based config
+- [ ] model_dump used instead of dict method
+- [ ] Both success and failure cases tested
+- [ ] Field dependencies validated when necessary
