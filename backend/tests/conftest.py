@@ -1,15 +1,25 @@
 """
 Pytest configuration and fixtures
 """
-import pytest
 import os
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, Column, String, Integer, Boolean, DateTime, Text, Float
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
-from datetime import datetime, timedelta
 import uuid
+from datetime import datetime, timedelta
 from unittest.mock import patch
+
+import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    Float,
+    Integer,
+    String,
+    Text,
+    create_engine,
+)
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 
 # Set test environment before importing main
 os.environ["DATABASE_URL"] = "sqlite:///./test.db"
@@ -19,63 +29,69 @@ os.environ["TESTING"] = "true"
 # Create test-specific models for SQLite compatibility
 TestBase = declarative_base()
 
+
 class TestSessionModel(TestBase):
     __tablename__ = "sessions"
-    
+
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     session_token = Column(String(255), unique=True, nullable=False, index=True)
     photo_s3_key = Column(String(500), nullable=True)
     audio_s3_key = Column(String(500), nullable=True)
     waveform_s3_key = Column(String(500), nullable=True)
     custom_text = Column(Text, nullable=True)
-    photo_shape = Column(String(20), default='square')
-    pdf_size = Column(String(20), default='A4')
-    template_id = Column(String(50), default='classic')
-    background_id = Column(String(50), default='none')
-    font_id = Column(String(50), default='script')
+    photo_shape = Column(String(20), default="square")
+    pdf_size = Column(String(20), default="A4")
+    template_id = Column(String(50), default="classic")
+    background_id = Column(String(50), default="none")
+    font_id = Column(String(50), default="script")
     audio_duration = Column(Float, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
-    expires_at = Column(DateTime, default=lambda: datetime.utcnow() + timedelta(hours=24))
+    expires_at = Column(
+        DateTime, default=lambda: datetime.utcnow() + timedelta(hours=24)
+    )
+
 
 class TestOrder(TestBase):
     __tablename__ = "orders"
-    
+
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     email = Column(String(255), nullable=False)
     amount_cents = Column(Integer, nullable=False)
-    status = Column(String(20), default='pending')
+    status = Column(String(20), default="pending")
     stripe_payment_intent_id = Column(String(255), nullable=True)
     session_token = Column(String(255), nullable=True)
     permanent_photo_s3_key = Column(String(500), nullable=True)
     permanent_audio_s3_key = Column(String(500), nullable=True)
     permanent_waveform_s3_key = Column(String(500), nullable=True)
     permanent_pdf_s3_key = Column(String(500), nullable=True)
-    migration_status = Column(String(20), default='pending')
+    migration_status = Column(String(20), default="pending")
     migration_completed_at = Column(DateTime, nullable=True)
     migration_error = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+
 class TestEmailSubscriber(TestBase):
     __tablename__ = "email_subscribers"
-    
+
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     email = Column(String(255), unique=True, nullable=False)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+
 # Test database URL (in-memory SQLite for testing)
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
 
 engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, 
-    connect_args={"check_same_thread": False}
+    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
 )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+from ..database import get_db
+
 # Import main app after setting up test models
 from ..main import app
-from ..database import get_db
 
 
 @pytest.fixture(scope="function")
@@ -83,10 +99,10 @@ def db_session():
     """Create a fresh database session for each test"""
     # Create tables using test models
     TestBase.metadata.create_all(bind=engine)
-    
+
     # Create session
     session = TestingSessionLocal()
-    
+
     try:
         yield session
     finally:
@@ -98,17 +114,18 @@ def db_session():
 @pytest.fixture(scope="function")
 def client(db_session):
     """Create a test client with database override"""
+
     def override_get_db():
         try:
             yield db_session
         finally:
             pass
-    
+
     app.dependency_overrides[get_db] = override_get_db
-    
+
     with TestClient(app) as test_client:
         yield test_client
-    
+
     app.dependency_overrides.clear()
 
 
@@ -125,7 +142,7 @@ def sample_session(db_session):
         photo_shape="square",
         pdf_size="A4",
         template_id="framed_a4_portrait",
-        background_id="none"
+        background_id="none",
     )
     db_session.add(session)
     db_session.commit()
@@ -142,7 +159,7 @@ def sample_order(db_session):
         amount_cents=999,
         status="completed",
         session_token="test-session-token",
-        permanent_audio_s3_key="permanent/audio/test.mp3"
+        permanent_audio_s3_key="permanent/audio/test.mp3",
     )
     db_session.add(order)
     db_session.commit()
@@ -153,7 +170,7 @@ def sample_order(db_session):
 @pytest.fixture
 def mock_s3_client():
     """Mock S3 client for testing"""
-    with patch('backend.services.file_uploader.boto3.client') as mock_client:
+    with patch("backend.services.file_uploader.boto3.client") as mock_client:
         mock_s3 = mock_client.return_value
         mock_s3.upload_fileobj.return_value = None
         mock_s3.generate_presigned_url.return_value = "https://example.com/test-url"
@@ -166,11 +183,11 @@ def mock_s3_client():
 @pytest.fixture
 def mock_stripe_service():
     """Mock Stripe service for testing"""
-    with patch('backend.main.stripe_service') as mock_stripe:
+    with patch("backend.main.stripe_service") as mock_stripe:
         mock_stripe.verify_payment.return_value = {"status": "succeeded"}
         mock_stripe.create_payment_intent.return_value = {
             "id": "pi_test",
-            "client_secret": "pi_test_secret"
+            "client_secret": "pi_test_secret",
         }
         yield mock_stripe
 
@@ -178,7 +195,7 @@ def mock_stripe_service():
 @pytest.fixture
 def mock_email_service():
     """Mock email service for testing"""
-    with patch('backend.main.email_service') as mock_email:
+    with patch("backend.main.email_service") as mock_email:
         mock_email.send_download_email.return_value = True
         yield mock_email
 
@@ -186,11 +203,11 @@ def mock_email_service():
 @pytest.fixture
 def mock_storage_manager():
     """Mock storage manager for testing"""
-    with patch('backend.main.storage_manager') as mock_storage:
+    with patch("backend.main.storage_manager") as mock_storage:
         mock_storage.migrate_all_session_files.return_value = {
             "permanent_photo_s3_key": "permanent/photos/test.jpg",
             "permanent_audio_s3_key": "permanent/audio/test.mp3",
-            "permanent_waveform_s3_key": "permanent/waveforms/test.png"
+            "permanent_waveform_s3_key": "permanent/waveforms/test.png",
         }
         mock_storage.verify_migration_success.return_value = True
         yield mock_storage

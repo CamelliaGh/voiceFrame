@@ -20,10 +20,10 @@ alwaysApply: true
   import os
   from datetime import datetime
   from unittest.mock import patch, MagicMock, AsyncMock
-  
+
   # Third-party imports
   from fastapi.testclient import TestClient
-  
+
   # Local imports
   from ..main import app
   from ..models import SessionModel, Order
@@ -36,12 +36,12 @@ alwaysApply: true
   ```python
   # ✅ DO: Import TestClient
   from fastapi.testclient import TestClient
-  
+
   @pytest.fixture
   def client(self):
       from ..main import app
       return TestClient(app)
-  
+
   # ❌ DON'T: Use TestClient without importing
   @pytest.fixture
   def client(self):
@@ -54,12 +54,12 @@ alwaysApply: true
   ```python
   # ✅ DO: Use UUID objects for UUID fields
   import uuid
-  
+
   session = SessionModel(
       id=str(uuid.uuid4()),  # Convert UUID to string
       session_token="test-token"
   )
-  
+
   # ❌ DON'T: Use plain strings for UUID fields
   session = SessionModel(
       id="test-session-id",  # Causes 'str' object has no attribute 'hex' error
@@ -76,7 +76,7 @@ alwaysApply: true
       mock_instance = mock_pdf_generator.return_value
       mock_instance.file_uploader = MagicMock()  # Ensure attribute exists
       mock_instance.generate_pdf.return_value = "test.pdf"
-  
+
   # ❌ DON'T: Mock without required attributes
   @patch('backend.services.pdf_generator.PDFGenerator')
   def test_pdf_generation(self, mock_pdf_generator):
@@ -89,7 +89,7 @@ alwaysApply: true
   ```python
   class TestExample:
       """Test class with proper setup"""
-      
+
       @pytest.fixture
       def setup_data(self):
           """Setup test data"""
@@ -97,7 +97,7 @@ alwaysApply: true
               "session_id": str(uuid.uuid4()),
               "token": "test-token"
           }
-      
+
       def test_example_functionality(self, setup_data):
           """Test specific functionality"""
           # Test implementation
@@ -110,7 +110,7 @@ alwaysApply: true
   # ✅ DO: Match actual Pydantic error format
   with pytest.raises(ValidationError, match="Input should be 'square' or 'circle'"):
       SessionUpdate(photo_shape="invalid")
-  
+
   # ❌ DON'T: Use custom error messages that don't match
   with pytest.raises(ValueError, match="Photo shape must be either"):
       SessionUpdate(photo_shape="invalid")  # Won't match Pydantic's actual error
@@ -121,12 +121,12 @@ alwaysApply: true
   ```python
   # ✅ DO: Use pytest.mark.asyncio for async tests
   import pytest
-  
+
   @pytest.mark.asyncio
   async def test_async_functionality():
       result = await async_function()
       assert result is not None
-  
+
   # ❌ DON'T: Define async tests without proper decorators
   async def test_async_functionality():  # Will be skipped
       result = await async_function()

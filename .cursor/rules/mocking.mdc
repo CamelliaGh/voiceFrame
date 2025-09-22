@@ -17,7 +17,7 @@ alwaysApply: true
       mock_instance.file_uploader = MagicMock()
       mock_instance.template_service = MagicMock()
       mock_instance.generate_pdf.return_value = "test.pdf"
-  
+
   # ❌ DON'T: Mock without required attributes
   @patch('backend.services.pdf_generator.PDFGenerator')
   def test_pdf_generation(self, mock_pdf_generator):
@@ -34,7 +34,7 @@ alwaysApply: true
       mock_storage_manager.migrate_all_session_files.return_value = {
           "permanent_photo_s3_key": "permanent/photos/test.jpg"
       }
-  
+
   # ❌ DON'T: Mock at class level without ensuring attributes exist
   @patch('backend.services.storage_manager.StorageManager')
   def test_migration(self, mock_storage_manager):
@@ -47,12 +47,12 @@ alwaysApply: true
   ```python
   # ✅ DO: Use AsyncMock for async methods
   from unittest.mock import AsyncMock
-  
+
   @patch('backend.services.audio_processor.AudioProcessor')
   def test_async_processing(self, mock_audio_processor):
       mock_instance = mock_audio_processor.return_value
       mock_instance.process_audio = AsyncMock(return_value="processed_audio.mp3")
-  
+
   # ❌ DON'T: Use regular MagicMock for async methods
   @patch('backend.services.audio_processor.AudioProcessor')
   def test_async_processing(self, mock_audio_processor):
@@ -143,7 +143,7 @@ alwaysApply: true
           mock_storage.return_value.migrate_files.return_value = {}
           # Test implementation
       # Mock is automatically cleaned up
-  
+
   # ✅ DO: Use patch decorators for automatic cleanup
   @patch('backend.services.storage_manager.StorageManager')
   def test_with_decorator(self, mock_storage):
@@ -160,10 +160,10 @@ alwaysApply: true
   def test_migration_called(self, mock_storage):
       mock_instance = mock_storage.return_value
       mock_instance.migrate_all_session_files.return_value = {}
-      
+
       # Test implementation
       result = some_function_that_calls_migration()
-      
+
       # Verify the mock was called
       mock_instance.migrate_all_session_files.assert_called_once()
   ```

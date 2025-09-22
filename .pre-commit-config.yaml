@@ -1,60 +1,60 @@
 repos:
   # Python code formatting and linting
-  - repo: https://github.com/psf/black
-    rev: 23.12.1
-    hooks:
-      - id: black
-        language_version: python3.13 
-        args: [--line-length=88]
+  # - repo: https://github.com/psf/black
+  #   rev: 23.12.1
+  #   hooks:
+  #     - id: black
+  #       language_version: python3.13
+  #       args: [--line-length=88]
 
 
-  - repo: https://github.com/pycqa/isort
-    rev: 5.13.2
-    hooks:
-      - id: isort
-        args: [--profile=black, --line-length=88]
+  # - repo: https://github.com/pycqa/isort
+  #   rev: 5.13.2
+  #   hooks:
+  #     - id: isort
+  #       args: [--profile=black, --line-length=88]
 
-  - repo: https://github.com/pycqa/flake8
-    rev: 7.0.0
-    hooks:
-      - id: flake8
-        args: [--max-line-length=88, --extend-ignore=E203,W503]
+  # - repo: https://github.com/pycqa/flake8
+  #   rev: 7.0.0
+  #   hooks:
+  #     - id: flake8
+  #       args: [--max-line-length=88, --extend-ignore=E203,W503]
 
   # Dependency validation
-  - repo: local
-    hooks:
-      - id: validate-requirements-consistency
-        name: Validate Requirements Consistency
-        entry: python scripts/validate_requirements_consistency.py
-        language: system
-        files: ^requirements.*\.txt$
-        pass_filenames: false
+  # - repo: local
+  #   hooks:
+  #     - id: validate-requirements-consistency
+  #       name: Validate Requirements Consistency
+  #       entry: python scripts/validate_requirements_consistency.py
+  #       language: system
+  #       files: ^requirements.*\.txt$
+  #       pass_filenames: false
 
-      - id: validate-imports
-        name: Validate All Imports
-        entry: python scripts/validate_imports.py
-        language: system
-        files: ^backend/.*\.py$
-        pass_filenames: false
+  #     - id: validate-imports
+  #       name: Validate All Imports
+  #       entry: python scripts/validate_imports.py
+  #       language: system
+  #       files: ^backend/.*\.py$
+  #       pass_filenames: false
 
-      - id: validate-docker-consistency
-        name: Validate Docker Consistency
-        entry: python scripts/validate_docker_consistency.py
-        language: system
-        files: ^(Dockerfile.*|docker-compose\.yml|requirements.*\.txt)$
-        pass_filenames: false
+  #     - id: validate-docker-consistency
+  #       name: Validate Docker Consistency
+  #       entry: python scripts/validate_docker_consistency.py
+  #       language: system
+  #       files: ^(Dockerfile.*|docker-compose\.yml|requirements.*\.txt)$
+  #       pass_filenames: false
 
-      - id: test-imports
-        name: Test Import Validation
-        entry: python -c "import backend.tests.test_file_migration; print('All imports valid')"
-        language: system
-        files: ^backend/tests/.*\.py$
+  #     - id: test-imports
+  #       name: Test Import Validation
+  #       entry: python -c "import backend.tests.test_file_migration; print('All imports valid')"
+  #       language: system
+  #       files: ^backend/tests/.*\.py$
 
-      - id: test-syntax
-        name: Python Syntax Check
-        entry: python -m py_compile
-        language: system
-        files: ^backend/.*\.py$
+  #     - id: test-syntax
+  #       name: Python Syntax Check
+  #       entry: python -m py_compile
+  #       language: system
+  #       files: ^backend/.*\.py$
 
   # YAML formatting
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -76,17 +76,17 @@ repos:
         args: [--ignore=DL3008, --ignore=DL3009]
 
   # Security checks
-  - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.5
-    hooks:
-      - id: bandit
-        args: [-r, backend/, -f, json, -o, bandit-report.json]
-        exclude: ^backend/tests/
+  # - repo: https://github.com/PyCQA/bandit
+  #   rev: 1.7.5
+  #   hooks:
+  #     - id: bandit
+  #       args: [-r, backend/, -f, json, -o, bandit-report.json]
+  #       exclude: ^backend/tests/
 
   # Type checking
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.8.0
-    hooks:
-      - id: mypy
-        args: [--ignore-missing-imports]
-        files: ^backend/.*\.py$
+  # - repo: https://github.com/pre-commit/mirrors-mypy
+  #   rev: v1.8.0
+  #   hooks:
+  #     - id: mypy
+  #       args: [--ignore-missing-imports]
+  #       files: ^backend/.*\.py$

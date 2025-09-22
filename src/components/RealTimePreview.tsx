@@ -46,10 +46,10 @@ export default function RealTimePreview({ className = '' }: RealTimePreviewProps
       setPreviewUrl(response.preview_url)
     } catch (err: any) {
       console.error('Failed to generate preview:', err)
-      
+
       // Extract specific error message from the response
       let errorMessage = 'Failed to generate preview'
-      
+
       if (err.response?.data?.detail) {
         const detail = err.response.data.detail
         if (detail.includes('Audio file is missing')) {
@@ -62,7 +62,7 @@ export default function RealTimePreview({ className = '' }: RealTimePreviewProps
           errorMessage = 'Preview unavailable'
         }
       }
-      
+
       setError(errorMessage)
     } finally {
       setLoading(false)

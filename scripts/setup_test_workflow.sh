@@ -76,7 +76,7 @@ print_success "Scripts are now executable"
 print_status "Checking Docker availability..."
 if docker info >/dev/null 2>&1; then
     print_success "Docker is available"
-    
+
     # Build test environment
     print_status "Building test environment..."
     if docker-compose build test; then

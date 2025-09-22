@@ -47,7 +47,7 @@ describe('UploadSection Component', () => {
   describe('Task 1.1: React Dropzone Setup', () => {
     it('should render photo and audio upload zones', () => {
       render(<UploadSection {...mockProps} />)
-      
+
       // Check if both upload zones are present
       expect(screen.getByText('Upload Your Files')).toBeInTheDocument()
       expect(screen.getByText('Upload Photo')).toBeInTheDocument()
@@ -56,17 +56,17 @@ describe('UploadSection Component', () => {
 
     it('should display correct file type instructions', () => {
       render(<UploadSection {...mockProps} />)
-      
+
       // Check photo file type instructions
       expect(screen.getByText(/Supports JPG, PNG, HEIC up to 50MB/)).toBeInTheDocument()
-      
+
       // Check audio file type instructions
       expect(screen.getByText(/Supports MP3, WAV, M4A up to 100MB/)).toBeInTheDocument()
     })
 
     it('should have drag and drop functionality', () => {
       render(<UploadSection {...mockProps} />)
-      
+
       // Check if dropzone elements are present (text is split across elements)
       expect(screen.getByText(/Drop your photo here/)).toBeInTheDocument()
       expect(screen.getByText(/Drop your audio here/)).toBeInTheDocument()
@@ -74,7 +74,7 @@ describe('UploadSection Component', () => {
 
     it('should have file input elements', () => {
       render(<UploadSection {...mockProps} />)
-      
+
       // Check for file input elements (they are hidden but present)
       const fileInputs = screen.getAllByDisplayValue('')
       expect(fileInputs.length).toBeGreaterThan(0)
@@ -84,7 +84,7 @@ describe('UploadSection Component', () => {
   describe('Task 1.2: File Size Validation', () => {
     it('should display file size limits in UI', () => {
       render(<UploadSection {...mockProps} />)
-      
+
       // Check that file size limits are displayed
       expect(screen.getByText(/up to 50MB/)).toBeInTheDocument()
       expect(screen.getByText(/up to 100MB/)).toBeInTheDocument()
@@ -92,7 +92,7 @@ describe('UploadSection Component', () => {
 
     it('should have proper file type restrictions', () => {
       render(<UploadSection {...mockProps} />)
-      
+
       // Check that file type restrictions are displayed
       expect(screen.getByText(/JPG, PNG, HEIC/)).toBeInTheDocument()
       expect(screen.getByText(/MP3, WAV, M4A/)).toBeInTheDocument()
@@ -102,7 +102,7 @@ describe('UploadSection Component', () => {
   describe('Task 1.3: Upload Progress Indicators', () => {
     it('should have upload zone structure for progress display', () => {
       render(<UploadSection {...mockProps} />)
-      
+
       // Check that upload zones are present (they will show progress when files are uploaded)
       const uploadZones = screen.getAllByRole('presentation')
       expect(uploadZones).toHaveLength(2) // One for photo, one for audio
@@ -120,7 +120,7 @@ describe('UploadSection Component', () => {
   describe('Task 1.5: Audio Duration Validation', () => {
     it('should have audio duration validation capability', () => {
       render(<UploadSection {...mockProps} />)
-      
+
       // Check that audio upload zone is present
       expect(screen.getByText('Upload Audio')).toBeInTheDocument()
     })
@@ -129,7 +129,7 @@ describe('UploadSection Component', () => {
   describe('Task 1.6: Error Handling', () => {
     it('should have error handling structure in place', () => {
       render(<UploadSection {...mockProps} />)
-      
+
       // Check that the component renders without errors
       expect(screen.getByText('Upload Your Files')).toBeInTheDocument()
     })

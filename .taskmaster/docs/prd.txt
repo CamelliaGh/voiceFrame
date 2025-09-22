@@ -12,7 +12,7 @@ Empower people to create meaningful, personalized keepsakes that capture special
 - **User Acquisition**: 5,000+ monthly visitors within 6 months
 - **Conversion Rate**: 8-12% preview-to-purchase conversion rate
 - **Revenue**: $15,000-25,000 MRR within 12 months
-- **Average Order Value**: $4.9 
+- **Average Order Value**: $4.9
 - **User Satisfaction**: 4.5+ star rating average
 - **Time to Generate**: <30 seconds average processing time
 - **Checkout Abandonment**: <20% cart abandonment rate
@@ -69,13 +69,13 @@ Empower people to create meaningful, personalized keepsakes that capture special
   - Background preview integration with real-time poster preview
 
 - **Photo Shape Selection**
-  - Rectangle 
+  - Rectangle
   - Circle
   - Rounded rectangle
 
 - **PDF Size and Orientation Options**
   - A4 (210 × 297 mm) - Portrait and Landscape
-  - A3 (297 × 420 mm) - Portrait and Landscape  
+  - A3 (297 × 420 mm) - Portrait and Landscape
   - US Letter (8.5 × 11 inches) - Portrait and Landscape
   - Default: A4 Portrait
 
@@ -251,7 +251,7 @@ Empower people to create meaningful, personalized keepsakes that capture special
 
 #### 4.1.2 Pay-Per-Download Model
 
-**Fixed $4.99** 
+**Fixed $4.99**
 - Everything in Standard without watermark
 - QR validility for ten years!
 
@@ -282,7 +282,7 @@ Empower people to create meaningful, personalized keepsakes that capture special
 
 #### 5.1.2 Audio Processing Pipeline
 ```
-Upload → Validation → Format Conversion → Waveform Analysis → 
+Upload → Validation → Format Conversion → Waveform Analysis →
 SVG Generation → QR Code Creation → PDF Assembly → Storage
 ```
 
@@ -360,7 +360,7 @@ SVG Generation → QR Code Creation → PDF Assembly → Storage
 
 ### 7.1 Email-Driven Growth Strategy
 - **High-Value Email List**: Every customer email is a paying customer
-- **Behavioral Segmentation**: 
+- **Behavioral Segmentation**:
   - Standard vs Premium buyers
   - Seasonal purchasers (Valentine's, Mother's Day, Christmas)
   - Audio content types (music, voice messages, speeches)

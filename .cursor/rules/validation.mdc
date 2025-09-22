@@ -12,21 +12,21 @@ alwaysApply: true
   # ✅ DO: Use Pydantic V2 field validators
   from pydantic import BaseModel, field_validator
   from typing import Literal
-  
+
   class SessionUpdate(BaseModel):
       photo_shape: Literal['square', 'circle']
       pdf_size: Literal['A4', 'A3', 'Letter']
-      
+
       @field_validator('photo_shape')
       @classmethod
       def validate_photo_shape(cls, v):
           if v not in ['square', 'circle']:
               raise ValueError("Photo shape must be either 'square' or 'circle'")
           return v
-  
+
   # ❌ DON'T: Use deprecated Pydantic V1 validators
   from pydantic import validator  # Deprecated
-  
+
   class SessionUpdate(BaseModel):
       @validator('photo_shape')  # Deprecated
       def validate_photo_shape(cls, v):
@@ -39,11 +39,11 @@ alwaysApply: true
   ```python
   # ✅ DO: Match actual Pydantic V2 error messages
   from pydantic import ValidationError
-  
+
   def test_validation_errors():
       with pytest.raises(ValidationError, match="Input should be 'square' or 'circle'"):
           SessionUpdate(photo_shape="invalid")
-  
+
   # ❌ DON'T: Use custom error messages that don't match
   def test_validation_errors():
       with pytest.raises(ValueError, match="Photo shape must be either"):
@@ -55,12 +55,12 @@ alwaysApply: true
   ```python
   # ✅ DO: Use Literal types for strict validation
   from typing import Literal
-  
+
   class SessionUpdate(BaseModel):
       photo_shape: Literal['square', 'circle']
       pdf_size: Literal['A4', 'A3', 'Letter', 'A4_Landscape', 'A3_Landscape', 'Letter_Landscape']
       template_id: Literal['classic', 'modern', 'elegant', 'vintage', 'framed_a4_portrait']
-  
+
   # ❌ DON'T: Use string types without validation
   class SessionUpdate(BaseModel):
       photo_shape: str  # Too permissive, allows invalid values
@@ -78,7 +78,7 @@ alwaysApply: true
       if v is not None and len(v) > 500:
           raise ValueError("Custom text cannot exceed 500 characters")
       return v
-  
+
   # ❌ DON'T: Use generic or unclear error messages
   @field_validator('custom_text')
   @classmethod
@@ -92,11 +92,11 @@ alwaysApply: true
   ```python
   # ✅ DO: Handle optional fields with proper validation
   from typing import Optional
-  
+
   class SessionUpdate(BaseModel):
       custom_text: Optional[str] = None
       audio_duration: Optional[float] = None
-      
+
       @field_validator('custom_text')
       @classmethod
       def validate_custom_text(cls, v):
@@ -106,7 +106,7 @@ alwaysApply: true
               if len(v) > 500:
                   raise ValueError("Custom text cannot exceed 500 characters")
           return v
-  
+
   # ❌ DON'T: Skip validation for optional fields
   class SessionUpdate(BaseModel):
       custom_text: Optional[str] = None
@@ -118,14 +118,14 @@ alwaysApply: true
   ```python
   # ✅ DO: Use ConfigDict for model configuration
   from pydantic import BaseModel, ConfigDict
-  
+
   class SessionUpdate(BaseModel):
       model_config = ConfigDict(
           str_strip_whitespace=True,
           validate_assignment=True,
           extra='forbid'
       )
-  
+
   # ❌ DON'T: Use deprecated class-based config
   class SessionUpdate(BaseModel):
       class Config:  # Deprecated
@@ -139,7 +139,7 @@ alwaysApply: true
   def update_session(session_data: SessionUpdate):
       update_data = session_data.model_dump(exclude_unset=True)
       # Process update_data
-  
+
   # ❌ DON'T: Use deprecated dict method
   def update_session(session_data: SessionUpdate):
       update_data = session_data.dict(exclude_unset=True)  # Deprecated
@@ -157,11 +157,11 @@ alwaysApply: true
           custom_text="Valid text"
       )
       assert valid_data.photo_shape == "square"
-      
+
       # Test validation errors
       with pytest.raises(ValidationError) as exc_info:
           SessionUpdate(photo_shape="invalid")
-      
+
       assert "Input should be 'square' or 'circle'" in str(exc_info.value)
   ```
 
@@ -170,11 +170,11 @@ alwaysApply: true
   ```python
   # ✅ DO: Validate field dependencies
   from pydantic import model_validator
-  
+
   class SessionUpdate(BaseModel):
       template_id: str
       pdf_size: str
-      
+
       @model_validator(mode='after')
       def validate_template_size_compatibility(self):
           if self.template_id == 'framed_a4_portrait' and self.pdf_size not in ['A4', 'A4_Landscape']:

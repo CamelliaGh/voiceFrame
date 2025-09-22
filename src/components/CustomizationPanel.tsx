@@ -27,7 +27,7 @@ const textSuggestions = [
   "Made for Each Other",
   "In Love",
   "Love You More",
-  
+
   // Wedding & Marriage
   "Wedding Day",
   "First Dance 💕",
@@ -42,7 +42,7 @@ const textSuggestions = [
   "Wedding Song",
   "Our Vows",
   "Wedding Day Magic",
-  
+
   // Anniversary & Special Dates
   "Anniversary Memory",
   "One Year Together",
@@ -55,7 +55,7 @@ const textSuggestions = [
   "Anniversary Song",
   "Special Date",
   "Our Milestone",
-  
+
   // Family & Children
   "Baby's First Song",
   "Welcome Little One",
@@ -68,7 +68,7 @@ const textSuggestions = [
   "Growing Family",
   "Baby Love",
   "Family Song",
-  
+
   // Memories & Moments
   "Special Moment",
   "Perfect Day",
@@ -96,33 +96,33 @@ const fontOptions = [
 ]
 
 const backgroundOptions = [
-  { 
-    id: 'none', 
-    name: 'No Background', 
+  {
+    id: 'none',
+    name: 'No Background',
     description: 'Clean white background',
     preview: null
   },
-  { 
-    id: 'abstract-blurred', 
-    name: 'Abstract Blurred', 
+  {
+    id: 'abstract-blurred',
+    name: 'Abstract Blurred',
     description: 'Soft abstract background',
     preview: '/backgrounds/237.jpg'
   },
-  { 
-    id: 'roses-wooden', 
-    name: 'Roses & Wood', 
+  {
+    id: 'roses-wooden',
+    name: 'Roses & Wood',
     description: 'Beautiful roses on wooden background',
     preview: '/backgrounds/beautiful-roses-great-white-wooden-background-with-space-right.jpg'
   },
-  { 
-    id: 'cute-hearts', 
-    name: 'Cute Hearts', 
+  {
+    id: 'cute-hearts',
+    name: 'Cute Hearts',
     description: 'Romantic hearts background',
     preview: '/backgrounds/copy-space-with-cute-hearts.jpg'
   },
-  { 
-    id: 'flat-lay-hearts', 
-    name: 'Flat Lay Hearts', 
+  {
+    id: 'flat-lay-hearts',
+    name: 'Flat Lay Hearts',
     description: 'Elegant flat lay hearts',
     preview: '/backgrounds/flat-lay-small-cute-hearts.jpg'
   }
@@ -306,7 +306,7 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
               <Type className="w-5 h-5 text-primary-600" />
               <h3 className="text-lg font-semibold text-gray-900">Custom Text</h3>
             </div>
-            
+
             <div className="space-y-4">
               <div>
                 <textarea
@@ -325,7 +325,7 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
                   </span>
                 </div>
               </div>
-              
+
               <div>
                 <p className="text-sm font-medium text-gray-700 mb-2">Suggestions:</p>
                 <div className="flex flex-wrap gap-2">
@@ -350,7 +350,7 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
               <FileText className="w-5 h-5 text-primary-600" />
               <h3 className="text-lg font-semibold text-gray-900">PDF Size</h3>
             </div>
-            
+
             <div className="space-y-2">
               {              [
                 { value: 'A4', label: 'A4 Portrait (210 × 297 mm)' },
@@ -391,7 +391,7 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
               <Image className="w-5 h-5 text-primary-600" />
               <h3 className="text-lg font-semibold text-gray-900">Background</h3>
             </div>
-            
+
             <div className="space-y-3">
               {backgroundOptions.map((background) => (
                 <label
@@ -411,7 +411,7 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
                     onChange={(e) => handleBackgroundChange(e.target.value)}
                     className="text-primary-600 focus:ring-primary-500"
                   />
-                  
+
                   <div className="flex-1 flex items-center space-x-3">
                     {background.preview ? (
                       <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100">
@@ -426,7 +426,7 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
                         <div className="w-6 h-6 bg-gray-200 rounded"></div>
                       </div>
                     )}
-                    
+
                     <div>
                       <div className="font-medium text-gray-900">{background.name}</div>
                       <div className="text-sm text-gray-500">{background.description}</div>
@@ -443,7 +443,7 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
               <Type className="w-5 h-5 text-primary-600" />
               <h3 className="text-lg font-semibold text-gray-900">Font Style</h3>
             </div>
-            
+
             <div className="space-y-3">
               {fontOptions.map((font) => (
                 <label
@@ -463,7 +463,7 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
                     onChange={(e) => handleFontChange(e.target.value)}
                     className="text-primary-600 focus:ring-primary-500"
                   />
-                  
+
                   <div className="flex-1">
                     <div className="font-medium text-gray-900">{font.name}</div>
                     <div className="text-sm text-gray-500">{font.description}</div>
@@ -490,7 +490,7 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
           <ArrowLeft className="w-4 h-4" />
           <span>Back to Upload</span>
         </button>
-        
+
         <button
           onClick={handleNext}
           className="btn-primary flex items-center space-x-2"

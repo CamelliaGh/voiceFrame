@@ -50,4 +50,3 @@ The implementation includes a dedicated test suite with comprehensive test cases
 - Ensure watermark doesn't interfere with QR code scanning
 - Validate watermark visibility across different backgrounds
 - Test watermark on various devices and PDF readers
-

@@ -11,7 +11,7 @@ alwaysApply: true
   ```dockerfile
   # ✅ DO: Use same Python version across all containers
   FROM python:3.11-slim
-  
+
   # ✅ DO: Use same system package installation pattern
   RUN apt-get update && apt-get install -y \
       ffmpeg \
@@ -31,7 +31,7 @@ alwaysApply: true
   # ✅ DO: Production containers use requirements.txt
   COPY requirements.txt .
   RUN pip install --no-cache-dir -r requirements.txt
-  
+
   # ✅ DO: Test containers use BOTH files
   COPY requirements.txt .
   COPY backend/requirements-test.txt backend/
@@ -47,11 +47,11 @@ alwaysApply: true
     api:
       build: .
       # Same environment as other services
-    
+
     celery-worker:
       build: .  # CRITICAL: Same image as API
       # Same environment variables
-    
+
     celery-beat:
       build: .  # CRITICAL: Same image as API
       # Same environment variables
@@ -116,11 +116,11 @@ alwaysApply: true
   # 1. Install system dependencies
   RUN apt-get update && apt-get install -y \
       ffmpeg libsndfile1 libsndfile1-dev gcc g++ libpq-dev curl
-  
+
   # 2. Copy requirements files
   COPY requirements.txt .
   COPY backend/requirements-test.txt backend/
-  
+
   # 3. Install Python dependencies
   RUN pip install --no-cache-dir -r requirements.txt
   RUN pip install --no-cache-dir -r backend/requirements-test.txt
@@ -133,11 +133,11 @@ alwaysApply: true
   # Copy requirements first for better caching
   COPY requirements.txt .
   COPY backend/requirements-test.txt backend/
-  
+
   # Install dependencies (this layer is cached)
   RUN pip install --no-cache-dir -r requirements.txt
   RUN pip install --no-cache-dir -r backend/requirements-test.txt
-  
+
   # Copy application code last
   COPY . .
   ```

@@ -9,7 +9,7 @@ Object.defineProperty(window, 'Image', {
     onerror: (() => void) | null = null
     width = 0
     height = 0
-    
+
     constructor() {
       // Simulate async loading
       setTimeout(() => {
@@ -29,7 +29,7 @@ Object.defineProperty(window, 'Audio', {
     duration = 0
     onloadedmetadata: (() => void) | null = null
     onerror: (() => void) | null = null
-    
+
     constructor() {
       // Simulate async loading
       setTimeout(() => {
@@ -48,7 +48,7 @@ Object.defineProperty(window, 'FileReader', {
     result: string | ArrayBuffer | null = null
     onload: ((event: any) => void) | null = null
     onerror: ((event: any) => void) | null = null
-    
+
     readAsDataURL(file: File) {
       // Simulate async reading
       setTimeout(() => {

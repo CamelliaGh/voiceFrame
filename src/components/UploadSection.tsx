@@ -14,11 +14,11 @@ interface UploadSectionProps {
   onNext: () => void
 }
 
-export default function UploadSection({ 
-  onPhotosUploaded, 
-  onAudioUploaded, 
-  canProceed, 
-  onNext 
+export default function UploadSection({
+  onPhotosUploaded,
+  onAudioUploaded,
+  canProceed,
+  onNext
 }: UploadSectionProps) {
   const { session } = useSession()
   const [photoUploading, setPhotoUploading] = useState(false)
@@ -36,17 +36,17 @@ export default function UploadSection({
   // Function to handle and categorize errors
   const handleUploadError = (error: any, fileType: 'photo' | 'audio'): string => {
     console.error(`${fileType} upload failed:`, error)
-    
+
     // Network errors
     if (!navigator.onLine) {
       return 'No internet connection. Please check your network and try again.'
     }
-    
+
     // Server errors
     if (error?.response) {
       const status = error.response.status
       const detail = error.response.data?.detail || error.response.data?.message
-      
+
       switch (status) {
         case 400:
           return detail || 'Invalid file format or corrupted file. Please try a different file.'
@@ -66,20 +66,20 @@ export default function UploadSection({
           return detail || `Upload failed (Error ${status}). Please try again.`
       }
     }
-    
+
     // Client-side errors
     if (error?.code === 'NETWORK_ERROR') {
       return 'Network error. Please check your connection and try again.'
     }
-    
+
     if (error?.message?.includes('timeout')) {
       return 'Upload timed out. Please try again with a smaller file or better connection.'
     }
-    
+
     if (error?.message?.includes('abort')) {
       return 'Upload was cancelled.'
     }
-    
+
     // Generic fallback
     return error?.message || `Failed to upload ${fileType}. Please try again.`
   }
@@ -88,19 +88,19 @@ export default function UploadSection({
   const retryUpload = async (fileType: 'photo' | 'audio') => {
     const file = lastUploadAttempt[fileType]
     if (!file) return
-    
+
     const currentRetryCount = retryCount[fileType] || 0
     if (currentRetryCount >= 3) {
-      setUploadErrors(prev => ({ 
-        ...prev, 
-        [fileType]: 'Maximum retry attempts reached. Please try a different file.' 
+      setUploadErrors(prev => ({
+        ...prev,
+        [fileType]: 'Maximum retry attempts reached. Please try a different file.'
       }))
       return
     }
-    
+
     setRetryCount(prev => ({ ...prev, [fileType]: currentRetryCount + 1 }))
     setUploadErrors(prev => ({ ...prev, [fileType]: undefined }))
-    
+
     if (fileType === 'photo') {
       await handlePhotoUpload([file])
     } else {
@@ -113,17 +113,17 @@ export default function UploadSection({
     return new Promise((resolve, reject) => {
       const audio = new Audio()
       const url = URL.createObjectURL(file)
-      
+
       audio.addEventListener('loadedmetadata', () => {
         URL.revokeObjectURL(url)
         resolve(audio.duration)
       })
-      
+
       audio.addEventListener('error', () => {
         URL.revokeObjectURL(url)
         reject(new Error('Failed to load audio metadata'))
       })
-      
+
       audio.src = url
     })
   }
@@ -138,11 +138,11 @@ export default function UploadSection({
           // Get EXIF data
           EXIF.getData(img, function() {
             const orientation = EXIF.getTag(this, 'Orientation')
-            
+
             // Create canvas to handle rotation
             const canvas = document.createElement('canvas')
             const ctx = canvas.getContext('2d')
-            
+
             if (!ctx) {
               resolve(e.target?.result as string)
               return
@@ -186,7 +186,7 @@ export default function UploadSection({
 
             // Draw the image
             ctx.drawImage(img, 0, 0)
-            
+
             // Convert to data URL
             const correctedDataUrl = canvas.toDataURL('image/jpeg', 0.9)
             resolve(correctedDataUrl)
@@ -210,9 +210,9 @@ export default function UploadSection({
 
     // Validate file type
     if (!allowedTypes.includes(file.type)) {
-      setUploadErrors(prev => ({ 
-        ...prev, 
-        photo: 'Invalid file type. Please upload a JPEG, PNG, GIF, BMP, or WebP image.' 
+      setUploadErrors(prev => ({
+        ...prev,
+        photo: 'Invalid file type. Please upload a JPEG, PNG, GIF, BMP, or WebP image.'
       }))
       return
     }
@@ -220,9 +220,9 @@ export default function UploadSection({
     // Validate file extension
     const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'))
     if (!allowedExtensions.includes(fileExtension)) {
-      setUploadErrors(prev => ({ 
-        ...prev, 
-        photo: 'Invalid file extension. Please upload a JPEG, PNG, GIF, BMP, or WebP image.' 
+      setUploadErrors(prev => ({
+        ...prev,
+        photo: 'Invalid file extension. Please upload a JPEG, PNG, GIF, BMP, or WebP image.'
       }))
       return
     }
@@ -259,12 +259,12 @@ export default function UploadSection({
 
     // Store file for potential retry
     setLastUploadAttempt(prev => ({ ...prev, photo: file }))
-    
+
     // Reset states and start upload
     setPhotoUploading(true)
     setUploadErrors(prev => ({ ...prev, photo: undefined }))
     setUploadProgress(prev => ({ ...prev, photo: 0 }))
-    
+
     const startTime = Date.now()
     const fileSize = file.size
 
@@ -279,16 +279,16 @@ export default function UploadSection({
             const uploaded = (newProgress / 100) * fileSize
             const speed = uploaded / elapsed
             const remaining = ((100 - newProgress) / 100) * fileSize / speed
-            
-            setUploadSpeed(prev => ({ 
-              ...prev, 
-              photo: `${(speed / 1024 / 1024).toFixed(1)} MB/s` 
+
+            setUploadSpeed(prev => ({
+              ...prev,
+              photo: `${(speed / 1024 / 1024).toFixed(1)} MB/s`
             }))
-            setUploadTimeRemaining(prev => ({ 
-              ...prev, 
-              photo: `${remaining.toFixed(0)}s` 
+            setUploadTimeRemaining(prev => ({
+              ...prev,
+              photo: `${remaining.toFixed(0)}s`
             }))
-            
+
             return { ...prev, photo: Math.min(newProgress, 90) }
           }
           return prev
@@ -296,7 +296,7 @@ export default function UploadSection({
       }, 200)
 
       await uploadPhoto(session.session_token, file)
-      
+
       clearInterval(progressInterval)
       setUploadProgress(prev => ({ ...prev, photo: 100 }))
       setPhotoUploaded(true)
@@ -323,9 +323,9 @@ export default function UploadSection({
 
     // Validate file type
     if (!allowedTypes.includes(file.type)) {
-      setUploadErrors(prev => ({ 
-        ...prev, 
-        audio: 'Invalid file type. Please upload an MP3, WAV, M4A, AAC, OGG, or FLAC audio file.' 
+      setUploadErrors(prev => ({
+        ...prev,
+        audio: 'Invalid file type. Please upload an MP3, WAV, M4A, AAC, OGG, or FLAC audio file.'
       }))
       return
     }
@@ -333,9 +333,9 @@ export default function UploadSection({
     // Validate file extension
     const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'))
     if (!allowedExtensions.includes(fileExtension)) {
-      setUploadErrors(prev => ({ 
-        ...prev, 
-        audio: 'Invalid file extension. Please upload an MP3, WAV, M4A, AAC, OGG, or FLAC audio file.' 
+      setUploadErrors(prev => ({
+        ...prev,
+        audio: 'Invalid file extension. Please upload an MP3, WAV, M4A, AAC, OGG, or FLAC audio file.'
       }))
       return
     }
@@ -360,35 +360,35 @@ export default function UploadSection({
     try {
       const duration = await getAudioDuration(file)
       if (duration > 600) { // 10 minutes
-        setUploadErrors(prev => ({ 
-          ...prev, 
-          audio: `Audio too long (${Math.floor(duration / 60)}:${Math.floor(duration % 60).toString().padStart(2, '0')}). Maximum duration is 10 minutes.` 
+        setUploadErrors(prev => ({
+          ...prev,
+          audio: `Audio too long (${Math.floor(duration / 60)}:${Math.floor(duration % 60).toString().padStart(2, '0')}). Maximum duration is 10 minutes.`
         }))
         return
       }
-      
+
       // Generate audio preview with duration info
-      setPreviewImages(prev => ({ 
-        ...prev, 
-        audio: `Audio file: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB, ${Math.floor(duration / 60)}:${Math.floor(duration % 60).toString().padStart(2, '0')})` 
+      setPreviewImages(prev => ({
+        ...prev,
+        audio: `Audio file: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB, ${Math.floor(duration / 60)}:${Math.floor(duration % 60).toString().padStart(2, '0')})`
       }))
     } catch (error) {
       console.warn('Failed to get audio duration:', error)
       // Continue with upload if duration check fails (backend will validate)
-      setPreviewImages(prev => ({ 
-        ...prev, 
-        audio: `Audio file: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB)` 
+      setPreviewImages(prev => ({
+        ...prev,
+        audio: `Audio file: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB)`
       }))
     }
 
     // Store file for potential retry
     setLastUploadAttempt(prev => ({ ...prev, audio: file }))
-    
+
     // Reset states and start upload
     setAudioUploading(true)
     setUploadErrors(prev => ({ ...prev, audio: undefined }))
     setUploadProgress(prev => ({ ...prev, audio: 0 }))
-    
+
     const startTime = Date.now()
     const fileSize = file.size
 
@@ -403,16 +403,16 @@ export default function UploadSection({
             const uploaded = (newProgress / 100) * fileSize
             const speed = uploaded / elapsed
             const remaining = ((100 - newProgress) / 100) * fileSize / speed
-            
-            setUploadSpeed(prev => ({ 
-              ...prev, 
-              audio: `${(speed / 1024 / 1024).toFixed(1)} MB/s` 
+
+            setUploadSpeed(prev => ({
+              ...prev,
+              audio: `${(speed / 1024 / 1024).toFixed(1)} MB/s`
             }))
-            setUploadTimeRemaining(prev => ({ 
-              ...prev, 
-              audio: `${remaining.toFixed(0)}s` 
+            setUploadTimeRemaining(prev => ({
+              ...prev,
+              audio: `${remaining.toFixed(0)}s`
             }))
-            
+
             return { ...prev, audio: Math.min(newProgress, 90) }
           }
           return prev
@@ -420,7 +420,7 @@ export default function UploadSection({
       }, 300)
 
       await uploadAudio(session.session_token, file)
-      
+
       clearInterval(progressInterval)
       setUploadProgress(prev => ({ ...prev, audio: 100 }))
       setAudioUploaded(true)
@@ -460,7 +460,7 @@ export default function UploadSection({
       <div className="text-center">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Upload Your Files</h2>
         <p className="text-gray-600 max-w-2xl mx-auto">
-          Start by uploading a photo and an audio file. We'll create a beautiful poster combining 
+          Start by uploading a photo and an audio file. We'll create a beautiful poster combining
           your image with the audio waveform and any custom text you add.
         </p>
       </div>
@@ -472,7 +472,7 @@ export default function UploadSection({
             <Image className="w-5 h-5 text-primary-600" />
             <h3 className="text-lg font-semibold text-gray-900">Upload Photo</h3>
           </div>
-          
+
           <div
             {...photoDropzone.getRootProps()}
             className={cn(
@@ -482,14 +482,14 @@ export default function UploadSection({
             )}
           >
             <input {...photoDropzone.getInputProps()} />
-            
+
             {photoUploading ? (
               <div className="space-y-3">
                 {previewImages.photo && (
                   <div className="w-16 h-16 mx-auto rounded-lg overflow-hidden border-2 border-gray-200">
-                    <img 
-                      src={previewImages.photo} 
-                      alt="Preview" 
+                    <img
+                      src={previewImages.photo}
+                      alt="Preview"
                       className="w-full h-full object-cover"
                     />
                   </div>
@@ -498,7 +498,7 @@ export default function UploadSection({
                 <div className="space-y-1">
                   <p className="text-sm text-gray-600">Uploading photo...</p>
                   <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
+                    <div
                       className="bg-primary-600 h-2 rounded-full transition-all duration-300"
                       style={{ width: `${uploadProgress.photo || 0}%` }}
                     />
@@ -527,7 +527,7 @@ export default function UploadSection({
               </div>
             )}
           </div>
-          
+
           {uploadErrors.photo && (
             <div className="mt-2 space-y-2">
               <div className="flex items-center space-x-2 text-red-600">
@@ -553,7 +553,7 @@ export default function UploadSection({
             <Music className="w-5 h-5 text-primary-600" />
             <h3 className="text-lg font-semibold text-gray-900">Upload Audio</h3>
           </div>
-          
+
           <div
             {...audioDropzone.getRootProps()}
             className={cn(
@@ -563,7 +563,7 @@ export default function UploadSection({
             )}
           >
             <input {...audioDropzone.getInputProps()} />
-            
+
             {audioUploading ? (
               <div className="space-y-3">
                 {previewImages.audio && (
@@ -576,7 +576,7 @@ export default function UploadSection({
                 <div className="space-y-1">
                   <p className="text-sm text-gray-600">Uploading audio...</p>
                   <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
+                    <div
                       className="bg-primary-600 h-2 rounded-full transition-all duration-300"
                       style={{ width: `${uploadProgress.audio || 0}%` }}
                     />
@@ -605,7 +605,7 @@ export default function UploadSection({
               </div>
             )}
           </div>
-          
+
           {uploadErrors.audio && (
             <div className="mt-2 space-y-2">
               <div className="flex items-center space-x-2 text-red-600">

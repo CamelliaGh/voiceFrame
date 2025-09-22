@@ -12,15 +12,15 @@ alwaysApply: true
   # ✅ DO: Use UUID type in SQLAlchemy models
   from sqlalchemy import Column, String
   import uuid
-  
+
   class SessionModel(Base):
       id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
       # OR use UUID type if supported by database
       # id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-  
+
   # ✅ DO: Use string type in Pydantic schemas
   from pydantic import BaseModel
-  
+
   class SessionCreate(BaseModel):
       id: str  # UUID as string in API
   ```
@@ -31,7 +31,7 @@ alwaysApply: true
   # ✅ DO: Ensure test models match production models
   class TestSessionModel(TestBase):
       __tablename__ = "sessions"
-      
+
       id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
       session_token = Column(String(255), unique=True, nullable=False, index=True)
       # Match all field types from production SessionModel
@@ -44,13 +44,13 @@ alwaysApply: true
   def upgrade():
       # Add new column with default value
       op.add_column('sessions', sa.Column('new_field', sa.String(50), nullable=True))
-      
+
       # Update existing records
       op.execute("UPDATE sessions SET new_field = 'default_value' WHERE new_field IS NULL")
-      
+
       # Make column non-nullable after data migration
       op.alter_column('sessions', 'new_field', nullable=False)
-  
+
   def downgrade():
       op.drop_column('sessions', 'new_field')
   ```
@@ -60,10 +60,10 @@ alwaysApply: true
   ```python
   # ✅ DO: Use Pydantic V2 field validators
   from pydantic import BaseModel, field_validator
-  
+
   class SessionUpdate(BaseModel):
       photo_shape: Literal['square', 'circle']
-      
+
       @field_validator('photo_shape')
       @classmethod
       def validate_photo_shape(cls, v):
@@ -77,7 +77,7 @@ alwaysApply: true
   ```python
   # ✅ DO: Generate proper UUIDs for test data
   import uuid
-  
+
   @pytest.fixture
   def mock_session(self):
       return SessionModel(
@@ -85,7 +85,7 @@ alwaysApply: true
           session_token="test-session-token",
           # ... other fields
       )
-  
+
   # ❌ DON'T: Use plain strings for UUID fields
   @pytest.fixture
   def mock_session(self):
@@ -117,13 +117,13 @@ alwaysApply: true
   # ✅ DO: Define proper foreign key relationships
   from sqlalchemy import ForeignKey
   from sqlalchemy.orm import relationship
-  
+
   class Order(Base):
       __tablename__ = "orders"
-      
+
       id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
       session_token = Column(String(255), ForeignKey('sessions.session_token'))
-      
+
       # Define relationship
       session = relationship("SessionModel", back_populates="orders")
   ```
@@ -134,7 +134,7 @@ alwaysApply: true
   # ✅ DO: Define indexes for frequently queried fields
   class SessionModel(Base):
       __tablename__ = "sessions"
-      
+
       session_token = Column(String(255), unique=True, nullable=False, index=True)
       created_at = Column(DateTime, default=datetime.utcnow, index=True)
       expires_at = Column(DateTime, default=lambda: datetime.utcnow() + timedelta(hours=24), index=True)

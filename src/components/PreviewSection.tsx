@@ -47,10 +47,10 @@ export default function PreviewSection({ onNext, onBack }: PreviewSectionProps) 
       setPreviewUrl(response.preview_url)
     } catch (err: any) {
       console.error('Failed to generate preview:', err)
-      
+
       // Extract specific error message from the response
       let errorMessage = 'Failed to generate preview. Please try again.'
-      
+
       if (err.response?.data?.detail) {
         const detail = err.response.data.detail
         if (detail.includes('Audio file is missing')) {
@@ -69,7 +69,7 @@ export default function PreviewSection({ onNext, onBack }: PreviewSectionProps) 
       } else if (err.message) {
         errorMessage = `Error: ${err.message}`
       }
-      
+
       setError(errorMessage)
     } finally {
       setLoading(false)
@@ -178,7 +178,7 @@ export default function PreviewSection({ onNext, onBack }: PreviewSectionProps) 
           {/* Poster Details */}
           <div className="card">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Poster Details</h3>
-            
+
             <div className="space-y-3 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-600">Custom Text:</span>
@@ -186,28 +186,28 @@ export default function PreviewSection({ onNext, onBack }: PreviewSectionProps) 
                   {session?.custom_text || 'None'}
                 </span>
               </div>
-              
+
               <div className="flex justify-between">
                 <span className="text-gray-600">Photo Shape:</span>
                 <span className="font-medium capitalize">
                   {session?.photo_shape || 'Square'}
                 </span>
               </div>
-              
+
               <div className="flex justify-between">
                 <span className="text-gray-600">PDF Size:</span>
                 <span className="font-medium">
                   {session?.pdf_size || 'A4'}
                 </span>
               </div>
-              
+
               <div className="flex justify-between">
                 <span className="text-gray-600">Template:</span>
                 <span className="font-medium capitalize">
                   {session?.template_id || 'Classic'}
                 </span>
               </div>
-              
+
               {session?.audio_duration && (
                 <div className="flex justify-between">
                   <span className="text-gray-600">Audio Duration:</span>
@@ -229,7 +229,7 @@ export default function PreviewSection({ onNext, onBack }: PreviewSectionProps) 
               <div>
                 <h4 className="font-medium text-amber-900 mb-1">Preview Version</h4>
                 <p className="text-sm text-amber-700">
-                  This preview includes a watermark. Purchase to download the clean, 
+                  This preview includes a watermark. Purchase to download the clean,
                   high-resolution version without watermarks.
                 </p>
               </div>
@@ -239,7 +239,7 @@ export default function PreviewSection({ onNext, onBack }: PreviewSectionProps) 
           {/* Features Included */}
           <div className="card">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">What's Included</h3>
-            
+
             <div className="space-y-2 text-sm">
               <div className="flex items-center space-x-2">
                 <div className="w-2 h-2 bg-green-500 rounded-full" />
@@ -275,7 +275,7 @@ export default function PreviewSection({ onNext, onBack }: PreviewSectionProps) 
           <ArrowLeft className="w-4 h-4" />
           <span>Back to Customize</span>
         </button>
-        
+
         <button
           onClick={onNext}
           className="btn-primary flex items-center space-x-2"

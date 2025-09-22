@@ -11,7 +11,7 @@ alwaysApply: true
   ```python
   # ✅ DO: Use proper UUID generation in test fixtures
   import uuid
-  
+
   @pytest.fixture
   def mock_session(self):
       return SessionModel(
@@ -19,7 +19,7 @@ alwaysApply: true
           session_token="test-session-token",
           # ... other fields
       )
-  
+
   # ❌ DON'T: Use plain strings for UUID fields
   @pytest.fixture
   def mock_session(self):
@@ -38,13 +38,13 @@ alwaysApply: true
       # Mock the file_uploader instance attribute
       pdf_generator.file_uploader.file_exists.return_value = True
       pdf_generator.file_uploader.generate_presigned_url.return_value = "https://example.com/test"
-      
+
       # Use the mocked instance
       result = pdf_generator.some_method()
-      
+
       # Verify calls
       pdf_generator.file_uploader.generate_presigned_url.assert_called_once()
-  
+
   # ❌ DON'T: Try to patch class attributes that are instance attributes
   @patch.object(PDFGenerator, 'file_uploader')  # This fails because file_uploader is created in __init__
   def test_pdf_generation(self, mock_file_uploader, pdf_generator):
@@ -61,7 +61,7 @@ alwaysApply: true
       mock_storage_manager.migrate_all_session_files.return_value = {
           "permanent_photo_s3_key": "permanent/photos/test.jpg"
       }
-  
+
   # ✅ DO: Use patch with proper target
   @patch('backend.services.pdf_generator.FileUploader')
   def test_pdf_generation(self, mock_file_uploader_class):
@@ -75,16 +75,16 @@ alwaysApply: true
   ```python
   # ✅ DO: Use correct exception type and message for Pydantic V2
   from pydantic import ValidationError
-  
+
   def test_validation_errors():
       # For Literal fields, use ValidationError with Pydantic's message
       with pytest.raises(ValidationError, match="Input should be 'square' or 'circle'"):
           SessionUpdate(photo_shape="invalid")
-      
+
       # For custom validators, use ValueError with custom message
       with pytest.raises(ValueError, match="Invalid template"):
           SessionUpdate(template_id="invalid")
-  
+
   # ❌ DON'T: Use wrong exception type or message
   def test_validation_errors():
       # This fails because Literal fields use ValidationError, not ValueError
@@ -125,7 +125,7 @@ alwaysApply: true
   from unittest.mock import patch, MagicMock, AsyncMock
   from fastapi.testclient import TestClient
   from pydantic import ValidationError
-  
+
   from ..models import SessionModel, Order
   from ..schemas import SessionUpdate
   from ..services.pdf_generator import PDFGenerator
@@ -136,12 +136,12 @@ alwaysApply: true
   ```python
   # ✅ DO: Use AsyncMock for async methods
   from unittest.mock import AsyncMock
-  
+
   @pytest.mark.asyncio
   async def test_async_functionality():
       mock_service = AsyncMock()
       mock_service.process_audio.return_value = "processed_audio.mp3"
-      
+
       result = await some_async_function(mock_service)
       assert result is not None
   ```
@@ -152,7 +152,7 @@ alwaysApply: true
   # ✅ DO: Ensure test models match production field types
   class TestSessionModel(TestBase):
       __tablename__ = "sessions"
-      
+
       id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
       session_token = Column(String(255), unique=True, nullable=False, index=True)
       # Match all field types from production SessionModel
