@@ -519,7 +519,7 @@ class PDFGenerator:
                 if self.file_uploader.file_exists(order.permanent_audio_s3_key):
                     return self.file_uploader.generate_presigned_url(
                         order.permanent_audio_s3_key,
-                        expiration=86400 * 365 * 5,  # 5 years expiration
+                        expiration=settings.qr_code_permanent_expiration
                     )
                 else:
                     raise Exception(
@@ -537,7 +537,7 @@ class PDFGenerator:
                 if file_exists:
                     print(f"DEBUG: Generating presigned URL for session audio")
                     return self.file_uploader.generate_presigned_url(
-                        session.audio_s3_key, expiration=86400 * 7  # 7 days expiration
+                        session.audio_s3_key, expiration=settings.qr_code_preview_expiration
                     )
                 else:
                     raise Exception(
