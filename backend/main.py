@@ -24,6 +24,7 @@ from .schemas import (
 )
 from .services.audio_processor import AudioProcessor
 from .services.email_service import EmailService
+from .services.privacy_service import PrivacyService
 from .services.file_uploader import FileUploader
 from .services.image_processor import ImageProcessor
 from .services.pdf_generator import PDFGenerator
@@ -68,6 +69,7 @@ image_processor = ImageProcessor()
 pdf_generator = PDFGenerator()
 stripe_service = StripeService()
 email_service = EmailService()
+privacy_service = PrivacyService()
 permanent_audio_service = PermanentAudioService()
 template_service = VisualTemplateService()
 
@@ -972,6 +974,115 @@ async def update_session_template(
         raise HTTPException(
             status_code=500, detail=f"Failed to update template: {str(e)}"
         )
+
+
+# Privacy Compliance Endpoints
+@app.get("/api/unsubscribe")
+async def unsubscribe_page():
+    """Serve unsubscribe page"""
+    return HTMLResponse("""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Unsubscribe - AudioPoster</title>
+        <style>
+            body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }
+            .container { background: #f9fafb; padding: 30px; border-radius: 10px; }
+            .success { color: #059669; }
+            .error { color: #dc2626; }
+            .btn { background: #8b5cf6; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>Unsubscribe from AudioPoster</h1>
+            <div id="content">
+                <p>We're sorry to see you go! You can unsubscribe from our emails below.</p>
+                <form id="unsubscribeForm">
+                    <label for="email">Email Address:</label><br>
+                    <input type="email" id="email" name="email" required style="width: 100%; padding: 10px; margin: 10px 0;"><br>
+                    <button type="submit" class="btn">Unsubscribe</button>
+                </form>
+            </div>
+        </div>
+        <script>
+            document.getElementById('unsubscribeForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const email = document.getElementById('email').value;
+                const urlParams = new URLSearchParams(window.location.search);
+                const token = urlParams.get('token');
+
+                try {
+                    const response = await fetch('/api/unsubscribe/confirm', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({email: email, token: token})
+                    });
+
+                    const result = await response.json();
+                    document.getElementById('content').innerHTML =
+                        '<p class="success">' + result.message + '</p>';
+                } catch (error) {
+                    document.getElementById('content').innerHTML =
+                        '<p class="error">An error occurred. Please try again.</p>';
+                }
+            });
+        </script>
+    </body>
+    </html>
+    """)
+
+
+@app.post("/api/unsubscribe/confirm")
+async def confirm_unsubscribe(request: dict, db: Session = Depends(get_db)):
+    """Confirm unsubscribe request"""
+    try:
+        email = request.get("email")
+        token = request.get("token")
+
+        if not email:
+            raise HTTPException(status_code=400, detail="Email is required")
+
+        # Verify token if provided
+        if token and not privacy_service.verify_unsubscribe_token(email, token):
+            raise HTTPException(status_code=400, detail="Invalid unsubscribe token")
+
+        # Unsubscribe the email
+        success = privacy_service.unsubscribe_email(email, db)
+
+        if success:
+            return {"message": f"Successfully unsubscribed {email} from AudioPoster emails."}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to unsubscribe email")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unsubscribe failed: {str(e)}")
+
+
+@app.post("/api/privacy/data-cleanup")
+async def cleanup_expired_data(db: Session = Depends(get_db)):
+    """Clean up expired session data (admin endpoint)"""
+    try:
+        deleted_count = privacy_service.cleanup_expired_data(db)
+        return {
+            "message": f"Successfully cleaned up {deleted_count} expired sessions",
+            "deleted_sessions": deleted_count
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Data cleanup failed: {str(e)}")
+
+
+@app.get("/api/privacy/data-retention")
+async def get_data_retention_info():
+    """Get information about data retention policies"""
+    try:
+        return privacy_service.get_data_retention_info()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get retention info: {str(e)}")
 
 
 # Removed audio-not-found and audio-error endpoints

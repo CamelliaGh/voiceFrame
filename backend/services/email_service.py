@@ -6,92 +6,101 @@ import logging
 from fastapi import HTTPException
 
 from ..config import settings
+from .privacy_service import PrivacyService
 
 logger = logging.getLogger(__name__)
 
 class EmailService:
     """Handles email delivery for downloads and marketing"""
-    
+
     def __init__(self):
         if settings.sendgrid_api_key:
             self.sg = SendGridAPIClient(api_key=settings.sendgrid_api_key)
         else:
             self.sg = None
             print("Warning: SendGrid API key not configured - emails will be logged only")
-    
-    async def send_download_email(self, email: str, download_url: str, 
+
+        self.privacy_service = PrivacyService()
+
+    async def send_download_email(self, email: str, download_url: str,
                                  expires_at: datetime, order_id: str = None) -> bool:
         """
         Send download email with PDF link
-        
+
         Args:
             email: Customer email
             download_url: Presigned URL for PDF download
             expires_at: When the download link expires
             order_id: Order ID for reference
-            
+
         Returns:
             True if email sent successfully
         """
         try:
             subject = "Your AudioPoster is Ready! 🎵"
-            
+
             # Format expiration time
             expires_str = expires_at.strftime("%B %d, %Y at %I:%M %p UTC")
-            
+
+            # Generate unsubscribe URL for this email
+            unsubscribe_url = self.privacy_service.create_unsubscribe_url(email)
+
             html_content = self._create_download_email_html(
-                download_url, expires_str, order_id
+                download_url, expires_str, order_id, unsubscribe_url
             )
-            
+
             text_content = self._create_download_email_text(
-                download_url, expires_str, order_id
+                download_url, expires_str, order_id, unsubscribe_url
             )
-            
+
             return await self._send_email(email, subject, html_content, text_content)
-            
+
         except Exception as e:
             logger.error(f"Failed to send download email to {email}: {str(e)}")
             return False
-    
+
     async def send_welcome_email(self, email: str, first_name: str = None) -> bool:
         """
         Send welcome email to new subscribers
-        
+
         Args:
             email: Subscriber email
             first_name: Optional first name
-            
+
         Returns:
             True if email sent successfully
         """
         try:
             subject = "Welcome to AudioPoster! 🎨"
-            
-            html_content = self._create_welcome_email_html(first_name)
-            text_content = self._create_welcome_email_text(first_name)
-            
+
+            # Generate unsubscribe URL for this email
+            unsubscribe_url = self.privacy_service.create_unsubscribe_url(email)
+
+            html_content = self._create_welcome_email_html(first_name, unsubscribe_url)
+            text_content = self._create_welcome_email_text(first_name, unsubscribe_url)
+
             return await self._send_email(email, subject, html_content, text_content)
-            
+
         except Exception as e:
             logger.error(f"Failed to send welcome email to {email}: {str(e)}")
             return False
-    
-    async def send_marketing_email(self, emails: List[str], subject: str, 
+
+    async def send_marketing_email(self, emails: List[str], subject: str,
                                   html_content: str, text_content: str) -> int:
         """
         Send marketing email to multiple recipients
-        
+
         Args:
             emails: List of recipient emails
             subject: Email subject
             html_content: HTML email content
             text_content: Plain text email content
-            
+
         Returns:
             Number of emails sent successfully
         """
         sent_count = 0
-        
+
         for email in emails:
             try:
                 if await self._send_email(email, subject, html_content, text_content):
@@ -99,20 +108,20 @@ class EmailService:
             except Exception as e:
                 logger.error(f"Failed to send marketing email to {email}: {str(e)}")
                 continue
-        
+
         return sent_count
-    
-    async def _send_email(self, to_email: str, subject: str, 
+
+    async def _send_email(self, to_email: str, subject: str,
                          html_content: str, text_content: str) -> bool:
         """
         Core email sending function
-        
+
         Args:
             to_email: Recipient email
             subject: Email subject
             html_content: HTML content
             text_content: Plain text content
-            
+
         Returns:
             True if sent successfully
         """
@@ -123,7 +132,7 @@ class EmailService:
             logger.info(f"Subject: {subject}")
             logger.info(f"Content: {text_content[:200]}...")
             return True
-        
+
         try:
             message = Mail(
                 from_email=Email(settings.from_email, "AudioPoster"),
@@ -132,9 +141,9 @@ class EmailService:
                 html_content=Content("text/html", html_content),
                 plain_text_content=Content("text/plain", text_content)
             )
-            
+
             response = self.sg.send(message)
-            
+
             # SendGrid returns 202 for successful sends
             if response.status_code == 202:
                 logger.info(f"Email sent successfully to {to_email}")
@@ -142,13 +151,13 @@ class EmailService:
             else:
                 logger.error(f"Email send failed with status {response.status_code}")
                 return False
-                
+
         except Exception as e:
             logger.error(f"SendGrid error: {str(e)}")
             return False
-    
-    def _create_download_email_html(self, download_url: str, expires_str: str, 
-                                   order_id: str = None) -> str:
+
+    def _create_download_email_html(self, download_url: str, expires_str: str,
+                                   order_id: str = None, unsubscribe_url: str = None) -> str:
         """Create HTML content for download email"""
         return f"""
         <!DOCTYPE html>
@@ -173,19 +182,19 @@ class EmailService:
                     <h1>🎵 Your AudioPoster is Ready!</h1>
                     <p>Your beautiful audio memory poster has been generated</p>
                 </div>
-                
+
                 <div class="content">
                     <p>Thank you for using AudioPoster! Your custom poster combining your photo, audio waveform, and personal message is now ready for download.</p>
-                    
+
                     <div style="text-align: center;">
                         <a href="{download_url}" class="download-btn">Download Your Poster</a>
                     </div>
-                    
+
                     <div class="warning">
-                        <strong>⏰ Important:</strong> This download link expires on <strong>{expires_str}</strong>. 
+                        <strong>⏰ Important:</strong> This download link expires on <strong>{expires_str}</strong>.
                         Make sure to download your poster before then!
                     </div>
-                    
+
                     <h3>What you'll get:</h3>
                     <ul>
                         <li>High-resolution PDF (300 DPI) perfect for printing</li>
@@ -193,29 +202,31 @@ class EmailService:
                         <li>QR code linking to your audio playback</li>
                         <li>Professional poster layout ready to frame</li>
                     </ul>
-                    
+
                     <h3>Printing Tips:</h3>
                     <ul>
                         <li>Print on high-quality photo paper or cardstock</li>
                         <li>Use color printing for best results</li>
                         <li>Consider professional printing services for premium quality</li>
                     </ul>
-                    
+
                     {f'<p><small>Order ID: {order_id}</small></p>' if order_id else ''}
                 </div>
-                
+
                 <div class="footer">
                     <p>Love your AudioPoster? Share it with friends and family!</p>
                     <p>Visit <a href="{settings.base_url}">AudioPoster.com</a> to create more beautiful memory posters.</p>
                     <p><small>If you have any questions, reply to this email and we'll help you out.</small></p>
                 </div>
+
+                {self.privacy_service.generate_privacy_footer_html(unsubscribe_url)}
             </div>
         </body>
         </html>
         """
-    
-    def _create_download_email_text(self, download_url: str, expires_str: str, 
-                                   order_id: str = None) -> str:
+
+    def _create_download_email_text(self, download_url: str, expires_str: str,
+                                   order_id: str = None, unsubscribe_url: str = None) -> str:
         """Create plain text content for download email"""
         return f"""
 Your AudioPoster is Ready! 🎵
@@ -228,7 +239,7 @@ Download Your Poster: {download_url}
 
 What you'll get:
 - High-resolution PDF (300 DPI) perfect for printing
-- Your photo with custom audio waveform visualization  
+- Your photo with custom audio waveform visualization
 - QR code linking to your audio playback
 - Professional poster layout ready to frame
 
@@ -243,12 +254,13 @@ Love your AudioPoster? Share it with friends and family!
 Visit {settings.base_url} to create more beautiful memory posters.
 
 If you have any questions, reply to this email and we'll help you out.
+{self.privacy_service.generate_privacy_footer_text(unsubscribe_url)}
         """
-    
-    def _create_welcome_email_html(self, first_name: str = None) -> str:
+
+    def _create_welcome_email_html(self, first_name: str = None, unsubscribe_url: str = None) -> str:
         """Create HTML content for welcome email"""
         name = first_name if first_name else "there"
-        
+
         return f"""
         <!DOCTYPE html>
         <html lang="en">
@@ -271,12 +283,12 @@ If you have any questions, reply to this email and we'll help you out.
                     <h1>🎨 Welcome to AudioPoster!</h1>
                     <p>Transform your memories into beautiful art</p>
                 </div>
-                
+
                 <div class="content">
                     <p>Hi {name}!</p>
-                    
+
                     <p>Welcome to the AudioPoster community! We're excited to help you create beautiful, personalized posters that combine your favorite photos with audio memories.</p>
-                    
+
                     <h3>What makes AudioPoster special:</h3>
                     <ul>
                         <li>🎵 <strong>Audio Waveform Art:</strong> Turn any audio into beautiful visualizations</li>
@@ -285,11 +297,11 @@ If you have any questions, reply to this email and we'll help you out.
                         <li>🎁 <strong>Perfect Gifts:</strong> Create unique presents for loved ones</li>
                         <li>🖼️ <strong>Print-Ready:</strong> High-quality PDFs ready for framing</li>
                     </ul>
-                    
+
                     <div style="text-align: center;">
                         <a href="{settings.base_url}" class="cta-btn">Create Your First Poster</a>
                     </div>
-                    
+
                     <h3>Popular uses:</h3>
                     <ul>
                         <li>Anniversary songs and voice messages</li>
@@ -299,21 +311,23 @@ If you have any questions, reply to this email and we'll help you out.
                         <li>Graduation speeches and memories</li>
                     </ul>
                 </div>
-                
+
                 <div class="footer">
                     <p>Questions? Tips? We'd love to hear from you!</p>
                     <p>Reply to this email anytime - we read every message.</p>
                     <p><small>Follow us for inspiration and new features!</small></p>
                 </div>
+
+                {self.privacy_service.generate_privacy_footer_html(unsubscribe_url)}
             </div>
         </body>
         </html>
         """
-    
-    def _create_welcome_email_text(self, first_name: str = None) -> str:
+
+    def _create_welcome_email_text(self, first_name: str = None, unsubscribe_url: str = None) -> str:
         """Create plain text content for welcome email"""
         name = first_name if first_name else "there"
-        
+
         return f"""
 Welcome to AudioPoster! 🎨
 
@@ -323,7 +337,7 @@ Welcome to the AudioPoster community! We're excited to help you create beautiful
 
 What makes AudioPoster special:
 🎵 Audio Waveform Art: Turn any audio into beautiful visualizations
-📷 Photo Integration: Combine your images with audio memories  
+📷 Photo Integration: Combine your images with audio memories
 ✨ Custom Text: Add personal messages and dedications
 🎁 Perfect Gifts: Create unique presents for loved ones
 🖼️ Print-Ready: High-quality PDFs ready for framing
@@ -339,4 +353,5 @@ Popular uses:
 
 Questions? Tips? We'd love to hear from you!
 Reply to this email anytime - we read every message.
+{self.privacy_service.generate_privacy_footer_text(unsubscribe_url)}
         """

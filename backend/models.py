@@ -27,6 +27,11 @@ class SessionModel(Base):
         DateTime, default=lambda: datetime.utcnow() + timedelta(hours=24)
     )
 
+    # Privacy compliance fields
+    email = Column(String(255), nullable=True, index=True)
+    unsubscribed = Column(Boolean, default=False)
+    unsubscribed_at = Column(DateTime, nullable=True)
+
 
 class Order(Base):
     __tablename__ = "orders"
