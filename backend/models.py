@@ -32,6 +32,14 @@ class SessionModel(Base):
     unsubscribed = Column(Boolean, default=False)
     unsubscribed_at = Column(DateTime, nullable=True)
 
+    # GDPR consent management fields
+    consent_data = Column(Text, nullable=True)  # JSON string storing consent records
+    consent_updated_at = Column(DateTime, nullable=True)
+    data_processing_consent = Column(Boolean, default=False)
+    marketing_consent = Column(Boolean, default=False)
+    analytics_consent = Column(Boolean, default=False)
+    cookie_consent = Column(Boolean, default=False)
+
 
 class Order(Base):
     __tablename__ = "orders"

@@ -6,7 +6,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     DEBIAN_FRONTEND=noninteractive
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     libsndfile1 \
     libsndfile1-dev \
@@ -14,6 +14,10 @@ RUN apt-get update && apt-get install -y \
     g++ \
     libpq-dev \
     curl \
+    libmagic1 \
+    libmagic-dev \
+    clamav \
+    clamav-daemon \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 

@@ -1,9 +1,11 @@
+import json
+import logging
 import os
 import uuid
 from datetime import datetime, timedelta
 from typing import Optional
 
-from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -23,16 +25,23 @@ from .schemas import (
     UploadResponse,
 )
 from .services.audio_processor import AudioProcessor
+from .services.content_filter import content_filter
 from .services.email_service import EmailService
 from .services.privacy_service import PrivacyService
 from .services.file_uploader import FileUploader
 from .services.image_processor import ImageProcessor
 from .services.pdf_generator import PDFGenerator
 from .services.permanent_audio_service import PermanentAudioService
+from .services.rate_limiter import rate_limiter
 from .services.session_manager import SessionManager
 from .services.storage_manager import StorageManager
 from .services.stripe_service import StripeService
 from .services.visual_template_service import VisualTemplateService
+from .services.consent_manager import consent_manager, ConsentType
+from .services.gdpr_service import gdpr_service
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 # Initialize services
 storage_manager = StorageManager()
@@ -46,6 +55,12 @@ app = FastAPI(
     description="API for creating personalized audio poster PDFs",
     version="1.0.0",
 )
+
+# Initialize rate limiter on startup
+@app.on_event("startup")
+async def startup_event():
+    """Initialize services on application startup"""
+    await rate_limiter.initialize()
 
 # CORS middleware
 app.add_middleware(
@@ -219,36 +234,57 @@ async def validate_session_for_preview(
 # File Upload Endpoints
 @app.post("/api/session/{token}/photo", response_model=UploadResponse)
 async def upload_photo(
-    token: str, photo: UploadFile = File(...), db: Session = Depends(get_db)
+    token: str, photo: UploadFile = File(...), db: Session = Depends(get_db), request: Request = None
 ):
     """Upload and process photo for the session"""
+    # Rate limiting check
+    if settings.rate_limit_enabled:
+        await rate_limiter.check_upload_rate_limit(token)
+        if request:
+            await rate_limiter.check_burst_rate_limit(request)
+            if await rate_limiter.is_banned(request):
+                raise HTTPException(status_code=403, detail="Access temporarily restricted")
+
     session = session_manager.get_session(db, token)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    # Validate file
+    # Basic file validation
     if not photo.filename:
         raise HTTPException(status_code=400, detail="No file selected")
 
     if photo.size == 0:
         raise HTTPException(status_code=400, detail="File is empty")
 
-    if not photo.content_type or not photo.content_type.startswith("image/"):
-        raise HTTPException(
-            status_code=400, detail="File must be an image (JPEG, PNG, etc.)"
-        )
+    # Advanced content filtering
+    if settings.content_filter_enabled:
+        validation_result = await content_filter.validate_upload(photo, "image")
+        if not validation_result["is_valid"]:
+            error_msg = "; ".join(validation_result["errors"])
+            logger.warning(f"Photo upload blocked: {error_msg}")
+            raise HTTPException(status_code=400, detail=f"File validation failed: {error_msg}")
 
-    if photo.size > 50 * 1024 * 1024:  # 50MB
-        raise HTTPException(status_code=400, detail="File too large (max 50MB)")
+        # Log any warnings
+        for warning in validation_result.get("warnings", []):
+            logger.info(f"Photo upload warning: {warning}")
+    else:
+        # Fallback to basic validation if content filtering is disabled
+        if not photo.content_type or not photo.content_type.startswith("image/"):
+            raise HTTPException(
+                status_code=400, detail="File must be an image (JPEG, PNG, etc.)"
+            )
 
-    # Validate file extension
-    allowed_extensions = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp"}
-    file_extension = os.path.splitext(photo.filename.lower())[1]
-    if file_extension not in allowed_extensions:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Unsupported image format. Allowed: {', '.join(allowed_extensions)}",
-        )
+        if photo.size > settings.max_photo_size:
+            raise HTTPException(status_code=400, detail=f"File too large (max {settings.max_photo_size // (1024*1024)}MB)")
+
+        # Validate file extension
+        allowed_extensions = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp"}
+        file_extension = os.path.splitext(photo.filename.lower())[1]
+        if file_extension not in allowed_extensions:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported image format. Allowed: {', '.join(allowed_extensions)}",
+            )
 
     try:
         # Store photo temporarily for preview generation using FileUploader (S3)
@@ -279,42 +315,63 @@ async def upload_photo(
 
 @app.post("/api/session/{token}/audio", response_model=UploadResponse)
 async def upload_audio(
-    token: str, audio: UploadFile = File(...), db: Session = Depends(get_db)
+    token: str, audio: UploadFile = File(...), db: Session = Depends(get_db), request: Request = None
 ):
     """Upload and process audio for the session"""
+    # Rate limiting check
+    if settings.rate_limit_enabled:
+        await rate_limiter.check_upload_rate_limit(token)
+        if request:
+            await rate_limiter.check_burst_rate_limit(request)
+            if await rate_limiter.is_banned(request):
+                raise HTTPException(status_code=403, detail="Access temporarily restricted")
+
     session = session_manager.get_session(db, token)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    # Validate file
+    # Basic file validation
     if not audio.filename:
         raise HTTPException(status_code=400, detail="No audio file selected")
 
     if audio.size == 0:
         raise HTTPException(status_code=400, detail="Audio file is empty")
 
-    if not audio.content_type or not audio.content_type.startswith("audio/"):
-        raise HTTPException(
-            status_code=400, detail="File must be an audio file (MP3, WAV, etc.)"
-        )
+    # Advanced content filtering
+    if settings.content_filter_enabled:
+        validation_result = await content_filter.validate_upload(audio, "audio")
+        if not validation_result["is_valid"]:
+            error_msg = "; ".join(validation_result["errors"])
+            logger.warning(f"Audio upload blocked: {error_msg}")
+            raise HTTPException(status_code=400, detail=f"File validation failed: {error_msg}")
 
-    if audio.size > 100 * 1024 * 1024:  # 100MB
-        raise HTTPException(status_code=400, detail="Audio file too large (max 100MB)")
+        # Log any warnings
+        for warning in validation_result.get("warnings", []):
+            logger.info(f"Audio upload warning: {warning}")
+    else:
+        # Fallback to basic validation if content filtering is disabled
+        if not audio.content_type or not audio.content_type.startswith("audio/"):
+            raise HTTPException(
+                status_code=400, detail="File must be an audio file (MP3, WAV, etc.)"
+            )
 
-    # Validate file extension
-    allowed_extensions = {".mp3", ".wav", ".m4a", ".aac", ".ogg", ".flac"}
-    file_extension = os.path.splitext(audio.filename.lower())[1]
-    if file_extension not in allowed_extensions:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Unsupported audio format. Allowed: {', '.join(allowed_extensions)}",
-        )
+        if audio.size > settings.max_audio_size:
+            raise HTTPException(status_code=400, detail=f"Audio file too large (max {settings.max_audio_size // (1024*1024)}MB)")
 
-    # Check minimum file size (at least 1KB)
-    if audio.size < 1024:  # 1KB
-        raise HTTPException(
-            status_code=400, detail="Audio file too small (minimum 1KB)"
-        )
+        # Validate file extension
+        allowed_extensions = {".mp3", ".wav", ".m4a", ".aac", ".ogg", ".flac"}
+        file_extension = os.path.splitext(audio.filename.lower())[1]
+        if file_extension not in allowed_extensions:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported audio format. Allowed: {', '.join(allowed_extensions)}",
+            )
+
+        # Check minimum file size (at least 1KB)
+        if audio.size < 1024:  # 1KB
+            raise HTTPException(
+                status_code=400, detail="Audio file too small (minimum 1KB)"
+            )
 
     try:
         # Store audio temporarily for preview generation using FileUploader (S3)
@@ -1083,6 +1140,257 @@ async def get_data_retention_info():
         return privacy_service.get_data_retention_info()
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get retention info: {str(e)}")
+
+
+# Security and Monitoring Endpoints
+@app.get("/api/security/rate-limit-status")
+async def get_rate_limit_status(request: Request):
+    """Get current rate limit status for monitoring"""
+    try:
+        return await rate_limiter.get_rate_limit_status(request)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get rate limit status: {str(e)}")
+
+
+@app.get("/api/security/content-filter-status")
+async def get_content_filter_status():
+    """Get current content filter status for monitoring"""
+    try:
+        return await content_filter.get_filter_status()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get content filter status: {str(e)}")
+
+
+@app.post("/api/security/cleanup-rate-limits")
+async def cleanup_rate_limits():
+    """Clean up expired rate limit entries (admin endpoint)"""
+    try:
+        await rate_limiter.cleanup_expired_entries()
+        return {"message": "Rate limit cleanup completed successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Rate limit cleanup failed: {str(e)}")
+
+
+# GDPR Compliance Endpoints
+
+@app.post("/api/gdpr/consent")
+async def collect_consent(
+    user_identifier: str = Form(...),
+    consent_type: str = Form(...),
+    consent_data: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    """Collect user consent for GDPR compliance"""
+    try:
+        # Parse consent data
+        consent_info = json.loads(consent_data)
+
+        # Validate consent type
+        try:
+            consent_type_enum = ConsentType(consent_type)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Invalid consent type: {consent_type}")
+
+        # Collect consent
+        result = consent_manager.collect_consent(
+            user_identifier,
+            consent_type_enum,
+            consent_info,
+            db
+        )
+
+        if result["success"]:
+            return result
+        else:
+            raise HTTPException(status_code=400, detail=result["message"])
+
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid consent data format")
+    except Exception as e:
+        logger.error(f"Error collecting consent: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to collect consent: {str(e)}")
+
+
+@app.delete("/api/gdpr/consent")
+async def withdraw_consent(
+    user_identifier: str = Form(...),
+    consent_type: str = Form(...),
+    withdrawal_reason: str = Form(""),
+    db: Session = Depends(get_db)
+):
+    """Withdraw user consent for GDPR compliance"""
+    try:
+        # Validate consent type
+        try:
+            consent_type_enum = ConsentType(consent_type)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Invalid consent type: {consent_type}")
+
+        # Withdraw consent
+        result = consent_manager.withdraw_consent(
+            user_identifier,
+            consent_type_enum,
+            withdrawal_reason,
+            db
+        )
+
+        if result["success"]:
+            return result
+        else:
+            raise HTTPException(status_code=400, detail=result["message"])
+
+    except Exception as e:
+        logger.error(f"Error withdrawing consent: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to withdraw consent: {str(e)}")
+
+
+@app.get("/api/gdpr/consent/{user_identifier}")
+async def get_consent_status(
+    user_identifier: str,
+    consent_type: str = None,
+    db: Session = Depends(get_db)
+):
+    """Get consent status for a user"""
+    try:
+        if consent_type:
+            # Get specific consent type
+            try:
+                consent_type_enum = ConsentType(consent_type)
+            except ValueError:
+                raise HTTPException(status_code=400, detail=f"Invalid consent type: {consent_type}")
+
+            result = consent_manager.get_consent_status(user_identifier, consent_type_enum, db)
+        else:
+            # Get all consents
+            result = consent_manager.get_all_consents(user_identifier, db)
+
+        return result
+
+    except Exception as e:
+        logger.error(f"Error getting consent status: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get consent status: {str(e)}")
+
+
+@app.get("/api/gdpr/data/{user_identifier}")
+async def get_user_data(
+    user_identifier: str,
+    db: Session = Depends(get_db)
+):
+    """Right to Access - Get all personal data for a user"""
+    try:
+        result = gdpr_service.get_user_data(user_identifier, db)
+
+        if "error" in result:
+            raise HTTPException(status_code=500, detail=result["message"])
+
+        return result
+
+    except Exception as e:
+        logger.error(f"Error getting user data: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get user data: {str(e)}")
+
+
+@app.get("/api/gdpr/export/{user_identifier}")
+async def export_user_data(
+    user_identifier: str,
+    format: str = "json",
+    db: Session = Depends(get_db)
+):
+    """Right to Data Portability - Export user data in portable format"""
+    try:
+        result = gdpr_service.export_user_data(user_identifier, db)
+
+        if not result["success"]:
+            raise HTTPException(status_code=500, detail=result["message"])
+
+        if format == "zip":
+            from fastapi.responses import Response
+            return Response(
+                content=result["zip_export"],
+                media_type="application/zip",
+                headers={
+                    "Content-Disposition": f"attachment; filename=gdpr_export_{user_identifier}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.zip"
+                }
+            )
+        else:
+            return result["export_data"]
+
+    except Exception as e:
+        logger.error(f"Error exporting user data: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to export user data: {str(e)}")
+
+
+@app.delete("/api/gdpr/data/{user_identifier}")
+async def erase_user_data(
+    user_identifier: str,
+    db: Session = Depends(get_db)
+):
+    """Right to Erasure - Delete all personal data for a user"""
+    try:
+        result = gdpr_service.erase_user_data(user_identifier, db)
+
+        if not result["success"]:
+            raise HTTPException(status_code=500, detail=result["message"])
+
+        return result
+
+    except Exception as e:
+        logger.error(f"Error erasing user data: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to erase user data: {str(e)}")
+
+
+@app.put("/api/gdpr/data/{user_identifier}")
+async def rectify_user_data(
+    user_identifier: str,
+    corrections: dict,
+    db: Session = Depends(get_db)
+):
+    """Right to Rectification - Correct inaccurate personal data"""
+    try:
+        result = gdpr_service.rectify_user_data(user_identifier, corrections, db)
+
+        if not result["success"]:
+            raise HTTPException(status_code=500, detail=result["message"])
+
+        return result
+
+    except Exception as e:
+        logger.error(f"Error rectifying user data: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to rectify user data: {str(e)}")
+
+
+@app.get("/api/gdpr/processing-info")
+async def get_data_processing_info():
+    """Get information about data processing activities"""
+    try:
+        return gdpr_service.get_data_processing_info()
+    except Exception as e:
+        logger.error(f"Error getting data processing info: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get data processing info: {str(e)}")
+
+
+@app.get("/api/gdpr/consent-statistics")
+async def get_consent_statistics(db: Session = Depends(get_db)):
+    """Get consent statistics for monitoring (admin endpoint)"""
+    try:
+        return consent_manager.get_consent_statistics(db)
+    except Exception as e:
+        logger.error(f"Error getting consent statistics: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get consent statistics: {str(e)}")
+
+
+@app.post("/api/gdpr/cleanup-consents")
+async def cleanup_expired_consents(db: Session = Depends(get_db)):
+    """Clean up expired consent records (admin endpoint)"""
+    try:
+        cleaned_count = consent_manager.cleanup_expired_consents(db)
+        return {
+            "message": f"Cleaned up {cleaned_count} expired consent records",
+            "cleaned_count": cleaned_count
+        }
+    except Exception as e:
+        logger.error(f"Error cleaning up expired consents: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to cleanup expired consents: {str(e)}")
 
 
 # Removed audio-not-found and audio-error endpoints

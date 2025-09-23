@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Type, ArrowLeft, ArrowRight, Image, FileText } from 'lucide-react'
 import { useSession } from '../contexts/SessionContext'
 import { cn } from '../lib/utils'
-import { SessionData } from '../lib/api'
+import { SessionData, getProcessingStatus } from '../lib/api'
 import RealTimePreview from './RealTimePreview'
 
 interface CustomizationPanelProps {
@@ -157,10 +157,41 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
   const [fontId, setFontId] = useState(session?.font_id || 'script')
   const [characterCount, setCharacterCount] = useState(0)
   const [isUpdating, setIsUpdating] = useState(false)
+  const [processingStatus, setProcessingStatus] = useState<{
+    photo_ready: boolean
+    audio_ready: boolean
+    waveform_ready: boolean
+    preview_ready: boolean
+  } | null>(null)
 
   useEffect(() => {
     setCharacterCount(customText.length)
   }, [customText])
+
+  // Check processing status when component mounts and periodically
+  useEffect(() => {
+    const checkProcessingStatus = async () => {
+      if (!session) return
+
+      try {
+        const status = await getProcessingStatus(session.session_token)
+        setProcessingStatus(status)
+      } catch (error) {
+        console.error('Failed to get processing status:', error)
+      }
+    }
+
+    checkProcessingStatus()
+
+    // If audio processing is not complete, check periodically
+    const interval = setInterval(() => {
+      if (processingStatus && !processingStatus.waveform_ready) {
+        checkProcessingStatus()
+      }
+    }, 2000) // Check every 2 seconds
+
+    return () => clearInterval(interval)
+  }, [session, processingStatus])
 
   // Debounced update function for real-time preview
   const debouncedUpdate = useCallback(
@@ -170,18 +201,34 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
         clearTimeout(timeoutId)
         timeoutId = setTimeout(async () => {
           if (!session) return
+
+          // Check if audio processing is complete before updating
+          if (processingStatus && !processingStatus.waveform_ready) {
+            console.warn('Audio processing not complete, skipping session update')
+            return
+          }
+
           try {
             setIsUpdating(true)
             await updateSessionData(data)
           } catch (error) {
             console.error('Failed to update session:', error)
+            // If it's a 400 error about audio processing, refresh the processing status
+            if (error instanceof Error && error.message.includes('Audio processing not complete')) {
+              try {
+                const status = await getProcessingStatus(session.session_token)
+                setProcessingStatus(status)
+              } catch (statusError) {
+                console.error('Failed to refresh processing status:', statusError)
+              }
+            }
           } finally {
             setIsUpdating(false)
           }
         }, 500) // 500ms delay
       }
     })(),
-    [session, updateSessionData]
+    [session, updateSessionData, processingStatus]
   )
 
   const handleTextChange = (text: string) => {
@@ -295,11 +342,17 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
             <span>Updating preview...</span>
           </div>
         )}
+        {processingStatus && !processingStatus.waveform_ready && (
+          <div className="mt-2 flex items-center justify-center space-x-2 text-sm text-amber-600">
+            <div className="w-4 h-4 border-2 border-amber-600 border-t-transparent rounded-full animate-spin" />
+            <span>Processing audio... Please wait before customizing.</span>
+          </div>
+        )}
       </div>
 
       <div className="grid lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
         {/* Customization Options */}
-        <div className="space-y-6">
+        <div className={`space-y-6 ${processingStatus && !processingStatus.waveform_ready ? 'opacity-50 pointer-events-none' : ''}`}>
           {/* Custom Text */}
           <div className="card">
             <div className="flex items-center space-x-2 mb-4">
@@ -493,7 +546,12 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
 
         <button
           onClick={handleNext}
-          className="btn-primary flex items-center space-x-2"
+          disabled={processingStatus ? !processingStatus.waveform_ready : false}
+          className={`btn-primary flex items-center space-x-2 ${
+            processingStatus && !processingStatus.waveform_ready
+              ? 'opacity-50 cursor-not-allowed'
+              : ''
+          }`}
         >
           <span>Continue to Preview</span>
           <ArrowRight className="w-4 h-4" />
