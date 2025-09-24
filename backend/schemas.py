@@ -154,6 +154,7 @@ class PaymentIntentResponse(BaseModel):
 
 class CompleteOrderRequest(BaseModel):
     payment_intent_id: str
+    session_token: str  # Required for payment-session binding validation
 
 
 class DownloadResponse(BaseModel):

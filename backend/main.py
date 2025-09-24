@@ -37,6 +37,8 @@ from .services.session_manager import SessionManager
 from .services.storage_manager import StorageManager
 from .services.stripe_service import StripeService
 from .services.visual_template_service import VisualTemplateService
+from .services.file_access_validator import FileAccessValidator
+from .services.admin_auth import AdminAuthService
 from .services.consent_manager import consent_manager, ConsentType
 from .services.gdpr_service import gdpr_service
 
@@ -87,6 +89,8 @@ email_service = EmailService()
 privacy_service = PrivacyService()
 permanent_audio_service = PermanentAudioService()
 template_service = VisualTemplateService()
+file_access_validator = FileAccessValidator()
+admin_auth_service = AdminAuthService()
 
 
 @app.get("/")
@@ -104,16 +108,10 @@ async def health_check():
 async def create_session(db: Session = Depends(get_db)):
     """Create a new session for file uploads and customization"""
     try:
-        session_token = str(uuid.uuid4())
-        expires_at = datetime.utcnow() + timedelta(hours=24)
-
-        session = SessionModel(session_token=session_token, expires_at=expires_at)
-        db.add(session)
-        db.commit()
-        db.refresh(session)
+        session = session_manager.create_session(db, expires_hours=2)
 
         return SessionResponse(
-            session_token=session_token, expires_at=expires_at.isoformat()
+            session_token=session.session_token, expires_at=session.expires_at.isoformat()
         )
     except Exception as e:
         raise HTTPException(
@@ -543,6 +541,7 @@ async def create_payment_intent(
             download_token=str(uuid.uuid4()),
             download_expires_at=datetime.utcnow()
             + timedelta(days=7),  # 7 days for all users
+            session_token=session.session_token,  # Bind order to session
         )
         db.add(order)
         db.commit()
@@ -577,6 +576,18 @@ async def complete_order(
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
 
+    # Validate session ownership - ensure the session token matches the order
+    if not order.session_token or order.session_token != request.session_token:
+        raise HTTPException(
+            status_code=403,
+            detail="Session token does not match order. Unauthorized access attempt."
+        )
+
+    # Validate session is still valid
+    session = session_manager.get_session(db, request.session_token)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found or expired")
+
     try:
         # Verify payment with Stripe
         payment_intent = stripe_service.verify_payment(request.payment_intent_id)
@@ -589,9 +600,7 @@ async def complete_order(
         db.commit()
 
         # Generate final PDF without watermark
-        session = session_manager.get_session_by_order(db, order_id)
-        if not session:
-            raise HTTPException(status_code=404, detail="Session not found for order")
+        # Note: session is already validated above
 
         # Validate that required files exist in S3 before generating final PDF
         from .services.file_uploader import FileUploader
@@ -729,12 +738,8 @@ async def complete_order(
 @app.get("/api/download/{download_token}")
 async def download_pdf(download_token: str, db: Session = Depends(get_db)):
     """Download PDF using secure token"""
-    order = db.query(Order).filter(Order.download_token == download_token).first()
-    if not order:
-        raise HTTPException(status_code=404, detail="Download not found")
-
-    if order.download_expires_at < datetime.utcnow():
-        raise HTTPException(status_code=410, detail="Download link expired")
+    # Validate download token access using file access validator
+    order = file_access_validator.validate_download_token_access(db, download_token)
 
     # Return the PDF file
     # This would typically redirect to S3 or serve the file directly
@@ -747,30 +752,21 @@ async def listen_to_audio(identifier: str, db: Session = Depends(get_db)):
     """Permanent audio playback for QR codes - works forever"""
 
     try:
-        # First try to find by order ID (paid posters)
-        order = (
-            db.query(Order)
-            .filter(Order.id == identifier, Order.status == "completed")
-            .first()
-        )
+        # Validate audio access using file access validator
+        access_info = file_access_validator.validate_audio_playback_access(db, identifier)
 
-        if order and order.permanent_audio_s3_key:
+        if access_info['type'] == 'order':
             # Paid poster - use permanent audio
             audio_url = permanent_audio_service.get_permanent_audio_url(
-                order, expiration=3600
+                access_info['object'], expiration=3600
             )
-            title = "Your AudioPoster Memory"
         else:
-            # Try as session token (preview)
-            session = session_manager.get_session(db, identifier)
-            if session and session.audio_s3_key:
-                # Preview poster - use session audio (may expire)
-                audio_url = file_uploader.generate_presigned_url(
-                    session.audio_s3_key, expiration=3600
-                )
-                title = "AudioPoster Preview"
-            else:
-                raise HTTPException(status_code=404, detail="Audio not found")
+            # Preview poster - use session audio (may expire)
+            audio_url = file_uploader.generate_presigned_url(
+                access_info['audio_key'], expiration=3600
+            )
+
+        title = access_info['title']
 
         if not audio_url:
             raise HTTPException(status_code=404, detail="Audio file not accessible")
@@ -942,14 +938,8 @@ async def get_audio_file(order_id: str, db: Session = Depends(get_db)):
     """Direct audio file access with presigned URL redirect"""
 
     try:
-        order = (
-            db.query(Order)
-            .filter(Order.id == order_id, Order.status == "completed")
-            .first()
-        )
-
-        if not order or not order.permanent_audio_s3_key:
-            raise HTTPException(status_code=404, detail="Audio not found")
+        # Validate order file access using file access validator
+        order = file_access_validator.validate_order_file_access(db, order_id, "audio")
 
         # Generate fresh presigned URL
         audio_url = permanent_audio_service.get_permanent_audio_url(
@@ -1121,7 +1111,10 @@ async def confirm_unsubscribe(request: dict, db: Session = Depends(get_db)):
 
 
 @app.post("/api/privacy/data-cleanup")
-async def cleanup_expired_data(db: Session = Depends(get_db)):
+async def cleanup_expired_data(
+    db: Session = Depends(get_db),
+    admin_auth: bool = admin_auth_service.get_admin_dependency()
+):
     """Clean up expired session data (admin endpoint)"""
     try:
         deleted_count = privacy_service.cleanup_expired_data(db)
@@ -1162,7 +1155,9 @@ async def get_content_filter_status():
 
 
 @app.post("/api/security/cleanup-rate-limits")
-async def cleanup_rate_limits():
+async def cleanup_rate_limits(
+    admin_auth: bool = admin_auth_service.get_admin_dependency()
+):
     """Clean up expired rate limit entries (admin endpoint)"""
     try:
         await rate_limiter.cleanup_expired_entries()
@@ -1370,7 +1365,10 @@ async def get_data_processing_info():
 
 
 @app.get("/api/gdpr/consent-statistics")
-async def get_consent_statistics(db: Session = Depends(get_db)):
+async def get_consent_statistics(
+    db: Session = Depends(get_db),
+    admin_auth: bool = admin_auth_service.get_admin_dependency()
+):
     """Get consent statistics for monitoring (admin endpoint)"""
     try:
         return consent_manager.get_consent_statistics(db)
@@ -1380,7 +1378,10 @@ async def get_consent_statistics(db: Session = Depends(get_db)):
 
 
 @app.post("/api/gdpr/cleanup-consents")
-async def cleanup_expired_consents(db: Session = Depends(get_db)):
+async def cleanup_expired_consents(
+    db: Session = Depends(get_db),
+    admin_auth: bool = admin_auth_service.get_admin_dependency()
+):
     """Clean up expired consent records (admin endpoint)"""
     try:
         cleaned_count = consent_manager.cleanup_expired_consents(db)

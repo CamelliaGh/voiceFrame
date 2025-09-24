@@ -11,7 +11,7 @@ import logging
 from datetime import datetime, timedelta
 from typing import Dict, Optional, Tuple
 from fastapi import HTTPException, Request
-import aioredis
+import redis.asyncio as aioredis
 from ..config import settings
 
 logger = logging.getLogger(__name__)
