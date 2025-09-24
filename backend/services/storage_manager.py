@@ -1,6 +1,7 @@
 import os
 import tempfile
 import shutil
+import time
 from typing import Optional
 from pathlib import Path
 from fastapi import UploadFile, HTTPException
@@ -10,6 +11,7 @@ from io import BytesIO
 from ..config import settings
 from .file_uploader import FileUploader
 from .encryption_service import EncryptionService
+from .file_audit_logger import file_audit_logger, FileOperationType, FileType, FileOperationStatus, FileOperationContext, FileOperationDetails
 
 class StorageManager:
     """Manages temporary and permanent file storage"""
@@ -99,11 +101,12 @@ class StorageManager:
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Temporary audio storage failed: {str(e)}")
 
-    async def migrate_all_session_files(self, session_token: str, order_id: str) -> dict:
+    async def migrate_all_session_files(self, session_token: str, order_id: str, context: Optional[FileOperationContext] = None, db=None) -> dict:
         """Migrate all files for a session to permanent storage after payment"""
         try:
             permanent_keys = {}
             migration_log = []
+            start_time = time.time()
 
             # Migrate photo
             temp_photo_key = f"temp_photos/{session_token}.jpg"
@@ -111,13 +114,38 @@ class StorageManager:
 
             if os.path.exists(temp_photo_path):
                 permanent_photo_key = f"permanent/photos/{order_id}.jpg"
+                file_size = os.path.getsize(temp_photo_path)
+
                 await self._upload_to_s3_permanent(temp_photo_path, permanent_photo_key, 'image/jpeg')
                 permanent_keys['permanent_photo_s3_key'] = permanent_photo_key
                 migration_log.append(f"Migrated photo: {temp_photo_key} -> {permanent_photo_key}")
 
+                # Log photo migration
+                if context and db:
+                    file_audit_logger.log_file_migration(
+                        file_type=FileType.PHOTO,
+                        source_path=temp_photo_key,
+                        destination_path=permanent_photo_key,
+                        file_size=file_size,
+                        context=context,
+                        status=FileOperationStatus.SUCCESS,
+                        processing_time_ms=int((time.time() - start_time) * 1000),
+                        db=db
+                    )
+
                 # Clean up temporary file
                 os.remove(temp_photo_path)
                 migration_log.append(f"Cleaned up temp photo: {temp_photo_path}")
+
+                # Log photo deletion
+                if context and db:
+                    file_audit_logger.log_file_deletion(
+                        file_type=FileType.PHOTO,
+                        file_path=temp_photo_key,
+                        context=context,
+                        status=FileOperationStatus.SUCCESS,
+                        db=db
+                    )
 
             # Migrate audio
             temp_audio_dir = os.path.join(self.temp_storage_path, "temp_audio")

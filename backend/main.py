@@ -42,6 +42,7 @@ from .services.admin_auth import AdminAuthService
 from .services.consent_manager import consent_manager, ConsentType
 from .services.gdpr_service import gdpr_service
 from .services.data_minimization_service import data_minimization_service, DataCategory, ProcessingPurpose
+from .services.file_audit_logger import file_audit_logger, FileOperationContext, FileOperationType, FileType, FileOperationStatus
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -1483,6 +1484,125 @@ async def get_minimization_recommendations():
     except Exception as e:
         logger.error(f"Error getting minimization recommendations: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to get recommendations: {str(e)}")
+
+# File Audit Logging Endpoints
+
+@app.get("/api/audit/file-operations")
+async def get_file_audit_logs(
+    user_identifier: str = None,
+    session_token: str = None,
+    operation_type: str = None,
+    file_type: str = None,
+    status: str = None,
+    start_date: str = None,
+    end_date: str = None,
+    limit: int = 100,
+    offset: int = 0,
+    db: Session = Depends(get_db),
+    admin_auth: bool = admin_auth_service.get_admin_dependency()
+):
+    """Get file operation audit logs (admin endpoint)"""
+    try:
+        # Parse dates
+        start_datetime = None
+        end_datetime = None
+        if start_date:
+            start_datetime = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+        if end_date:
+            end_datetime = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+
+        # Convert string enums to enum objects
+        operation_type_enum = None
+        if operation_type:
+            try:
+                operation_type_enum = FileOperationType(operation_type)
+            except ValueError:
+                raise HTTPException(status_code=400, detail=f"Invalid operation type: {operation_type}")
+
+        file_type_enum = None
+        if file_type:
+            try:
+                file_type_enum = FileType(file_type)
+            except ValueError:
+                raise HTTPException(status_code=400, detail=f"Invalid file type: {file_type}")
+
+        status_enum = None
+        if status:
+            try:
+                status_enum = FileOperationStatus(status)
+            except ValueError:
+                raise HTTPException(status_code=400, detail=f"Invalid status: {status}")
+
+        logs = file_audit_logger.get_audit_logs(
+            db=db,
+            user_identifier=user_identifier,
+            session_token=session_token,
+            operation_type=operation_type_enum,
+            file_type=file_type_enum,
+            status=status_enum,
+            start_date=start_datetime,
+            end_date=end_datetime,
+            limit=limit,
+            offset=offset
+        )
+
+        return {
+            "logs": logs,
+            "count": len(logs),
+            "limit": limit,
+            "offset": offset
+        }
+
+    except Exception as e:
+        logger.error(f"Error getting file audit logs: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get audit logs: {str(e)}")
+
+@app.get("/api/audit/file-operations/statistics")
+async def get_file_audit_statistics(
+    start_date: str = None,
+    end_date: str = None,
+    db: Session = Depends(get_db),
+    admin_auth: bool = admin_auth_service.get_admin_dependency()
+):
+    """Get file operation audit statistics (admin endpoint)"""
+    try:
+        # Parse dates
+        start_datetime = None
+        end_datetime = None
+        if start_date:
+            start_datetime = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+        if end_date:
+            end_datetime = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+
+        statistics = file_audit_logger.get_audit_statistics(
+            db=db,
+            start_date=start_datetime,
+            end_date=end_datetime
+        )
+
+        return statistics
+
+    except Exception as e:
+        logger.error(f"Error getting file audit statistics: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get audit statistics: {str(e)}")
+
+@app.post("/api/audit/file-operations/cleanup")
+async def cleanup_old_audit_logs(
+    db: Session = Depends(get_db),
+    admin_auth: bool = admin_auth_service.get_admin_dependency()
+):
+    """Clean up old audit logs (admin endpoint)"""
+    try:
+        cleaned_count = file_audit_logger.cleanup_old_logs(db)
+
+        return {
+            "message": f"Cleaned up {cleaned_count} old audit logs",
+            "cleaned_count": cleaned_count
+        }
+
+    except Exception as e:
+        logger.error(f"Error cleaning up audit logs: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to cleanup audit logs: {str(e)}")
 
 
 # Removed audio-not-found and audio-error endpoints

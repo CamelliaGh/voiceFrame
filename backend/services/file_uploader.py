@@ -5,9 +5,12 @@ import uuid
 from typing import BinaryIO, Optional
 import os
 from datetime import datetime
+import time
+import hashlib
 
 from ..config import settings
 from .encryption_service import EncryptionService
+from .file_audit_logger import file_audit_logger, FileOperationType, FileType, FileOperationStatus, FileOperationContext, FileOperationDetails
 
 class FileUploader:
     """Handles file uploads to AWS S3"""
@@ -31,10 +34,25 @@ class FileUploader:
             self.local_storage_path = "/tmp/audioposter"
             os.makedirs(self.local_storage_path, exist_ok=True)
 
-    async def upload_file(self, file: UploadFile, prefix: str = "") -> str:
+    async def upload_file(self, file: UploadFile, prefix: str = "", context: Optional[FileOperationContext] = None, db=None) -> str:
         """Upload file to S3 or local storage and return the key/path"""
         file_extension = self._get_file_extension(file.filename)
         file_key = f"{prefix}/{uuid.uuid4()}{file_extension}"
+
+        # Determine file type
+        file_type = self._determine_file_type(file.content_type, file.filename)
+
+        # Calculate file hash and size
+        file_content = await file.read()
+        file_size = len(file_content)
+        file_hash = hashlib.sha256(file_content).hexdigest()
+
+        # Reset file position
+        await file.seek(0)
+
+        start_time = time.time()
+        status = FileOperationStatus.SUCCESS
+        error_message = None
 
         try:
             if self.s3_client:
@@ -44,9 +62,42 @@ class FileUploader:
                 # Store locally for development
                 await self._upload_to_local(file, file_key)
 
+            processing_time_ms = int((time.time() - start_time) * 1000)
+
+            # Log successful upload
+            if context and db:
+                file_audit_logger.log_file_upload(
+                    file_type=file_type,
+                    file_path=file_key,
+                    file_size=file_size,
+                    content_type=file.content_type,
+                    context=context,
+                    status=status,
+                    processing_time_ms=processing_time_ms,
+                    db=db
+                )
+
             return file_key
 
         except Exception as e:
+            status = FileOperationStatus.FAILED
+            error_message = str(e)
+            processing_time_ms = int((time.time() - start_time) * 1000)
+
+            # Log failed upload
+            if context and db:
+                file_audit_logger.log_file_upload(
+                    file_type=file_type,
+                    file_path=file_key,
+                    file_size=file_size,
+                    content_type=file.content_type,
+                    context=context,
+                    status=status,
+                    error_message=error_message,
+                    processing_time_ms=processing_time_ms,
+                    db=db
+                )
+
             raise HTTPException(status_code=500, detail=f"File upload failed: {str(e)}")
 
     async def upload_file_with_key(self, file: UploadFile, file_key: str) -> str:
@@ -145,17 +196,59 @@ class FileUploader:
         else:
             return self.get_file_url(key)
 
-    def delete_file(self, key: str):
+    def delete_file(self, key: str, context: Optional[FileOperationContext] = None, db=None):
         """Delete file from storage"""
-        if self.s3_client:
-            try:
-                self.s3_client.delete_object(Bucket=settings.s3_bucket, Key=key)
-            except ClientError:
-                pass  # File might not exist
-        else:
-            file_path = os.path.join(self.local_storage_path, key)
-            if os.path.exists(file_path):
-                os.remove(file_path)
+        # Determine file type from key
+        file_type = self._determine_file_type_from_key(key)
+
+        start_time = time.time()
+        status = FileOperationStatus.SUCCESS
+        error_message = None
+        success = True
+
+        try:
+            if self.s3_client:
+                try:
+                    self.s3_client.delete_object(Bucket=settings.s3_bucket, Key=key)
+                except ClientError as e:
+                    success = False
+                    error_message = str(e)
+            else:
+                file_path = os.path.join(self.local_storage_path, key)
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                else:
+                    success = False
+                    error_message = "File not found"
+
+            processing_time_ms = int((time.time() - start_time) * 1000)
+
+            # Log deletion
+            if context and db:
+                file_audit_logger.log_file_deletion(
+                    file_type=file_type,
+                    file_path=key,
+                    context=context,
+                    status=status if success else FileOperationStatus.FAILED,
+                    error_message=error_message if not success else None,
+                    db=db
+                )
+
+        except Exception as e:
+            status = FileOperationStatus.FAILED
+            error_message = str(e)
+            processing_time_ms = int((time.time() - start_time) * 1000)
+
+            # Log failed deletion
+            if context and db:
+                file_audit_logger.log_file_deletion(
+                    file_type=file_type,
+                    file_path=key,
+                    context=context,
+                    status=status,
+                    error_message=error_message,
+                    db=db
+                )
 
     def file_exists(self, key: str) -> bool:
         """Check if file exists in storage"""
@@ -227,3 +320,60 @@ class FileUploader:
         if not filename:
             return ""
         return os.path.splitext(filename)[1].lower()
+
+    def _determine_file_type(self, content_type: str, filename: str) -> FileType:
+        """Determine file type based on content type and filename"""
+        if not content_type:
+            content_type = ""
+
+        content_type = content_type.lower()
+        filename = filename.lower() if filename else ""
+
+        if content_type.startswith('image/') or any(ext in filename for ext in ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp']):
+            return FileType.PHOTO
+        elif content_type.startswith('audio/') or any(ext in filename for ext in ['.mp3', '.wav', '.m4a', '.aac', '.ogg', '.flac']):
+            return FileType.AUDIO
+        elif content_type == 'application/pdf' or filename.endswith('.pdf'):
+            return FileType.PDF
+        elif 'waveform' in filename or filename.endswith('.png') and 'waveform' in content_type:
+            return FileType.WAVEFORM
+        elif 'template' in filename or 'template' in content_type:
+            return FileType.TEMPLATE
+        elif 'background' in filename or 'background' in content_type:
+            return FileType.BACKGROUND
+        elif 'font' in filename or 'font' in content_type or filename.endswith(('.ttf', '.otf', '.woff', '.woff2')):
+            return FileType.FONT
+        else:
+            return FileType.OTHER
+
+    def _determine_file_type_from_key(self, key: str) -> FileType:
+        """Determine file type from file key/path"""
+        if not key:
+            return FileType.OTHER
+
+        key_lower = key.lower()
+
+        if any(path in key_lower for path in ['photo', 'image', 'temp_photos', 'permanent/photos']):
+            return FileType.PHOTO
+        elif any(path in key_lower for path in ['audio', 'temp_audio', 'permanent/audio']):
+            return FileType.AUDIO
+        elif any(path in key_lower for path in ['pdf', 'permanent/pdf']):
+            return FileType.PDF
+        elif any(path in key_lower for path in ['waveform', 'permanent/waveforms']):
+            return FileType.WAVEFORM
+        elif any(path in key_lower for path in ['template']):
+            return FileType.TEMPLATE
+        elif any(path in key_lower for path in ['background']):
+            return FileType.BACKGROUND
+        elif any(path in key_lower for path in ['font']):
+            return FileType.FONT
+        else:
+            # Try to determine from file extension
+            if key_lower.endswith(('.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp')):
+                return FileType.PHOTO
+            elif key_lower.endswith(('.mp3', '.wav', '.m4a', '.aac', '.ogg', '.flac')):
+                return FileType.AUDIO
+            elif key_lower.endswith('.pdf'):
+                return FileType.PDF
+            else:
+                return FileType.OTHER
