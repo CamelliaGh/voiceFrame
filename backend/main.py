@@ -41,6 +41,7 @@ from .services.file_access_validator import FileAccessValidator
 from .services.admin_auth import AdminAuthService
 from .services.consent_manager import consent_manager, ConsentType
 from .services.gdpr_service import gdpr_service
+from .services.data_minimization_service import data_minimization_service, DataCategory, ProcessingPurpose
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -1392,6 +1393,96 @@ async def cleanup_expired_consents(
     except Exception as e:
         logger.error(f"Error cleaning up expired consents: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to cleanup expired consents: {str(e)}")
+
+# Data Minimization Endpoints
+
+@app.post("/api/gdpr/data-minimization/validate")
+async def validate_data_minimization(
+    session_data: dict,
+    processing_purposes: list[str],
+    db: Session = Depends(get_db)
+):
+    """Validate data collection against minimization principles"""
+    try:
+        # Convert string purposes to enums
+        purposes = [ProcessingPurpose(p) for p in processing_purposes]
+
+        # Identify data categories
+        data_categories = data_minimization_service._identify_data_categories(session_data)
+
+        # Validate data collection
+        validation_result = data_minimization_service.validate_data_collection(
+            data_categories, purposes
+        )
+
+        return {
+            "is_valid": validation_result.is_valid,
+            "compliance_score": validation_result.score,
+            "violations": validation_result.violations,
+            "recommendations": validation_result.recommendations,
+            "data_categories": [c.value for c in data_categories],
+            "processing_purposes": [p.value for p in purposes]
+        }
+    except Exception as e:
+        logger.error(f"Error validating data minimization: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to validate data minimization: {str(e)}")
+
+@app.get("/api/gdpr/data-minimization/audit/{user_identifier}")
+async def audit_data_minimization(
+    user_identifier: str,
+    db: Session = Depends(get_db)
+):
+    """Audit data processing for minimization compliance"""
+    try:
+        # Get user data
+        user_data = gdpr_service.get_user_data(user_identifier, db)
+
+        # Define processing purposes
+        purposes = [
+            ProcessingPurpose.SERVICE_DELIVERY,
+            ProcessingPurpose.EMAIL_COMMUNICATIONS,
+            ProcessingPurpose.ANALYTICS
+        ]
+
+        # Audit data processing
+        audit_results = data_minimization_service.audit_data_processing(
+            user_data, purposes
+        )
+
+        return audit_results
+    except Exception as e:
+        logger.error(f"Error auditing data minimization: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to audit data minimization: {str(e)}")
+
+@app.get("/api/gdpr/data-minimization/recommendations")
+async def get_minimization_recommendations():
+    """Get general data minimization recommendations"""
+    try:
+        return {
+            "recommendations": [
+                "Only collect data that is necessary for service delivery",
+                "Implement data retention policies with automatic cleanup",
+                "Anonymize or pseudonymize data where possible",
+                "Provide users with granular consent options",
+                "Regularly audit data collection practices",
+                "Use data minimization by design principles",
+                "Implement purpose limitation for data processing",
+                "Provide clear data processing information to users"
+            ],
+            "best_practices": [
+                "Collect data only when explicitly needed",
+                "Use the least invasive data collection methods",
+                "Implement automatic data deletion after retention periods",
+                "Provide users with data control options",
+                "Regularly review and update data collection practices",
+                "Document the legal basis for all data processing",
+                "Implement privacy by design principles",
+                "Conduct regular privacy impact assessments"
+            ]
+        }
+    except Exception as e:
+        logger.error(f"Error getting minimization recommendations: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get recommendations: {str(e)}")
 
 
 # Removed audio-not-found and audio-error endpoints
