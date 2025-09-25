@@ -11,6 +11,9 @@ from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 
+# Import security middleware
+from .middleware.security_headers import SecurityHeadersMiddleware, RateLimitMiddleware, SecurityLoggingMiddleware
+
 from .config import settings
 from .database import engine, get_db
 from .models import Base, EmailSubscriber, Order, SessionModel
@@ -60,6 +63,20 @@ app = FastAPI(
     version="1.0.0",
 )
 
+# Add security middleware
+app.add_middleware(
+    SecurityHeadersMiddleware,
+    environment=os.getenv("ENVIRONMENT", "development")
+)
+
+app.add_middleware(
+    RateLimitMiddleware,
+    requests_per_minute=settings.get_rate_limit_requests_per_minute(),
+    burst_size=settings.get_rate_limit_burst_size()
+)
+
+app.add_middleware(SecurityLoggingMiddleware)
+
 # Initialize rate limiter on startup
 @app.on_event("startup")
 async def startup_event():
@@ -107,8 +124,15 @@ async def health_check():
 
 # Session Management
 @app.post("/api/session", response_model=SessionResponse)
-async def create_session(db: Session = Depends(get_db)):
+async def create_session(db: Session = Depends(get_db), request: Request = None):
     """Create a new session for file uploads and customization"""
+    # Apply more lenient rate limiting for session creation
+    if settings.is_rate_limit_enabled() and request:
+        # Use burst rate limiting instead of general API rate limiting
+        await rate_limiter.check_burst_rate_limit(request)
+        if await rate_limiter.is_banned(request):
+            raise HTTPException(status_code=403, detail="Access temporarily restricted")
+
     try:
         session = session_manager.create_session(db, expires_hours=2)
 
@@ -238,7 +262,7 @@ async def upload_photo(
 ):
     """Upload and process photo for the session"""
     # Rate limiting check
-    if settings.rate_limit_enabled:
+    if settings.is_rate_limit_enabled():
         await rate_limiter.check_upload_rate_limit(token)
         if request:
             await rate_limiter.check_burst_rate_limit(request)
@@ -319,7 +343,7 @@ async def upload_audio(
 ):
     """Upload and process audio for the session"""
     # Rate limiting check
-    if settings.rate_limit_enabled:
+    if settings.is_rate_limit_enabled():
         await rate_limiter.check_upload_rate_limit(token)
         if request:
             await rate_limiter.check_burst_rate_limit(request)

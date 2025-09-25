@@ -1,6 +1,10 @@
 from pydantic_settings import BaseSettings
-from pydantic import Field
+from pydantic import Field, validator
 import os
+import logging
+from .services.security_config import security_config
+
+logger = logging.getLogger(__name__)
 
 class Settings(BaseSettings):
     # Database
@@ -28,6 +32,7 @@ class Settings(BaseSettings):
     base_url: str = Field(default="http://localhost:3000")
     debug: bool = Field(default=True)
     project_root: str = Field(default="/app")
+    environment: str = Field(default_factory=lambda: os.getenv("ENVIRONMENT", "development"))  # development, staging, production
 
     # File Processing
     max_photo_size: int = Field(default=50 * 1024 * 1024)  # 50MB
@@ -51,7 +56,7 @@ class Settings(BaseSettings):
 
     # Rate Limiting Configuration
     rate_limit_enabled: bool = Field(default=True)  # Enable/disable rate limiting
-    rate_limit_requests_per_minute: int = Field(default=10)  # General API requests per minute
+    rate_limit_requests_per_minute: int = Field(default=60)  # General API requests per minute (increased for development)
     rate_limit_upload_per_hour: int = Field(default=20)  # File uploads per hour per user
     rate_limit_upload_per_day: int = Field(default=100)  # File uploads per day per user
     rate_limit_burst_size: int = Field(default=5)  # Burst allowance for rate limiting
@@ -67,8 +72,114 @@ class Settings(BaseSettings):
         "*.exe", "*.bat", "*.cmd", "*.scr", "*.pif", "*.com", "*.vbs", "*.js", "*.jar"
     ])  # File patterns to block
 
+    @validator('secret_key')
+    def validate_secret_key(cls, v):
+        """Validate secret key security"""
+        if not v or v in ['your-secret-key-change-this', 'your-super-secret-key-change-this-in-production']:
+            logger.warning("Using default/example SECRET_KEY. This is insecure for production!")
+            if os.getenv('ENVIRONMENT') == 'production':
+                raise ValueError("Default SECRET_KEY cannot be used in production")
+        if len(v) < 32:
+            raise ValueError("SECRET_KEY must be at least 32 characters long")
+        return v
+
+    def get_rate_limit_requests_per_minute(self) -> int:
+        """Get rate limit based on environment"""
+        if self.environment == "development":
+            return 120  # Very lenient for development
+        elif self.environment == "staging":
+            return 60   # Moderate for staging
+        else:  # production
+            return 10   # Strict for production
+
+    def get_rate_limit_burst_size(self) -> int:
+        """Get burst size based on environment"""
+        if self.environment == "development":
+            return 50   # Very lenient for development
+        elif self.environment == "staging":
+            return 20   # Moderate for staging
+        else:  # production
+            return 5    # Strict for production
+
+    def is_rate_limit_enabled(self) -> bool:
+        """Check if rate limiting should be enabled based on environment"""
+        if self.environment == "development":
+            return False  # Disable rate limiting in development
+        else:
+            return self.rate_limit_enabled
+
+    @validator('aws_access_key_id')
+    def validate_aws_access_key(cls, v):
+        """Validate AWS access key"""
+        if v and v in ['your_aws_access_key', 'AKIAIOSFODNN7EXAMPLE']:
+            logger.warning("Using default/example AWS_ACCESS_KEY_ID")
+            if os.getenv('ENVIRONMENT') == 'production':
+                raise ValueError("Default AWS credentials cannot be used in production")
+        return v
+
+    @validator('aws_secret_access_key')
+    def validate_aws_secret_key(cls, v):
+        """Validate AWS secret key"""
+        if v and v in ['your_aws_secret_key', 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY']:
+            logger.warning("Using default/example AWS_SECRET_ACCESS_KEY")
+            if os.getenv('ENVIRONMENT') == 'production':
+                raise ValueError("Default AWS credentials cannot be used in production")
+        return v
+
+    @validator('stripe_secret_key')
+    def validate_stripe_secret_key(cls, v):
+        """Validate Stripe secret key"""
+        if v and v == 'sk_test_your_stripe_secret_key':
+            logger.warning("Using default/example STRIPE_SECRET_KEY")
+            if os.getenv('ENVIRONMENT') == 'production':
+                raise ValueError("Default Stripe credentials cannot be used in production")
+        return v
+
+    @validator('sendgrid_api_key')
+    def validate_sendgrid_api_key(cls, v):
+        """Validate SendGrid API key"""
+        if v and v == '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':
+            logger.warning("Using default/example SENDGRID_API_KEY")
+            if os.getenv('ENVIRONMENT') == 'production':
+                raise ValueError("Default SendGrid credentials cannot be used in production")
+        return v
+
+    def validate_security(self) -> dict:
+        """Validate overall security configuration"""
+        return security_config.validate_environment()
+
+    def get_masked_config(self) -> dict:
+        """Get configuration with sensitive values masked for logging"""
+        config_dict = self.dict()
+        sensitive_fields = [
+            'secret_key', 'aws_access_key_id', 'aws_secret_access_key',
+            'stripe_secret_key', 'stripe_webhook_secret', 'sendgrid_api_key',
+            'local_encryption_key'
+        ]
+
+        for field in sensitive_fields:
+            if field in config_dict and config_dict[field]:
+                config_dict[field] = security_config.mask_sensitive_value(config_dict[field])
+
+        return config_dict
+
     class Config:
         env_file = ".env"
         case_sensitive = False
 
+# Validate security on startup
 settings = Settings()
+security_validation = settings.validate_security()
+
+if not security_validation['valid']:
+    logger.error("Security validation failed:")
+    for error in security_validation['errors']:
+        logger.error(f"  - {error}")
+    for issue in security_validation['security_issues']:
+        logger.error(f"  - SECURITY ISSUE: {issue}")
+
+    if os.getenv('ENVIRONMENT') == 'production':
+        raise ValueError("Security validation failed in production environment")
+
+for warning in security_validation['warnings']:
+    logger.warning(f"Security warning: {warning}")

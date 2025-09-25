@@ -67,3 +67,4 @@ node_modules/
 # tasks.json
 # tasks/
 test_report_*.txt
+security_audit_report.json

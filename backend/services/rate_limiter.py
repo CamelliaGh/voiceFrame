@@ -203,7 +203,7 @@ class RateLimiter:
         is_allowed, info = await self._check_rate_limit(
             identifier,
             "burst",
-            settings.rate_limit_burst_size,
+            settings.get_rate_limit_burst_size(),
             10  # 10 second window for burst detection
         )
 

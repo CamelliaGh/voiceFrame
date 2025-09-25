@@ -21,14 +21,14 @@ export function SessionProvider({ children }: SessionProviderProps) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const initializeSession = async () => {
+  const initializeSession = async (retryCount = 0) => {
     try {
       setLoading(true)
       setError(null)
 
       // Check if we have a session token in localStorage
       let sessionToken = localStorage.getItem('session_token')
-      
+
       if (sessionToken) {
         try {
           // Try to retrieve existing session
@@ -46,10 +46,38 @@ export function SessionProvider({ children }: SessionProviderProps) {
       const newSession = await createSession()
       localStorage.setItem('session_token', newSession.session_token)
       setSession(newSession)
-      
-    } catch (err) {
+
+    } catch (err: any) {
       console.error('Failed to initialize session:', err)
-      setError('Failed to initialize session')
+
+      // Provide specific error messages for different error types
+      if (err.response?.status === 429) {
+        setError('Too many requests. Please wait a moment and try again.')
+        // Retry after a delay for rate limiting
+        setTimeout(() => {
+          if (retryCount < 3) {
+            initializeSession(retryCount + 1)
+          }
+        }, Math.pow(2, retryCount) * 2000) // Exponential backoff: 2s, 4s, 8s
+      } else if (err.response?.status >= 500) {
+        setError('Server error. Please try again in a few moments.')
+        // Retry after a delay for server errors
+        setTimeout(() => {
+          if (retryCount < 2) {
+            initializeSession(retryCount + 1)
+          }
+        }, Math.pow(2, retryCount) * 1000) // Exponential backoff: 1s, 2s
+      } else if (err.code === 'ECONNABORTED' || err.message.includes('timeout')) {
+        setError('Request timed out. Please check your connection and try again.')
+        // Retry after a delay for timeouts
+        setTimeout(() => {
+          if (retryCount < 2) {
+            initializeSession(retryCount + 1)
+          }
+        }, Math.pow(2, retryCount) * 1000) // Exponential backoff: 1s, 2s
+      } else {
+        setError('Failed to initialize session. Please refresh the page.')
+      }
     } finally {
       setLoading(false)
     }

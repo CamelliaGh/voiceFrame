@@ -3,9 +3,9 @@ services:
   db:
     image: postgres:15
     environment:
-      POSTGRES_DB: audioposter
-      POSTGRES_USER: audioposter
-      POSTGRES_PASSWORD: audioposter_password
+      POSTGRES_DB: ${POSTGRES_DB:-audioposter}
+      POSTGRES_USER: ${POSTGRES_USER:-audioposter}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-audioposter_password}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
@@ -35,14 +35,25 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://audioposter:audioposter_password@db:5432/audioposter
-      - REDIS_URL=redis://redis:6379
-      - DEBUG=true
-      # Add AWS S3 credentials
+      - DATABASE_URL=${DATABASE_URL:-postgresql://audioposter:audioposter_password@db:5432/audioposter}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
+      - DEBUG=${DEBUG:-true}
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      # AWS S3 credentials
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - S3_BUCKET=audioposter-bucket
-      - S3_REGION=us-east-2
+      - S3_BUCKET=${S3_BUCKET:-audioposter-bucket}
+      - S3_REGION=${S3_REGION:-us-east-2}
+      # Stripe credentials
+      - STRIPE_PUBLIC_KEY=${STRIPE_PUBLIC_KEY}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+      # SendGrid credentials
+      - SENDGRID_API_KEY=${SENDGRID_API_KEY}
+      - FROM_EMAIL=${FROM_EMAIL}
+      # Application settings
+      - SECRET_KEY=${SECRET_KEY}
+      - BASE_URL=${BASE_URL:-http://localhost:3000}
 
 
     volumes:
@@ -66,14 +77,25 @@ services:
     build: .
     command: celery -A backend.tasks worker --loglevel=info --concurrency=2
     environment:
-      - DATABASE_URL=postgresql://audioposter:audioposter_password@db:5432/audioposter
-      - REDIS_URL=redis://redis:6379
-      - DEBUG=true
-      # Add AWS S3 credentials
+      - DATABASE_URL=${DATABASE_URL:-postgresql://audioposter:audioposter_password@db:5432/audioposter}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
+      - DEBUG=${DEBUG:-true}
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      # AWS S3 credentials
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - S3_BUCKET=audioposter-bucket
-      - S3_REGION=us-east-2
+      - S3_BUCKET=${S3_BUCKET:-audioposter-bucket}
+      - S3_REGION=${S3_REGION:-us-east-2}
+      # Stripe credentials
+      - STRIPE_PUBLIC_KEY=${STRIPE_PUBLIC_KEY}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+      # SendGrid credentials
+      - SENDGRID_API_KEY=${SENDGRID_API_KEY}
+      - FROM_EMAIL=${FROM_EMAIL}
+      # Application settings
+      - SECRET_KEY=${SECRET_KEY}
+      - BASE_URL=${BASE_URL:-http://localhost:3000}
     volumes:
       - ./backend:/app/backend
       - ./fonts:/app/fonts

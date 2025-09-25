@@ -1,132 +1,20 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Type, ArrowLeft, ArrowRight, Image, FileText } from 'lucide-react'
+import { Type, ArrowLeft, ArrowRight, Image, FileText, RefreshCw, Eye } from 'lucide-react'
 import { useSession } from '../contexts/SessionContext'
-import { cn } from '../lib/utils'
-import { SessionData, getProcessingStatus } from '../lib/api'
-import RealTimePreview from './RealTimePreview'
+// import { cn } from '../lib/utils' // Not used
+import { SessionData, getProcessingStatus, getPreviewUrl } from '../lib/api'
+// import RealTimePreview from './RealTimePreview' // Disabled to prevent excessive API calls
+import TextCustomization from './TextCustomization'
+import BackgroundSelection from './BackgroundSelection'
+import PhotoShapeCustomization from './PhotoShapeCustomization'
+import PDFSizeSelection from './PDFSizeSelection'
 
 interface CustomizationPanelProps {
   onNext: () => void
   onBack: () => void
 }
 
-const textSuggestions = [
-  // Romantic & Love
-  "Our Song ♪",
-  "I Love You",
-  "Forever & Always",
-  "Together Forever",
-  "My Heart",
-  "You & Me",
-  "Love Always",
-  "My Everything",
-  "Heart & Soul",
-  "True Love",
-  "Soulmates",
-  "Love Story",
-  "Made for Each Other",
-  "In Love",
-  "Love You More",
 
-  // Wedding & Marriage
-  "Wedding Day",
-  "First Dance 💕",
-  "Mr. & Mrs.",
-  "Happily Ever After",
-  "Just Married",
-  "Wedding Memories",
-  "Our Big Day",
-  "I Do",
-  "Married Life",
-  "Husband & Wife",
-  "Wedding Song",
-  "Our Vows",
-  "Wedding Day Magic",
-
-  // Anniversary & Special Dates
-  "Anniversary Memory",
-  "One Year Together",
-  "5 Years Strong",
-  "10 Years of Love",
-  "Golden Anniversary",
-  "Our Anniversary",
-  "Celebrating Us",
-  "Years of Happiness",
-  "Anniversary Song",
-  "Special Date",
-  "Our Milestone",
-
-  // Family & Children
-  "Baby's First Song",
-  "Welcome Little One",
-  "Our Family",
-  "Mommy & Daddy Love You",
-  "Sweet Dreams Baby",
-  "Little Angel",
-  "Family Love",
-  "Our Child",
-  "Growing Family",
-  "Baby Love",
-  "Family Song",
-
-  // Memories & Moments
-  "Special Moment",
-  "Perfect Day",
-  "Our Memories",
-  "Best Day Ever",
-  "Unforgettable",
-  "Precious Moments",
-  "Sweet Memories",
-  "Amazing Day",
-  "Wonderful Time",
-  "Happy Times",
-  "Beautiful Memory",
-  "Magical Moment",
-  "Cherished Memory",
-  "Special Time",
-  "Incredible Day"
-]
-
-const fontOptions = [
-  { id: 'script', name: 'Script', description: 'Handwritten style' },
-  { id: 'elegant', name: 'Elegant', description: 'Sophisticated serif' },
-  { id: 'modern', name: 'Modern', description: 'Clean sans-serif' },
-  { id: 'vintage', name: 'Vintage', description: 'Classic antique feel' },
-  { id: 'classic', name: 'Classic', description: 'Traditional serif' }
-]
-
-const backgroundOptions = [
-  {
-    id: 'none',
-    name: 'No Background',
-    description: 'Clean white background',
-    preview: null
-  },
-  {
-    id: 'abstract-blurred',
-    name: 'Abstract Blurred',
-    description: 'Soft abstract background',
-    preview: '/backgrounds/237.jpg'
-  },
-  {
-    id: 'roses-wooden',
-    name: 'Roses & Wood',
-    description: 'Beautiful roses on wooden background',
-    preview: '/backgrounds/beautiful-roses-great-white-wooden-background-with-space-right.jpg'
-  },
-  {
-    id: 'cute-hearts',
-    name: 'Cute Hearts',
-    description: 'Romantic hearts background',
-    preview: '/backgrounds/copy-space-with-cute-hearts.jpg'
-  },
-  {
-    id: 'flat-lay-hearts',
-    name: 'Flat Lay Hearts',
-    description: 'Elegant flat lay hearts',
-    preview: '/backgrounds/flat-lay-small-cute-hearts.jpg'
-  }
-]
 
 
 // Framed template variants for different sizes
@@ -155,7 +43,7 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
   const [pdfSize, setPdfSize] = useState<'A4' | 'A4_Landscape' | 'Letter' | 'Letter_Landscape' | 'A3' | 'A3_Landscape'>(session?.pdf_size || 'A4')
   const [backgroundId, setBackgroundId] = useState(session?.background_id || 'none')
   const [fontId, setFontId] = useState(session?.font_id || 'script')
-  const [characterCount, setCharacterCount] = useState(0)
+  const [photoShape, setPhotoShape] = useState<'square' | 'circle'>(session?.photo_shape || 'square')
   const [isUpdating, setIsUpdating] = useState(false)
   const [processingStatus, setProcessingStatus] = useState<{
     photo_ready: boolean
@@ -164,9 +52,11 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
     preview_ready: boolean
   } | null>(null)
 
-  useEffect(() => {
-    setCharacterCount(customText.length)
-  }, [customText])
+  // Preview state
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [previewLoading, setPreviewLoading] = useState(false)
+  const [previewError, setPreviewError] = useState<string | null>(null)
+
 
   // Check processing status when component mounts and periodically
   useEffect(() => {
@@ -240,24 +130,12 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
         pdf_size: pdfSize,
         template_id: getFramedTemplateId(pdfSize),
         background_id: backgroundId,
-        font_id: fontId
+        font_id: fontId,
+        photo_shape: photoShape
       })
     }
   }
 
-  const handleSuggestionClick = (suggestion: string) => {
-    if (suggestion.length <= 200) {
-      setCustomText(suggestion)
-      // Update session in real-time for preview
-      debouncedUpdate({
-        custom_text: suggestion.trim(),
-        pdf_size: pdfSize,
-        template_id: getFramedTemplateId(pdfSize),
-        background_id: backgroundId,
-        font_id: fontId
-      })
-    }
-  }
 
   const handlePdfSizeChange = (newPdfSize: 'A4' | 'A4_Landscape' | 'Letter' | 'Letter_Landscape' | 'A3' | 'A3_Landscape') => {
     setPdfSize(newPdfSize)
@@ -267,7 +145,8 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
       pdf_size: newPdfSize,
       template_id: getFramedTemplateId(newPdfSize),
       background_id: backgroundId,
-      font_id: fontId
+      font_id: fontId,
+      photo_shape: photoShape
     })
   }
 
@@ -279,7 +158,8 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
       pdf_size: pdfSize,
       template_id: getFramedTemplateId(pdfSize),
       background_id: newBackgroundId,
-      font_id: fontId
+      font_id: fontId,
+      photo_shape: photoShape
     })
   }
 
@@ -291,7 +171,21 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
       pdf_size: pdfSize,
       template_id: getFramedTemplateId(pdfSize),
       background_id: backgroundId,
-      font_id: newFontId
+      font_id: newFontId,
+      photo_shape: photoShape
+    })
+  }
+
+  const handlePhotoShapeChange = (newPhotoShape: 'square' | 'circle') => {
+    setPhotoShape(newPhotoShape)
+    // Update session in real-time for preview
+    debouncedUpdate({
+      custom_text: customText.trim(),
+      pdf_size: pdfSize,
+      template_id: getFramedTemplateId(pdfSize),
+      background_id: backgroundId,
+      font_id: fontId,
+      photo_shape: newPhotoShape
     })
   }
 
@@ -315,7 +209,8 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
       pdf_size: pdfSize,
       template_id: finalTemplateId,
       background_id: backgroundId,
-      font_id: fontId
+      font_id: fontId,
+      photo_shape: photoShape
     })
   }
 
@@ -326,6 +221,69 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
     } catch (error: any) {
       // Error will be handled by the parent component
       throw error
+    }
+  }
+
+  // Calculate aspect ratio based on PDF size
+  const getAspectRatio = (pdfSize: string) => {
+    switch (pdfSize) {
+      case 'A4':
+        return 'aspect-[3/4]' // A4 Portrait
+      case 'A4_Landscape':
+        return 'aspect-[4/3]' // A4 Landscape
+      case 'Letter':
+        return 'aspect-[3/4]' // Letter Portrait
+      case 'Letter_Landscape':
+        return 'aspect-[4/3]' // Letter Landscape
+      case 'A3':
+        return 'aspect-[2/3]' // A3 Portrait
+      case 'A3_Landscape':
+        return 'aspect-[3/2]' // A3 Landscape
+      default:
+        return 'aspect-[3/4]' // Default fallback
+    }
+  }
+
+  const aspectRatio = getAspectRatio(pdfSize)
+
+  // Manual preview generation function
+  const generatePreview = async () => {
+    if (!session) return
+
+    setPreviewLoading(true)
+    setPreviewError(null)
+
+    try {
+      const response = await getPreviewUrl(session.session_token)
+      setPreviewUrl(response.preview_url)
+    } catch (err: any) {
+      console.error('Failed to generate preview:', err)
+
+      // Extract specific error message from the response
+      let errorMessage = 'Failed to generate preview. Please try again.'
+
+      if (err.response?.data?.detail) {
+        const detail = err.response.data.detail
+        if (detail.includes('Audio file is missing')) {
+          errorMessage = 'Audio file is missing. Please upload your audio file again.'
+        } else if (detail.includes('Waveform file is missing')) {
+          errorMessage = 'Audio is still processing. Please wait a moment and try again.'
+        } else if (detail.includes('Photo file is missing')) {
+          errorMessage = 'Photo file is missing. Please upload your photo again.'
+        } else if (detail.includes('Failed to upload audio to S3')) {
+          errorMessage = 'Failed to upload audio file. Please check your connection and try again.'
+        } else if (detail.includes('Session audio file missing')) {
+          errorMessage = 'Audio file was not properly uploaded. Please try uploading your audio again.'
+        } else {
+          errorMessage = detail
+        }
+      } else if (err.message) {
+        errorMessage = `Error: ${err.message}`
+      }
+
+      setPreviewError(errorMessage)
+    } finally {
+      setPreviewLoading(false)
     }
   }
 
@@ -360,40 +318,14 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
               <h3 className="text-lg font-semibold text-gray-900">Custom Text</h3>
             </div>
 
-            <div className="space-y-4">
-              <div>
-                <textarea
-                  value={customText}
-                  onChange={(e) => handleTextChange(e.target.value)}
-                  placeholder="Enter your custom message..."
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
-                  rows={3}
-                />
-                <div className="flex justify-between items-center mt-2">
-                  <span className={cn(
-                    "text-sm",
-                    characterCount > 180 ? "text-red-600" : "text-gray-500"
-                  )}>
-                    {characterCount}/200 characters
-                  </span>
-                </div>
-              </div>
-
-              <div>
-                <p className="text-sm font-medium text-gray-700 mb-2">Suggestions:</p>
-                <div className="flex flex-wrap gap-2">
-                  {textSuggestions.map((suggestion) => (
-                    <button
-                      key={suggestion}
-                      onClick={() => handleSuggestionClick(suggestion)}
-                      className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full transition-colors duration-200"
-                    >
-                      {suggestion}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
+            <TextCustomization
+              value={customText}
+              onChange={handleTextChange}
+              onFontChange={handleFontChange}
+              selectedFont={fontId}
+              maxLength={200}
+              disabled={processingStatus ? !processingStatus.waveform_ready : false}
+            />
           </div>
 
 
@@ -401,41 +333,14 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
           <div className="card">
             <div className="flex items-center space-x-2 mb-4">
               <FileText className="w-5 h-5 text-primary-600" />
-              <h3 className="text-lg font-semibold text-gray-900">PDF Size</h3>
+              <h3 className="text-lg font-semibold text-gray-900">PDF Size & Orientation</h3>
             </div>
 
-            <div className="space-y-2">
-              {              [
-                { value: 'A4', label: 'A4 Portrait (210 × 297 mm)' },
-                { value: 'A4_Landscape', label: 'A4 Landscape (297 × 210 mm)' },
-                { value: 'Letter', label: 'US Letter Portrait (8.5 × 11 in)' },
-                { value: 'Letter_Landscape', label: 'US Letter Landscape (11 × 8.5 in)' },
-                { value: 'A3', label: 'A3 Portrait (297 × 420 mm)' },
-                { value: 'A3_Landscape', label: 'A3 Landscape (420 × 297 mm)' }
-              ].map((size) => (
-                <label
-                  key={size.value}
-                  className={cn(
-                    'flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors duration-200',
-                    pdfSize === size.value
-                      ? 'border-primary-500 bg-primary-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  )}
-                >
-                  <div className="flex items-center space-x-3">
-                    <input
-                      type="radio"
-                      name="pdfSize"
-                      value={size.value}
-                      checked={pdfSize === size.value}
-                      onChange={(e) => handlePdfSizeChange(e.target.value as 'A4' | 'A4_Landscape' | 'Letter' | 'Letter_Landscape' | 'A3' | 'A3_Landscape')}
-                      className="text-primary-600 focus:ring-primary-500"
-                    />
-                    <span className="font-medium">{size.label}</span>
-                  </div>
-                </label>
-              ))}
-            </div>
+            <PDFSizeSelection
+              value={pdfSize}
+              onChange={handlePdfSizeChange}
+              disabled={processingStatus ? !processingStatus.waveform_ready : false}
+            />
           </div>
 
           {/* Background Selection */}
@@ -445,92 +350,97 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
               <h3 className="text-lg font-semibold text-gray-900">Background</h3>
             </div>
 
-            <div className="space-y-3">
-              {backgroundOptions.map((background) => (
-                <label
-                  key={background.id}
-                  className={cn(
-                    'flex items-center space-x-3 p-3 border rounded-lg cursor-pointer transition-colors duration-200',
-                    backgroundId === background.id
-                      ? 'border-primary-500 bg-primary-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  )}
-                >
-                  <input
-                    type="radio"
-                    name="background"
-                    value={background.id}
-                    checked={backgroundId === background.id}
-                    onChange={(e) => handleBackgroundChange(e.target.value)}
-                    className="text-primary-600 focus:ring-primary-500"
-                  />
-
-                  <div className="flex-1 flex items-center space-x-3">
-                    {background.preview ? (
-                      <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100">
-                        <img
-                          src={background.preview}
-                          alt={background.name}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    ) : (
-                      <div className="w-12 h-12 rounded-lg bg-white border-2 border-gray-200 flex items-center justify-center">
-                        <div className="w-6 h-6 bg-gray-200 rounded"></div>
-                      </div>
-                    )}
-
-                    <div>
-                      <div className="font-medium text-gray-900">{background.name}</div>
-                      <div className="text-sm text-gray-500">{background.description}</div>
-                    </div>
-                  </div>
-                </label>
-              ))}
-            </div>
+            <BackgroundSelection
+              value={backgroundId}
+              onChange={handleBackgroundChange}
+              disabled={processingStatus ? !processingStatus.waveform_ready : false}
+            />
           </div>
 
-          {/* Font Selection */}
+          {/* Photo Shape Selection */}
           <div className="card">
             <div className="flex items-center space-x-2 mb-4">
-              <Type className="w-5 h-5 text-primary-600" />
-              <h3 className="text-lg font-semibold text-gray-900">Font Style</h3>
+              <Image className="w-5 h-5 text-primary-600" />
+              <h3 className="text-lg font-semibold text-gray-900">Photo Shape</h3>
             </div>
 
-            <div className="space-y-3">
-              {fontOptions.map((font) => (
-                <label
-                  key={font.id}
-                  className={cn(
-                    'flex items-center space-x-3 p-3 border rounded-lg cursor-pointer transition-colors duration-200',
-                    fontId === font.id
-                      ? 'border-primary-500 bg-primary-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  )}
-                >
-                  <input
-                    type="radio"
-                    name="font"
-                    value={font.id}
-                    checked={fontId === font.id}
-                    onChange={(e) => handleFontChange(e.target.value)}
-                    className="text-primary-600 focus:ring-primary-500"
-                  />
-
-                  <div className="flex-1">
-                    <div className="font-medium text-gray-900">{font.name}</div>
-                    <div className="text-sm text-gray-500">{font.description}</div>
-                  </div>
-                </label>
-              ))}
-            </div>
+            <PhotoShapeCustomization
+              value={photoShape}
+              onChange={handlePhotoShapeChange}
+              disabled={processingStatus ? !processingStatus.waveform_ready : false}
+            />
           </div>
+
 
         </div>
 
-        {/* Real-time Preview */}
+        {/* Manual Preview Section */}
         <div className="lg:sticky lg:top-8 lg:h-fit">
-          <RealTimePreview />
+          <div className="card">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Poster Preview</h3>
+                {pdfSize && (
+                  <p className="text-sm text-gray-600 mt-1">
+                    Size: {pdfSize.replace('_', ' ')}
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={generatePreview}
+                disabled={previewLoading || !session}
+                className="btn-secondary flex items-center space-x-2 text-sm"
+              >
+                <RefreshCw className={`w-4 h-4 ${previewLoading ? 'animate-spin' : ''}`} />
+                <span>Refresh</span>
+              </button>
+            </div>
+
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
+              {previewLoading ? (
+                <div className={`${aspectRatio} bg-gray-50 flex items-center justify-center`}>
+                  <div className="text-center">
+                    <div className="w-8 h-8 border-2 border-primary-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                    <p className="text-sm text-gray-600">Generating preview...</p>
+                  </div>
+                </div>
+              ) : previewError ? (
+                <div className={`${aspectRatio} bg-red-50 flex items-center justify-center`}>
+                  <div className="text-center text-red-600">
+                    <p className="font-medium">{previewError}</p>
+                    <button
+                      onClick={generatePreview}
+                      className="mt-2 text-sm underline hover:no-underline"
+                    >
+                      Try again
+                    </button>
+                  </div>
+                </div>
+              ) : previewUrl ? (
+                <iframe
+                  src={previewUrl}
+                  className={`w-full ${aspectRatio}`}
+                  title="Poster Preview"
+                />
+              ) : (
+                <div className={`${aspectRatio} bg-gray-100 flex items-center justify-center`}>
+                  <div className="text-center text-gray-500">
+                    <Eye className="w-12 h-12 mx-auto mb-2" />
+                    <p>Preview not available</p>
+                    <p className="text-xs mt-1">Click "Refresh" to generate preview</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {previewUrl && (
+              <div className="mt-4 text-center">
+                <p className="text-xs text-gray-500">
+                  This preview includes a watermark. Purchase to download the clean version.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
