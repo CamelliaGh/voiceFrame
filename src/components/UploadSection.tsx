@@ -5,7 +5,7 @@ import { useSession } from '../contexts/SessionContext'
 import { uploadPhoto, uploadAudio } from '../lib/api'
 // import { formatFileSize } from '../lib/utils'
 import { cn } from '../lib/utils'
-import EXIF from 'exif-js'
+import { parse as parseExif } from 'exifr'
 
 interface UploadSectionProps {
   onPhotosUploaded: () => void
@@ -128,18 +128,27 @@ export default function UploadSection({
     })
   }
 
-  // Function to handle EXIF data and auto-rotate image
-  const handleImageOrientation = (file: File): Promise<string> => {
-    return new Promise((resolve) => {
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        const img = new window.Image()
-        img.onload = () => {
-          // Get EXIF data
-          EXIF.getData(img, function() {
-            const orientation = EXIF.getTag(this, 'Orientation')
+  // Modern EXIF handling with exifr (more robust)
+  const handleImageOrientationModern = async (file: File): Promise<string> => {
+    try {
+      // Parse EXIF data using the modern exifr library
+      const exifData = await parseExif(file, {
+        pick: ['Orientation'],
+        mergeOutput: true,
+        reviveValues: false,
+        sanitize: false,
+        translateKeys: false,
+        translateValues: false
+      })
 
-            // Create canvas to handle rotation
+      const orientation = exifData?.Orientation || 1
+
+      // Create image and canvas for rotation
+      return new Promise((resolve) => {
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          const img = new window.Image()
+          img.onload = () => {
             const canvas = document.createElement('canvas')
             const ctx = canvas.getContext('2d')
 
@@ -148,55 +157,68 @@ export default function UploadSection({
               return
             }
 
-            // Set canvas size based on orientation
-            if (orientation === 6 || orientation === 8) {
-              canvas.width = img.height
-              canvas.height = img.width
-            } else {
-              canvas.width = img.width
-              canvas.height = img.height
-            }
-
-            // Apply rotation based on EXIF orientation
-            switch (orientation) {
-              case 2:
-                ctx.transform(-1, 0, 0, 1, canvas.width, 0)
-                break
-              case 3:
-                ctx.transform(-1, 0, 0, -1, canvas.width, canvas.height)
-                break
-              case 4:
-                ctx.transform(1, 0, 0, -1, 0, canvas.height)
-                break
-              case 5:
-                ctx.transform(0, 1, 1, 0, 0, 0)
-                break
-              case 6:
-                ctx.transform(0, 1, -1, 0, canvas.height, 0)
-                break
-              case 7:
-                ctx.transform(0, -1, -1, 0, canvas.height, canvas.width)
-                break
-              case 8:
-                ctx.transform(0, -1, 1, 0, 0, canvas.width)
-                break
-              default:
-                break
-            }
-
-            // Draw the image
-            ctx.drawImage(img, 0, 0)
+            // Apply rotation based on orientation
+            applyImageRotation(canvas, ctx, img, orientation)
 
             // Convert to data URL
             const correctedDataUrl = canvas.toDataURL('image/jpeg', 0.9)
             resolve(correctedDataUrl)
-          })
+          }
+          img.onerror = () => resolve(e.target?.result as string)
+          img.src = e.target?.result as string
         }
-        img.src = e.target?.result as string
-      }
-      reader.readAsDataURL(file)
-    })
+        reader.onerror = () => resolve(URL.createObjectURL(file))
+        reader.readAsDataURL(file)
+      })
+    } catch (error) {
+      console.warn('Modern EXIF parsing failed, falling back to original image:', error)
+      return URL.createObjectURL(file)
+    }
   }
+
+  // Helper function to apply image rotation
+  const applyImageRotation = (canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, img: HTMLImageElement, orientation: number): void => {
+    // Set canvas size based on orientation
+    if (orientation === 6 || orientation === 8) {
+      canvas.width = img.height
+      canvas.height = img.width
+    } else {
+      canvas.width = img.width
+      canvas.height = img.height
+    }
+
+    // Apply rotation based on EXIF orientation
+    switch (orientation) {
+      case 2:
+        ctx.transform(-1, 0, 0, 1, canvas.width, 0)
+        break
+      case 3:
+        ctx.transform(-1, 0, 0, -1, canvas.width, canvas.height)
+        break
+      case 4:
+        ctx.transform(1, 0, 0, -1, 0, canvas.height)
+        break
+      case 5:
+        ctx.transform(0, 1, 1, 0, 0, 0)
+        break
+      case 6:
+        ctx.transform(0, 1, -1, 0, canvas.height, 0)
+        break
+      case 7:
+        ctx.transform(0, -1, -1, 0, canvas.height, canvas.width)
+        break
+      case 8:
+        ctx.transform(0, -1, 1, 0, 0, canvas.width)
+        break
+      default:
+        // No rotation needed
+        break
+    }
+
+    // Draw the image
+    ctx.drawImage(img, 0, 0)
+  }
+
 
   const handlePhotoUpload = async (files: File[]) => {
     const file = files[0]
@@ -243,13 +265,14 @@ export default function UploadSection({
       return
     }
 
-    // Generate preview image with EXIF correction
+    // Generate preview image (skip EXIF processing to avoid crashes)
     try {
-      const correctedImageUrl = await handleImageOrientation(file)
+      // Try modern EXIF library first
+      const correctedImageUrl = await handleImageOrientationModern(file)
       setPreviewImages(prev => ({ ...prev, photo: correctedImageUrl }))
     } catch (error) {
-      console.warn('EXIF correction failed, using original image:', error)
-      // Fallback to original image if EXIF correction fails
+      console.warn('EXIF processing failed, using original image:', error)
+      // Fallback to original image without EXIF processing
       const reader = new FileReader()
       reader.onload = (e) => {
         setPreviewImages(prev => ({ ...prev, photo: e.target?.result as string }))
