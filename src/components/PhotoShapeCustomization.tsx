@@ -20,10 +20,10 @@ interface PhotoShapeCustomizationProps {
 const photoShapeOptions: PhotoShapeOption[] = [
   {
     id: 'square',
-    name: 'Square',
-    description: 'Classic square photo with sharp corners',
+    name: 'Rectangle',
+    description: 'Standard rectangular photo using template dimensions',
     icon: Square,
-    preview: 'square'
+    preview: 'rectangle'
   },
   {
     id: 'circle',
@@ -73,7 +73,7 @@ export default function PhotoShapeCustomization({
 
                 {/* Photo placeholder with shape */}
                 <div className={cn(
-                  "relative w-24 h-24 bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center",
+                  "relative w-24 h-16 bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center",
                   option.id === 'circle' ? 'rounded-full' : 'rounded-lg'
                 )}>
                   <Image className="w-8 h-8 text-primary-600" />
@@ -112,7 +112,7 @@ export default function PhotoShapeCustomization({
           <div className="relative">
             {/* Example photo with selected shape */}
             <div className={cn(
-              "w-16 h-16 bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center relative overflow-hidden",
+              "w-16 h-12 bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center relative overflow-hidden",
               value === 'circle' ? 'rounded-full' : 'rounded-lg'
             )}>
               <Image className="w-6 h-6 text-blue-600" />
@@ -129,7 +129,7 @@ export default function PhotoShapeCustomization({
             <p className="text-sm text-gray-600">
               Your photo will be displayed as a{' '}
               <span className="font-medium text-gray-900">
-                {value === 'circle' ? 'circle' : 'square'}
+                {value === 'circle' ? 'circle' : 'rectangle'}
               </span>{' '}
               in the final poster.
             </p>
@@ -148,8 +148,8 @@ export default function PhotoShapeCustomization({
           <div>
             <h4 className="text-sm font-medium text-blue-900">Photo Shape Tips</h4>
             <ul className="text-xs text-blue-700 mt-1 space-y-1">
-              <li>• <strong>Square:</strong> Best for portraits and balanced compositions</li>
-              <li>• <strong>Circle:</strong> Creates a modern, elegant look for any photo</li>
+              <li>• <strong>Rectangle:</strong> Uses the template's dimensions for optimal fit</li>
+              <li>• <strong>Circle:</strong> Creates a modern, elegant look centered in the photo area</li>
               <li>• Both shapes work well with all background options</li>
             </ul>
           </div>

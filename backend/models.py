@@ -18,7 +18,7 @@ class SessionModel(Base):
     custom_text = Column(Text, nullable=True)
     photo_shape = Column(String(20), default="square")
     pdf_size = Column(String(20), default="A4")
-    template_id = Column(String(50), default="classic")
+    template_id = Column(String(50), default="framed_a4_portrait")
     background_id = Column(String(50), default="none")
     font_id = Column(String(50), default="script")
     audio_duration = Column(Float, nullable=True)
@@ -97,3 +97,48 @@ class Template(Base):
     layout_config = Column(Text, nullable=True)  # JSON string
     preview_image_url = Column(String(500), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class AdminFont(Base):
+    __tablename__ = "admin_fonts"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String(100), nullable=False, unique=True)
+    display_name = Column(String(100), nullable=False)
+    file_path = Column(String(500), nullable=False)  # Path to font file
+    file_size = Column(Integer, nullable=True)  # File size in bytes
+    is_active = Column(Boolean, default=True)
+    is_premium = Column(Boolean, default=False)
+    description = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class AdminSuggestedText(Base):
+    __tablename__ = "admin_suggested_texts"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    text = Column(Text, nullable=False)
+    category = Column(String(50), nullable=True)  # e.g., "romantic", "birthday", "anniversary"
+    is_active = Column(Boolean, default=True)
+    is_premium = Column(Boolean, default=False)
+    usage_count = Column(Integer, default=0)  # Track how often it's used
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class AdminBackground(Base):
+    __tablename__ = "admin_backgrounds"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String(100), nullable=False, unique=True)
+    display_name = Column(String(100), nullable=False)
+    file_path = Column(String(500), nullable=False)  # Path to background image
+    file_size = Column(Integer, nullable=True)  # File size in bytes
+    is_active = Column(Boolean, default=True)
+    is_premium = Column(Boolean, default=False)
+    description = Column(Text, nullable=True)
+    category = Column(String(50), nullable=True)  # e.g., "nature", "abstract", "patterns"
+    usage_count = Column(Integer, default=0)  # Track how often it's used
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

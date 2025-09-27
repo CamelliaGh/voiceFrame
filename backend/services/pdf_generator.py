@@ -20,6 +20,7 @@ from ..models import Order, SessionModel
 from .file_uploader import FileUploader
 from .image_processor import ImageProcessor
 from .visual_pdf_generator import VisualPDFGenerator
+from .admin_resource_service import admin_resource_service
 
 
 class PDFGenerator:
@@ -29,6 +30,7 @@ class PDFGenerator:
         self.file_uploader = FileUploader()
         self.image_processor = ImageProcessor()
         self.visual_generator = VisualPDFGenerator()
+        self.admin_resource_service = admin_resource_service
         self.page_sizes = {
             "A4": A4,
             "A4_Landscape": (A4[1], A4[0]),  # Swap width and height for landscape
@@ -43,29 +45,17 @@ class PDFGenerator:
 
     async def generate_preview_pdf(self, session: SessionModel) -> str:
         """Generate watermarked preview PDF"""
-        # Check if visual template exists
-        if self._has_visual_template(session.template_id):
-            print(f"DEBUG: Using visual template for {session.template_id}")
-            print(
-                f"DEBUG: Calling visual_generator.generate_pdf with add_watermark=True"
-            )
-            return await self.visual_generator.generate_pdf(session, add_watermark=True)
-        else:
-            print(f"DEBUG: Using code-based template for {session.template_id}")
-            print(f"DEBUG: Calling _generate_pdf with add_watermark=True")
-            return await self._generate_pdf(session, add_watermark=True)
+        # Always use visual generator since we only use visual templates now
+        print(f"🎯 DEBUG: Using visual generator for {session.template_id}")
+        return await self.visual_generator.generate_pdf(session, add_watermark=True)
 
     async def generate_final_pdf(self, session: SessionModel, order: Order) -> str:
         """Generate final PDF without watermark"""
-        # Check if visual template exists
-        if self._has_visual_template(session.template_id):
-            print(f"Using visual template for {session.template_id}")
-            return await self.visual_generator.generate_pdf(
-                session, add_watermark=False, order=order
-            )
-        else:
-            print(f"Using code-based template for {session.template_id}")
-            return await self._generate_pdf(session, add_watermark=False, order=order)
+        # Always use visual generator since we only use visual templates now
+        print(f"🎯 DEBUG: Using visual generator for final PDF {session.template_id}")
+        return await self.visual_generator.generate_pdf(
+            session, add_watermark=False, order=order
+        )
 
     async def _generate_pdf(
         self,
@@ -113,7 +103,13 @@ class PDFGenerator:
             buffer.seek(0)
 
             # Upload PDF to storage
-            pdf_key = f"pdfs/{'preview' if add_watermark else order.id if order else 'final'}.pdf"
+            if add_watermark:
+                # Add timestamp to preview filename to prevent caching
+                import time
+                timestamp = int(time.time())
+                pdf_key = f"pdfs/preview_{timestamp}.pdf"
+            else:
+                pdf_key = f"pdfs/{order.id if order else 'final'}.pdf"
 
             # Save buffer to temporary file for upload
             temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
@@ -178,68 +174,10 @@ class PDFGenerator:
         except Exception as e:
             raise Exception(f"PDF generation failed: {str(e)}")
 
+    # Legacy method - no longer used since we only use visual templates
     def _get_template_config(self, template_id: str) -> dict:
-        """Get template configuration"""
-        templates = {
-            "classic": {
-                "text_y_offset": 0.90,  # Position text at top like in example
-                "photo_y_offset": 0.70,  # Move photo higher up
-                "waveform_y_offset": 0.35,  # Position waveform below photo
-                "qr_y_offset": 0.10,  # Center QR at bottom
-                "text_font": "Times-Italic",  # Handwritten-style font
-                "text_size": 32,  # Larger text like in example
-                "photo_size": 4.5,  # Larger photo (4.5 inches)
-                "waveform_width": 7,  # Wider waveform (7 inches)
-                "qr_size": 0.8,  # Smaller QR code (0.8 inches)
-                "qr_position": "center",  # Center QR instead of right
-                "background_color": None,
-                "accent_color": "#000000",  # Black text like in example
-            },
-            "modern": {
-                "text_y_offset": 0.90,
-                "photo_y_offset": 0.60,
-                "waveform_y_offset": 0.30,
-                "qr_y_offset": 0.05,
-                "text_font": "Helvetica",
-                "text_size": 20,
-                "photo_size": 3,
-                "waveform_width": 6,
-                "qr_size": 1,
-                "qr_position": "right",
-                "background_color": "#f8fafc",
-                "accent_color": "#6d28d9",
-            },
-            "vintage": {
-                "text_y_offset": 0.88,
-                "photo_y_offset": 0.58,
-                "waveform_y_offset": 0.28,
-                "qr_y_offset": 0.08,
-                "text_font": "Times-Roman",
-                "text_size": 22,
-                "photo_size": 3,
-                "waveform_width": 6,
-                "qr_size": 1,
-                "qr_position": "right",
-                "background_color": "#fef7e0",
-                "accent_color": "#92400e",
-            },
-            "elegant": {
-                "text_y_offset": 0.87,
-                "photo_y_offset": 0.57,
-                "waveform_y_offset": 0.27,
-                "qr_y_offset": 0.06,
-                "text_font": "Times-Italic",
-                "text_size": 26,
-                "photo_size": 3,
-                "waveform_width": 6,
-                "qr_size": 1,
-                "qr_position": "right",
-                "background_color": None,
-                "accent_color": "#1e293b",
-            },
-        }
-
-        return templates.get(template_id, templates["classic"])
+        """Legacy method - no longer used"""
+        return {}
 
     async def _add_text(
         self,
@@ -549,14 +487,7 @@ class PDFGenerator:
             print(f"Error generating QR URL: {e}")
             raise Exception(f"Failed to generate QR code URL: {str(e)}")
 
+    # Legacy method - no longer used since we only use visual templates
     def _has_visual_template(self, template_id: str) -> bool:
-        """Check if a visual template exists for the given template ID"""
-        try:
-            template = self.visual_generator.template_service.get_template(template_id)
-            template_path = self.visual_generator.template_service.get_template_path(
-                template_id
-            )
-            return template is not None and template_path is not None
-        except Exception as e:
-            print(f"Error checking visual template: {e}")
-            return False
+        """Legacy method - no longer used"""
+        return True

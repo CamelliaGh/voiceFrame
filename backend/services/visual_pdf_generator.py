@@ -35,6 +35,9 @@ class VisualPDFGenerator:
                 f"DEBUG: Session data - template_id: {session.template_id}, custom_text: '{session.custom_text}', font_id: {getattr(session, 'font_id', 'NOT_SET')}"
             )
             print(f"DEBUG: add_watermark parameter: {add_watermark}")
+            print(f"🚀 DEBUG: VISUAL PDF GENERATION START - template_id: {session.template_id}")
+            print(f"🚀 DEBUG: VISUAL PDF GENERATION START - custom_text: '{session.custom_text}'")
+            print(f"🚀 DEBUG: VISUAL PDF GENERATION START - photo_s3_key: {session.photo_s3_key}")
             print(f"DEBUG: Starting visual PDF generation process...")
 
             # Get template configuration
@@ -63,8 +66,13 @@ class VisualPDFGenerator:
                 print(f"Background applied: {session.background_id}")
 
             # Add photo
+            print(f"🔵 DEBUG: About to check photo condition - session.photo_s3_key: {session.photo_s3_key}")
+            print(f"🔵 DEBUG: About to check photo condition - session.custom_text: '{session.custom_text}'")
             if session.photo_s3_key:
+                print(f"🔵 DEBUG: Photo condition passed, calling _add_photo_to_template")
                 await self._add_photo_to_template(base_image, session, template)
+            else:
+                print(f"🔵 DEBUG: Photo condition failed - no photo_s3_key")
 
             # Add waveform
             if session.waveform_s3_key:
@@ -77,9 +85,11 @@ class VisualPDFGenerator:
             # Add text
             if session.custom_text:
                 print(f"DEBUG: Adding text '{session.custom_text}' to template")
+                print(f"DEBUG: Base image mode before text: {base_image.mode}")
                 await self._add_text_to_template(
                     base_image, session.custom_text, template, session
                 )
+                print(f"DEBUG: Base image mode after text: {base_image.mode}")
             else:
                 print(
                     f"DEBUG: No custom text to add (session.custom_text: {session.custom_text})"
@@ -103,7 +113,13 @@ class VisualPDFGenerator:
             pdf_path = await self._convert_image_to_pdf(base_image, template)
 
             # Upload to storage
-            pdf_key = f"pdfs/{'preview' if add_watermark else order.id if order else 'final'}.pdf"
+            if add_watermark:
+                # Add timestamp to preview filename to prevent caching
+                import time
+                timestamp = int(time.time())
+                pdf_key = f"pdfs/preview_{timestamp}.pdf"
+            else:
+                pdf_key = f"pdfs/{order.id if order else 'final'}.pdf"
 
             if self.file_uploader.s3_client:
                 with open(pdf_path, "rb") as f:
@@ -157,22 +173,84 @@ class VisualPDFGenerator:
         self, base_image: Image.Image, session: SessionModel, template: Dict
     ):
         """Add photo to template at specified coordinates"""
+        print(f"🟢 DEBUG: _add_photo_to_template ENTRY - session.photo_s3_key: {session.photo_s3_key}")
+        print(f"🟢 DEBUG: _add_photo_to_template ENTRY - session.photo_shape: {session.photo_shape}")
+        print(f"🟢 DEBUG: _add_photo_to_template ENTRY - session.custom_text: '{session.custom_text}'")
         placeholder = template["placeholders"]["photo"]
 
         try:
             # Get processed photo
             photo_size = (placeholder["width"], placeholder["height"])
-            photo = self.image_processor.create_shaped_image(
-                session.photo_s3_key,
-                "rectangle",  # Always use rectangle for framed templates
-                photo_size,
-            )
+            # Simple debug log to verify photo shape
+            print(f"🔍 PHOTO SHAPE DEBUG: session.photo_shape = '{session.photo_shape}'")
+
+            # DEBUG MODE: Draw red circle instead of actual photo
+            debug_mode = settings.debug_photo_circle
+
+            if debug_mode:
+                print("🔴 DEBUG MODE: Drawing red circle instead of photo")
+                # Create a red circle image
+                photo = Image.new('RGBA', photo_size, (0, 0, 0, 0))  # Transparent background
+                draw = ImageDraw.Draw(photo)
+
+                # Draw a red circle
+                margin = 20
+                circle_bbox = [margin, margin, photo_size[0] - margin, photo_size[1] - margin]
+                draw.ellipse(circle_bbox, fill='red', outline='darkred', width=5)
+
+                # Add text label
+                draw.text((photo_size[0]//2 - 30, photo_size[1]//2 - 10), "CIRCLE", fill='white')
+                print(f"🔴 DEBUG: Created red circle image with size {photo_size}")
+            else:
+                photo = self.image_processor.create_shaped_image(
+                    session.photo_s3_key,
+                    session.photo_shape,  # Use the session's photo shape preference
+                    photo_size,
+                )
 
             # Paste photo onto template
-            base_image.paste(photo, (placeholder["x"], placeholder["y"]))
-            print(
-                f"Photo added at ({placeholder['x']}, {placeholder['y']}) with size {photo_size}"
-            )
+            print(f"🔴 DEBUG: PHOTO PASTE #{id(photo)} - About to paste photo. Base image mode: {base_image.mode}, Photo mode: {photo.mode}")
+            print(f"🔴 DEBUG: PHOTO PASTE #{id(photo)} - Photo size: {photo.size}, Paste position: ({placeholder['x']}, {placeholder['y']})")
+            print(f"🔴 DEBUG: PHOTO PASTE #{id(photo)} - Photo shape being used: {session.photo_shape}")
+
+            # Handle transparency for circular images
+            if photo.mode == 'RGBA':
+                print("DEBUG: Photo has RGBA mode, checking for transparency")
+                alpha_channel = photo.getchannel('A')
+                alpha_bbox = alpha_channel.getbbox()
+                print(f"DEBUG: Alpha channel bbox: {alpha_bbox}")
+
+                if alpha_bbox:
+                    print("DEBUG: Photo has transparency, using alpha compositing")
+                    # Convert base image to RGBA if needed for transparency support
+                    if base_image.mode != 'RGBA':
+                        print("DEBUG: Converting base image to RGBA")
+                        base_image = base_image.convert('RGBA')
+
+                    # For circular images, we need to handle the white background issue
+                    # Create a temporary image with the same size as the photo area
+                    photo_area = base_image.crop((
+                        placeholder["x"],
+                        placeholder["y"],
+                        placeholder["x"] + placeholder["width"],
+                        placeholder["y"] + placeholder["height"]
+                    ))
+
+                    # Composite the circular photo onto the photo area
+                    # This will properly handle the transparency
+                    composited_area = Image.alpha_composite(photo_area, photo)
+
+                    # Paste the composited area back onto the base image
+                    base_image.paste(composited_area, (placeholder["x"], placeholder["y"]))
+                    print("DEBUG: Alpha compositing completed")
+                else:
+                    print("DEBUG: Photo has no transparency, using regular paste")
+                    base_image.paste(photo, (placeholder["x"], placeholder["y"]))
+            else:
+                print("DEBUG: Photo has no alpha channel, using regular paste")
+                base_image.paste(photo, (placeholder["x"], placeholder["y"]))
+
+            print(f"DEBUG: Photo pasted successfully. Final base image mode: {base_image.mode}")
 
         except Exception as e:
             print(f"Error adding photo: {e}")

@@ -147,7 +147,6 @@ export default function PDFSizeSelection({
       <div className="space-y-2">
         {filteredOptions.map((option) => {
           const isSelected = value === option.value
-          const IconComponent = option.icon
 
           return (
             <div

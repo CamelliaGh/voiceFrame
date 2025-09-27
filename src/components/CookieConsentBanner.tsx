@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { X, Cookie, Settings, Check, AlertCircle } from 'lucide-react'
 import { cn } from '../lib/utils'
 

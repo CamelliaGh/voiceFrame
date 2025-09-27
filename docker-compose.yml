@@ -29,18 +29,18 @@ services:
       timeout: 5s
       retries: 5
 
-  # ClamAV for virus scanning
-  clamav:
-    image: clamav/clamav:stable-alpine
-    ports:
-      - "3310:3310"
-    volumes:
-      - clamav_data:/var/lib/clamav
-    healthcheck:
-      test: ["CMD", "clamdscan", "--version"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
+  # ClamAV for virus scanning (disabled for ARM64 compatibility)
+  # clamav:
+  #   image: clamav/clamav:1.0
+  #   ports:
+  #     - "3310:3310"
+  #   volumes:
+  #     - clamav_data:/var/lib/clamav
+  #   healthcheck:
+  #     test: ["CMD", "clamdscan", "--version"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 5
 
   # FastAPI Backend
   api:
@@ -52,6 +52,8 @@ services:
       - REDIS_URL=${REDIS_URL:-redis://redis:6379}
       - DEBUG=${DEBUG:-true}
       - ENVIRONMENT=${ENVIRONMENT:-development}
+      # Debug settings
+      - DEBUG_PHOTO_CIRCLE=${DEBUG_PHOTO_CIRCLE:-false}
       # AWS S3 credentials
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
@@ -79,8 +81,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      clamav:
-        condition: service_healthy
+      # clamav:
+      #   condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -96,6 +98,8 @@ services:
       - REDIS_URL=${REDIS_URL:-redis://redis:6379}
       - DEBUG=${DEBUG:-true}
       - ENVIRONMENT=${ENVIRONMENT:-development}
+      # Debug settings
+      - DEBUG_PHOTO_CIRCLE=${DEBUG_PHOTO_CIRCLE:-false}
       # AWS S3 credentials
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
@@ -121,6 +125,12 @@ services:
       redis:
         condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "celery.*worker"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
 
   # Celery Beat for periodic tasks
   celery-beat:
@@ -138,6 +148,12 @@ services:
       redis:
         condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "celery.*beat"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
 
   # Test environment
   test:
@@ -179,5 +195,5 @@ services:
 volumes:
   postgres_data:
   redis_data:
-  clamav_data:
+  # clamav_data:
   file_storage:

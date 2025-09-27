@@ -39,12 +39,18 @@ export default function PreviewSection({ onNext, onBack }: PreviewSectionProps) 
   const generatePreview = async () => {
     if (!session) return
 
+    console.log('🎯 PreviewSection: generatePreview called for photo_shape:', session.photo_shape)
     setLoading(true)
     setError(null)
 
     try {
+      console.log('🎯 PreviewSection: Making preview request...')
       const response = await getPreviewUrl(session.session_token)
-      setPreviewUrl(response.preview_url)
+      console.log('🎯 PreviewSection: Preview response received:', response.preview_url)
+      // Add cache-busting parameter to prevent browser caching
+      const cacheBustingUrl = `${response.preview_url}?t=${Date.now()}`
+      console.log('🎯 PreviewSection: Using cache-busting URL:', cacheBustingUrl)
+      setPreviewUrl(cacheBustingUrl)
     } catch (err: any) {
       console.error('Failed to generate preview:', err)
 
@@ -77,8 +83,9 @@ export default function PreviewSection({ onNext, onBack }: PreviewSectionProps) 
   }
 
   useEffect(() => {
+    console.log('🎯 PreviewSection: useEffect triggered, session photo_shape:', session?.photo_shape)
     generatePreview()
-  }, [session?.custom_text, session?.pdf_size, session?.template_id, session?.background_id, session?.photo_url, session?.waveform_url])
+  }, [session?.custom_text, session?.pdf_size, session?.template_id, session?.background_id, session?.photo_shape, session?.photo_url, session?.waveform_url])
 
   const handleDownloadPreview = () => {
     if (previewUrl) {

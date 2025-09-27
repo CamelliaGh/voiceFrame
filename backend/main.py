@@ -46,6 +46,8 @@ from .services.consent_manager import consent_manager, ConsentType
 from .services.gdpr_service import gdpr_service
 from .services.data_minimization_service import data_minimization_service, DataCategory, ProcessingPurpose
 from .services.file_audit_logger import file_audit_logger, FileOperationContext, FileOperationType, FileType, FileOperationStatus
+from .services.admin_resource_service import admin_resource_service
+from .routers import admin
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -96,6 +98,9 @@ app.add_middleware(
 static_dir = "/tmp/audioposter"
 os.makedirs(static_dir, exist_ok=True)
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+# Include routers
+app.include_router(admin.router)
 
 # Initialize services
 session_manager = SessionManager()
@@ -152,6 +157,16 @@ async def get_session(token: str, db: Session = Depends(get_db)):
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
+    # Generate presigned URLs for photo and waveform
+    photo_url = None
+    waveform_url = None
+
+    if session.photo_s3_key:
+        photo_url = file_uploader.generate_presigned_url(session.photo_s3_key, expiration=3600)
+
+    if session.waveform_s3_key:
+        waveform_url = file_uploader.generate_presigned_url(session.waveform_s3_key, expiration=3600)
+
     return SessionResponse(
         session_token=session.session_token,
         expires_at=session.expires_at.isoformat(),
@@ -159,8 +174,8 @@ async def get_session(token: str, db: Session = Depends(get_db)):
         photo_shape=session.photo_shape,
         pdf_size=session.pdf_size,
         template_id=session.template_id,
-        photo_url=session.photo_s3_key,
-        waveform_url=session.waveform_s3_key,
+        photo_url=photo_url,
+        waveform_url=waveform_url,
         audio_duration=session.audio_duration,
     )
 
@@ -170,6 +185,7 @@ async def update_session(
     token: str, data: SessionUpdate, db: Session = Depends(get_db)
 ):
     """Update session customization data"""
+    print("🚨 PUT REQUEST RECEIVED!")
     print(f"DEBUG: Received data: {data.model_dump()}")
 
     session = session_manager.get_session(db, token)
@@ -187,16 +203,23 @@ async def update_session(
             status_code=400, detail="Audio file must be uploaded before customization"
         )
 
-    # Validate that audio processing is complete
-    if not session.waveform_s3_key:
+    # Get update data first to check if it's a photo shape only update
+    update_data = data.model_dump(exclude_unset=True)
+    print(f"DEBUG: Session update received - token: {token}")
+    print(f"DEBUG: Update data after exclude_unset: {update_data}")
+    print(f"DEBUG: Current session photo_shape: {session.photo_shape}")
+
+    # Validate that audio processing is complete (except for photo_shape updates)
+    is_photo_shape_only_update = len(update_data) == 1 and "photo_shape" in update_data
+    print(f"DEBUG: is_photo_shape_only_update: {is_photo_shape_only_update}")
+
+    if not session.waveform_s3_key and not is_photo_shape_only_update:
         raise HTTPException(
             status_code=400,
             detail="Audio processing not complete. Please wait and try again.",
         )
 
     try:
-        update_data = data.model_dump(exclude_unset=True)
-        print(f"DEBUG: Update data after exclude_unset: {update_data}")
         print(
             f"DEBUG: Session before update - custom_text: '{session.custom_text}', font_id: '{session.font_id}'"
         )
@@ -204,6 +227,7 @@ async def update_session(
         print(
             f"DEBUG: Session after update - custom_text: '{session.custom_text}', font_id: '{session.font_id}'"
         )
+        print(f"DEBUG: Session after update - photo_shape: '{session.photo_shape}'")
         return {"status": "updated"}
     except ValueError as e:
         print(f"DEBUG: ValueError in update_session: {e}")
@@ -446,6 +470,7 @@ async def get_processing_status(token: str, db: Session = Depends(get_db)):
 @app.get("/api/session/{token}/preview")
 async def get_preview(token: str, db: Session = Depends(get_db)):
     """Generate watermarked preview PDF"""
+    print("🚨 PREVIEW REQUEST RECEIVED!")
     session = session_manager.get_session(db, token)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -1627,6 +1652,60 @@ async def cleanup_old_audit_logs(
     except Exception as e:
         logger.error(f"Error cleaning up audit logs: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to cleanup audit logs: {str(e)}")
+
+
+# Public API endpoints for accessing admin-managed resources
+@app.get("/api/resources/fonts")
+async def get_available_fonts(db: Session = Depends(get_db)):
+    """Get all active fonts available for use"""
+    try:
+        fonts = admin_resource_service.get_active_fonts(db)
+        return {"fonts": fonts}
+    except Exception as e:
+        logger.error(f"Error getting fonts: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to get fonts")
+
+
+@app.get("/api/resources/suggested-texts")
+async def get_suggested_texts(
+    category: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """Get suggested texts, optionally filtered by category"""
+    try:
+        texts = admin_resource_service.get_active_suggested_texts(db, category)
+        return {"suggested_texts": texts}
+    except Exception as e:
+        logger.error(f"Error getting suggested texts: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to get suggested texts")
+
+
+@app.get("/api/resources/backgrounds")
+async def get_backgrounds(
+    category: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """Get backgrounds, optionally filtered by category"""
+    try:
+        backgrounds = admin_resource_service.get_active_backgrounds(db, category)
+        return {"backgrounds": backgrounds}
+    except Exception as e:
+        logger.error(f"Error getting backgrounds: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to get backgrounds")
+
+
+@app.get("/api/resources/categories")
+async def get_resource_categories(
+    resource_type: str,
+    db: Session = Depends(get_db)
+):
+    """Get all categories for a resource type"""
+    try:
+        categories = admin_resource_service.get_categories(db, resource_type)
+        return {"categories": categories}
+    except Exception as e:
+        logger.error(f"Error getting categories: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to get categories")
 
 
 # Removed audio-not-found and audio-error endpoints

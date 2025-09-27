@@ -49,7 +49,7 @@ Object.defineProperty(window, 'FileReader', {
     onload: ((event: any) => void) | null = null
     onerror: ((event: any) => void) | null = null
 
-    readAsDataURL(file: File) {
+    readAsDataURL(_file: File) {
       // Simulate async reading
       setTimeout(() => {
         this.result = 'data:image/jpeg;base64,mock-data'

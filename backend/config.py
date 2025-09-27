@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     project_root: str = Field(default="/app")
     environment: str = Field(default_factory=lambda: os.getenv("ENVIRONMENT", "development"))  # development, staging, production
 
+    # Debug settings
+    debug_photo_circle: bool = Field(default=False)  # Show red circle instead of photo for debugging
+
     # File Processing
     max_photo_size: int = Field(default=50 * 1024 * 1024)  # 50MB
     max_audio_size: int = Field(default=100 * 1024 * 1024)  # 100MB

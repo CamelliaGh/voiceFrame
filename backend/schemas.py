@@ -14,7 +14,7 @@ class SessionResponse(BaseModel):
             "A4", "A4_Landscape", "Letter", "Letter_Landscape", "A3", "A3_Landscape"
         ]
     ] = "A4"
-    template_id: Optional[str] = "classic"
+    template_id: Optional[str] = "framed_a4_portrait"
     background_id: Optional[str] = "none"
     font_id: Optional[str] = "script"
     photo_url: Optional[str] = None
@@ -166,3 +166,103 @@ class DownloadResponse(BaseModel):
 class ErrorResponse(BaseModel):
     detail: str
     error_code: Optional[str] = None
+
+
+# Admin Dashboard Schemas
+class AdminFontCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+    display_name: str = Field(..., min_length=1, max_length=100)
+    description: Optional[str] = None
+    is_premium: bool = False
+
+
+class AdminFontUpdate(BaseModel):
+    display_name: Optional[str] = Field(None, min_length=1, max_length=100)
+    description: Optional[str] = None
+    is_active: Optional[bool] = None
+    is_premium: Optional[bool] = None
+
+
+class AdminFontResponse(BaseModel):
+    id: str
+    name: str
+    display_name: str
+    file_path: str
+    file_size: Optional[int]
+    is_active: bool
+    is_premium: bool
+    description: Optional[str]
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class AdminSuggestedTextCreate(BaseModel):
+    text: str = Field(..., min_length=1, max_length=500)
+    category: Optional[str] = Field(None, max_length=50)
+    is_premium: bool = False
+
+
+class AdminSuggestedTextUpdate(BaseModel):
+    text: Optional[str] = Field(None, min_length=1, max_length=500)
+    category: Optional[str] = Field(None, max_length=50)
+    is_active: Optional[bool] = None
+    is_premium: Optional[bool] = None
+
+
+class AdminSuggestedTextResponse(BaseModel):
+    id: str
+    text: str
+    category: Optional[str]
+    is_active: bool
+    is_premium: bool
+    usage_count: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class AdminBackgroundCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+    display_name: str = Field(..., min_length=1, max_length=100)
+    description: Optional[str] = None
+    category: Optional[str] = Field(None, max_length=50)
+    is_premium: bool = False
+
+
+class AdminBackgroundUpdate(BaseModel):
+    display_name: Optional[str] = Field(None, min_length=1, max_length=100)
+    description: Optional[str] = None
+    category: Optional[str] = Field(None, max_length=50)
+    is_active: Optional[bool] = None
+    is_premium: Optional[bool] = None
+
+
+class AdminBackgroundResponse(BaseModel):
+    id: str
+    name: str
+    display_name: str
+    file_path: str
+    file_size: Optional[int]
+    is_active: bool
+    is_premium: bool
+    description: Optional[str]
+    category: Optional[str]
+    usage_count: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class AdminResourceListResponse(BaseModel):
+    items: list
+    total: int
+    page: int
+    per_page: int
+    total_pages: int

@@ -88,19 +88,32 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
     (() => {
       let timeoutId: NodeJS.Timeout
       return (data: Partial<SessionData>) => {
+        console.log('⏱️ debouncedUpdate called with data:', data)
         clearTimeout(timeoutId)
         timeoutId = setTimeout(async () => {
-          if (!session) return
+          console.log('🚀 debouncedUpdate timeout triggered')
+          console.log('📊 Session exists:', !!session)
+          console.log('📊 Processing status:', processingStatus)
 
-          // Check if audio processing is complete before updating
-          if (processingStatus && !processingStatus.waveform_ready) {
+          if (!session) {
+            console.log('❌ No session, returning')
+            return
+          }
+
+          // Allow photo shape updates even if audio processing isn't complete
+          // Check if audio processing is complete before updating (except for photo_shape)
+          if (processingStatus && !processingStatus.waveform_ready && !data.photo_shape) {
             console.warn('Audio processing not complete, skipping session update')
             return
           }
 
+          console.log('✅ Proceeding with session update:', data)
+
           try {
             setIsUpdating(true)
+            console.log('📡 Calling updateSessionData with:', data)
             await updateSessionData(data)
+            console.log('✅ updateSessionData completed successfully')
           } catch (error) {
             console.error('Failed to update session:', error)
             // If it's a 400 error about audio processing, refresh the processing status
@@ -177,14 +190,11 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
   }
 
   const handlePhotoShapeChange = (newPhotoShape: 'square' | 'circle') => {
+    console.log('🔄 Photo shape change triggered:', newPhotoShape)
     setPhotoShape(newPhotoShape)
-    // Update session in real-time for preview
+    // Update session in real-time for preview - send only photo_shape for immediate update
+    console.log('📤 Calling debouncedUpdate with photo_shape:', newPhotoShape)
     debouncedUpdate({
-      custom_text: customText.trim(),
-      pdf_size: pdfSize,
-      template_id: getFramedTemplateId(pdfSize),
-      background_id: backgroundId,
-      font_id: fontId,
       photo_shape: newPhotoShape
     })
   }

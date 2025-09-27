@@ -3,7 +3,7 @@ import { useState } from 'react'
 import CookieConsentBanner from './CookieConsentBanner'
 
 export default function Header() {
-  const [showCookieSettings, setShowCookieSettings] = useState(false)
+  const [, setShowCookieSettings] = useState(false)
 
   return (
     <>

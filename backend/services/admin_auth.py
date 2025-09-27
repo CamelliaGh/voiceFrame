@@ -13,15 +13,26 @@ from fastapi import HTTPException, Request
 class AdminAuthService:
     """Handles admin authentication for protected endpoints"""
 
+    _instance = None
+    _api_key = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(AdminAuthService, cls).__new__(cls)
+        return cls._instance
+
     def __init__(self):
-        # Get admin API key from environment
-        self.admin_api_key = os.getenv("ADMIN_API_KEY")
-        if not self.admin_api_key:
-            # Generate a default key for development (should be set in production)
-            import secrets
-            self.admin_api_key = secrets.token_urlsafe(32)
-            print(f"⚠️  WARNING: Using auto-generated admin API key: {self.admin_api_key}")
-            print("   Set ADMIN_API_KEY environment variable in production!")
+        if self._api_key is None:
+            # Get admin API key from environment
+            self._api_key = os.getenv("ADMIN_API_KEY")
+            if not self._api_key:
+                # Generate a default key for development (should be set in production)
+                import secrets
+                self._api_key = secrets.token_urlsafe(32)
+                print(f"⚠️  WARNING: Using auto-generated admin API key: {self._api_key}")
+                print("   Set ADMIN_API_KEY environment variable in production!")
+
+        self.admin_api_key = self._api_key
 
     def validate_admin_access(self, request: Request) -> bool:
         """

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Type } from 'lucide-react'
 import { cn } from '../lib/utils'
 

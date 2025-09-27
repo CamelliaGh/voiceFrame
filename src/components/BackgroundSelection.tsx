@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { Image, Eye, Check } from 'lucide-react'
 import { cn } from '../lib/utils'
 
