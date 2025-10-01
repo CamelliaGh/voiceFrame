@@ -263,9 +263,27 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
     setPreviewLoading(true)
     setPreviewError(null)
 
+    // Wait a moment to ensure any pending session updates have completed
+    if (isUpdating) {
+      console.log('⏳ Waiting for session update to complete before generating preview...')
+      // Wait for the update to complete
+      await new Promise(resolve => {
+        const checkUpdate = () => {
+          if (!isUpdating) {
+            resolve(void 0)
+          } else {
+            setTimeout(checkUpdate, 100)
+          }
+        }
+        checkUpdate()
+      })
+    }
+
     try {
       const response = await getPreviewUrl(session.session_token)
-      setPreviewUrl(response.preview_url)
+      // Add cache-busting parameter to prevent browser caching
+      const cacheBustingUrl = `${response.preview_url}?t=${Date.now()}`
+      setPreviewUrl(cacheBustingUrl)
     } catch (err: any) {
       console.error('Failed to generate preview:', err)
 
