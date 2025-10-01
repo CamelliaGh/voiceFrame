@@ -241,7 +241,7 @@ const AdminDashboard: React.FC = () => {
   }, [activeTab, isAuthenticated])
 
   const handleDelete = async (type: ResourceType, id: string) => {
-    if (!confirm('Are you sure you want to delete this item?') || !apiKey) return
+    if (!confirm('Are you sure you want to delete this item?') || !adminPassword) return
 
     try {
       const response = await fetch(`/admin/${type}/${id}`, {
@@ -284,7 +284,7 @@ const AdminDashboard: React.FC = () => {
       const response = await fetch(`/admin/${type}/${id}/upload`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${apiKey}`
+          'Authorization': `Bearer ${adminPassword}`
         },
         body: formData
       })
@@ -434,7 +434,7 @@ const AdminDashboard: React.FC = () => {
   }
 
   const handleSubmitEdit = async () => {
-    if (!apiKey || !editingItem) return
+    if (!adminPassword || !editingItem) return
 
     try {
       let endpoint = ''
