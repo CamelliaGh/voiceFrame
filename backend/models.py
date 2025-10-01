@@ -19,8 +19,8 @@ class SessionModel(Base):
     photo_shape = Column(String(20), default="square")
     pdf_size = Column(String(20), default="A4")
     template_id = Column(String(50), default="framed_a4_portrait")
-    background_id = Column(String(50), default="none")
-    font_id = Column(String(50), default="script")
+    background_id = Column(String(255), default="none")
+    font_id = Column(String(255), default="script")
     audio_duration = Column(Float, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     expires_at = Column(

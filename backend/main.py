@@ -104,6 +104,11 @@ backgrounds_dir = "backgrounds"
 os.makedirs(backgrounds_dir, exist_ok=True)
 app.mount("/backgrounds", StaticFiles(directory=backgrounds_dir), name="backgrounds")
 
+# Mount admin backgrounds directory for serving admin-managed background images
+admin_backgrounds_dir = "backgrounds/admin"
+os.makedirs(admin_backgrounds_dir, exist_ok=True)
+app.mount("/backgrounds/admin", StaticFiles(directory=admin_backgrounds_dir), name="admin_backgrounds")
+
 # Include routers
 app.include_router(admin.router)
 app.include_router(admin_auth.router)

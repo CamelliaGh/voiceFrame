@@ -85,14 +85,36 @@ export default function BackgroundSelection({
         const response = await fetch('/api/resources/backgrounds')
         if (response.ok) {
           const data = await response.json()
-          const backgrounds = data.backgrounds?.map((bg: any) => ({
-            id: bg.id,
-            name: bg.display_name,
-            description: bg.description || 'Custom background',
-            preview: bg.file_path ? `/backgrounds/${bg.file_path.split('/').pop()}` : null,
-            category: bg.category || 'General',
-            tags: [bg.category || 'general']
-          })) || []
+          const backgrounds = data.backgrounds?.map((bg: any) => {
+            // Create preview URL based on file path
+            let preview = null
+            if (bg.file_path) {
+              if (bg.file_path.includes('/admin/') || bg.file_path.includes('admin/')) {
+                // Admin-managed background: handle both absolute and relative paths
+                let relativePath
+                if (bg.file_path.startsWith('/app/')) {
+                  relativePath = bg.file_path.replace('/app/', '/')
+                } else if (bg.file_path.startsWith('backgrounds/')) {
+                  relativePath = `/${bg.file_path}`
+                } else {
+                  relativePath = bg.file_path
+                }
+                preview = relativePath.startsWith('/') ? relativePath : `/${relativePath}`
+              } else {
+                // Default background: just use the filename
+                preview = `/backgrounds/${bg.file_path.split('/').pop()}`
+              }
+            }
+
+            return {
+              id: bg.id,
+              name: bg.display_name,
+              description: bg.description || 'Custom background',
+              preview: preview,
+              category: bg.category || 'General',
+              tags: [bg.category || 'general']
+            }
+          }) || []
 
           if (backgrounds.length > 0) {
             // Add the "none" option at the beginning

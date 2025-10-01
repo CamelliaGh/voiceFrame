@@ -30,6 +30,10 @@ export default defineConfig({
       '/admin/simple': {
         target: 'http://localhost:8000',
         changeOrigin: true,
+      },
+      '/backgrounds': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
       }
     }
   }
