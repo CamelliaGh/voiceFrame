@@ -82,7 +82,7 @@ const AdminDashboard: React.FC = () => {
   const [backgrounds, setBackgrounds] = useState<AdminBackground[]>([])
   const [loading, setLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
-  const [apiKey, setApiKey] = useState<string | null>(null)
+  const [adminPassword, setAdminPassword] = useState<string | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
@@ -103,34 +103,34 @@ const AdminDashboard: React.FC = () => {
     file: null as File | null
   })
 
-  // Check for stored API key on component mount
+  // Check for stored admin password on component mount
   useEffect(() => {
-    const storedApiKey = localStorage.getItem('admin_api_key')
-    if (storedApiKey) {
-      setApiKey(storedApiKey)
+    const storedPassword = localStorage.getItem('admin_password')
+    if (storedPassword) {
+      setAdminPassword(storedPassword)
       setIsAuthenticated(true)
     }
   }, [])
 
-  const handleLogin = (key: string) => {
-    setApiKey(key)
+  const handleLogin = (password: string) => {
+    setAdminPassword(password)
     setIsAuthenticated(true)
-    localStorage.setItem('admin_api_key', key)
+    localStorage.setItem('admin_password', password)
   }
 
   const handleLogout = () => {
-    setApiKey(null)
+    setAdminPassword(null)
     setIsAuthenticated(false)
-    localStorage.removeItem('admin_api_key')
+    localStorage.removeItem('admin_password')
   }
 
   const fetchStats = async () => {
-    if (!apiKey) return
+    if (!adminPassword) return
 
     try {
       const response = await fetch('/admin/stats', {
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
+          'Authorization': `Bearer ${adminPassword}`,
           'Content-Type': 'application/json'
         }
       })
@@ -138,7 +138,7 @@ const AdminDashboard: React.FC = () => {
         const data = await response.json()
         setStats(data)
       } else if (response.status === 401 || response.status === 403) {
-        // API key is invalid, logout
+        // Password is invalid, logout
         handleLogout()
       }
     } catch (error) {
@@ -147,13 +147,13 @@ const AdminDashboard: React.FC = () => {
   }
 
   const fetchFonts = async () => {
-    if (!apiKey) return
+    if (!adminPassword) return
 
     setLoading(true)
     try {
       const response = await fetch('/admin/fonts', {
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
+          'Authorization': `Bearer ${adminPassword}`,
           'Content-Type': 'application/json'
         }
       })
@@ -171,13 +171,13 @@ const AdminDashboard: React.FC = () => {
   }
 
   const fetchSuggestedTexts = async () => {
-    if (!apiKey) return
+    if (!adminPassword) return
 
     setLoading(true)
     try {
       const response = await fetch('/admin/suggested-texts', {
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
+          'Authorization': `Bearer ${adminPassword}`,
           'Content-Type': 'application/json'
         }
       })
@@ -195,13 +195,13 @@ const AdminDashboard: React.FC = () => {
   }
 
   const fetchBackgrounds = async () => {
-    if (!apiKey) return
+    if (!adminPassword) return
 
     setLoading(true)
     try {
       const response = await fetch('/admin/backgrounds', {
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
+          'Authorization': `Bearer ${adminPassword}`,
           'Content-Type': 'application/json'
         }
       })
@@ -247,7 +247,7 @@ const AdminDashboard: React.FC = () => {
       const response = await fetch(`/admin/${type}/${id}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
+          'Authorization': `Bearer ${adminPassword}`,
           'Content-Type': 'application/json'
         }
       })
@@ -275,7 +275,7 @@ const AdminDashboard: React.FC = () => {
   }
 
   const handleFileUpload = async (type: ResourceType, id: string, file: File) => {
-    if (!apiKey) return
+    if (!adminPassword) return
 
     const formData = new FormData()
     formData.append('file', file)
@@ -321,7 +321,7 @@ const AdminDashboard: React.FC = () => {
   }
 
   const handleSubmitAdd = async () => {
-    if (!apiKey) return
+    if (!adminPassword) return
 
     try {
       let endpoint = ''
@@ -380,7 +380,7 @@ const AdminDashboard: React.FC = () => {
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
+          'Authorization': `Bearer ${adminPassword}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(body)
@@ -480,7 +480,7 @@ const AdminDashboard: React.FC = () => {
       const response = await fetch(endpoint, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
+          'Authorization': `Bearer ${adminPassword}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(body)

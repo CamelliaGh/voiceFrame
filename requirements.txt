@@ -26,3 +26,5 @@ cryptography==42.0.8
 fastapi-limiter==0.1.6
 python-magic==0.4.27
 pyclamd==0.4.0
+passlib[bcrypt]==1.7.4
+python-jose[cryptography]==3.3.0

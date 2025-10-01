@@ -42,7 +42,7 @@ async def list_fonts(
     is_active: Optional[bool] = None,
     is_premium: Optional[bool] = None,
     db: Session = Depends(get_db),
-    _: bool = admin_auth.get_admin_dependency(),
+    _: bool = admin_auth.get_simple_password_dependency(),
 ):
     """List all fonts with pagination and filtering"""
     query = db.query(AdminFont)
@@ -75,7 +75,7 @@ async def list_fonts(
 async def create_font(
     font_data: AdminFontCreate,
     db: Session = Depends(get_db),
-    _: bool = admin_auth.get_admin_dependency(),
+    _: bool = admin_auth.get_simple_password_dependency(),
 ):
     """Create a new font entry"""
     # Check if font name already exists
@@ -103,7 +103,7 @@ async def upload_font_file(
     font_id: str,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    _: bool = admin_auth.get_admin_dependency(),
+    _: bool = admin_auth.get_simple_password_dependency(),
 ):
     """Upload font file for a font entry"""
     # Validate font exists
@@ -141,7 +141,7 @@ async def upload_font_file(
 async def get_font(
     font_id: str,
     db: Session = Depends(get_db),
-    _: bool = admin_auth.get_admin_dependency(),
+    _: bool = admin_auth.get_simple_password_dependency(),
 ):
     """Get a specific font by ID"""
     font = db.query(AdminFont).filter(AdminFont.id == font_id).first()
@@ -156,7 +156,7 @@ async def update_font(
     font_id: str,
     font_data: AdminFontUpdate,
     db: Session = Depends(get_db),
-    _: bool = admin_auth.get_admin_dependency(),
+    _: bool = admin_auth.get_simple_password_dependency(),
 ):
     """Update a font entry"""
     font = db.query(AdminFont).filter(AdminFont.id == font_id).first()
@@ -177,7 +177,7 @@ async def update_font(
 async def delete_font(
     font_id: str,
     db: Session = Depends(get_db),
-    _: bool = admin_auth.get_admin_dependency(),
+    _: bool = admin_auth.get_simple_password_dependency(),
 ):
     """Delete a font entry and its file"""
     font = db.query(AdminFont).filter(AdminFont.id == font_id).first()
@@ -204,7 +204,7 @@ async def list_suggested_texts(
     is_active: Optional[bool] = None,
     is_premium: Optional[bool] = None,
     db: Session = Depends(get_db),
-    _: bool = admin_auth.get_admin_dependency(),
+    _: bool = admin_auth.get_simple_password_dependency(),
 ):
     """List all suggested texts with pagination and filtering"""
     query = db.query(AdminSuggestedText)
@@ -237,7 +237,7 @@ async def list_suggested_texts(
 async def create_suggested_text(
     text_data: AdminSuggestedTextCreate,
     db: Session = Depends(get_db),
-    _: bool = admin_auth.get_admin_dependency(),
+    _: bool = admin_auth.get_simple_password_dependency(),
 ):
     """Create a new suggested text entry"""
     suggested_text = AdminSuggestedText(
@@ -257,7 +257,7 @@ async def create_suggested_text(
 async def get_suggested_text(
     text_id: str,
     db: Session = Depends(get_db),
-    _: bool = admin_auth.get_admin_dependency(),
+    _: bool = admin_auth.get_simple_password_dependency(),
 ):
     """Get a specific suggested text by ID"""
     suggested_text = db.query(AdminSuggestedText).filter(AdminSuggestedText.id == text_id).first()
@@ -272,7 +272,7 @@ async def update_suggested_text(
     text_id: str,
     text_data: AdminSuggestedTextUpdate,
     db: Session = Depends(get_db),
-    _: bool = admin_auth.get_admin_dependency(),
+    _: bool = admin_auth.get_simple_password_dependency(),
 ):
     """Update a suggested text entry"""
     suggested_text = db.query(AdminSuggestedText).filter(AdminSuggestedText.id == text_id).first()
@@ -293,7 +293,7 @@ async def update_suggested_text(
 async def delete_suggested_text(
     text_id: str,
     db: Session = Depends(get_db),
-    _: bool = admin_auth.get_admin_dependency(),
+    _: bool = admin_auth.get_simple_password_dependency(),
 ):
     """Delete a suggested text entry"""
     suggested_text = db.query(AdminSuggestedText).filter(AdminSuggestedText.id == text_id).first()
@@ -316,7 +316,7 @@ async def list_backgrounds(
     is_active: Optional[bool] = None,
     is_premium: Optional[bool] = None,
     db: Session = Depends(get_db),
-    _: bool = admin_auth.get_admin_dependency(),
+    _: bool = admin_auth.get_simple_password_dependency(),
 ):
     """List all backgrounds with pagination and filtering"""
     query = db.query(AdminBackground)
@@ -352,7 +352,7 @@ async def list_backgrounds(
 async def create_background(
     background_data: AdminBackgroundCreate,
     db: Session = Depends(get_db),
-    _: bool = admin_auth.get_admin_dependency(),
+    _: bool = admin_auth.get_simple_password_dependency(),
 ):
     """Create a new background entry"""
     # Check if background name already exists
@@ -381,7 +381,7 @@ async def upload_background_file(
     background_id: str,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    _: bool = admin_auth.get_admin_dependency(),
+    _: bool = admin_auth.get_simple_password_dependency(),
 ):
     """Upload background image file for a background entry"""
     # Validate background exists
@@ -419,7 +419,7 @@ async def upload_background_file(
 async def get_background(
     background_id: str,
     db: Session = Depends(get_db),
-    _: bool = admin_auth.get_admin_dependency(),
+    _: bool = admin_auth.get_simple_password_dependency(),
 ):
     """Get a specific background by ID"""
     background = db.query(AdminBackground).filter(AdminBackground.id == background_id).first()
@@ -434,7 +434,7 @@ async def update_background(
     background_id: str,
     background_data: AdminBackgroundUpdate,
     db: Session = Depends(get_db),
-    _: bool = admin_auth.get_admin_dependency(),
+    _: bool = admin_auth.get_simple_password_dependency(),
 ):
     """Update a background entry"""
     background = db.query(AdminBackground).filter(AdminBackground.id == background_id).first()
@@ -455,7 +455,7 @@ async def update_background(
 async def delete_background(
     background_id: str,
     db: Session = Depends(get_db),
-    _: bool = admin_auth.get_admin_dependency(),
+    _: bool = admin_auth.get_simple_password_dependency(),
 ):
     """Delete a background entry and its file"""
     background = db.query(AdminBackground).filter(AdminBackground.id == background_id).first()
@@ -476,7 +476,7 @@ async def delete_background(
 @router.get("/stats")
 async def get_admin_stats(
     db: Session = Depends(get_db),
-    _: bool = admin_auth.get_admin_dependency(),
+    _: bool = admin_auth.get_simple_password_dependency(),
 ):
     """Get admin dashboard statistics"""
     font_stats = db.query(

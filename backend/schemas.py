@@ -281,3 +281,40 @@ class AdminResourceListResponse(BaseModel):
     page: int
     per_page: int
     total_pages: int
+
+
+# Admin Authentication Schemas
+class AdminLoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+class AdminLoginResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    expires_in: int
+    user: dict
+
+
+class AdminUserResponse(BaseModel):
+    id: str
+    username: str
+    email: str
+    is_active: bool
+    is_superuser: bool
+    last_login: Optional[datetime] = None
+    created_at: datetime
+
+
+class AdminUserCreate(BaseModel):
+    username: str
+    email: str
+    password: str
+    is_superuser: bool = False
+
+
+class AdminUserUpdate(BaseModel):
+    email: Optional[str] = None
+    password: Optional[str] = None
+    is_active: Optional[bool] = None
+    is_superuser: Optional[bool] = None

@@ -47,7 +47,7 @@ from .services.gdpr_service import gdpr_service
 from .services.data_minimization_service import data_minimization_service, DataCategory, ProcessingPurpose
 from .services.file_audit_logger import file_audit_logger, FileOperationContext, FileOperationType, FileType, FileOperationStatus
 from .services.admin_resource_service import admin_resource_service
-from .routers import admin
+from .routers import admin, admin_auth, simple_admin
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -99,8 +99,15 @@ static_dir = "/tmp/audioposter"
 os.makedirs(static_dir, exist_ok=True)
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
+# Mount backgrounds directory for serving admin-uploaded background images
+backgrounds_dir = "backgrounds"
+os.makedirs(backgrounds_dir, exist_ok=True)
+app.mount("/backgrounds", StaticFiles(directory=backgrounds_dir), name="backgrounds")
+
 # Include routers
 app.include_router(admin.router)
+app.include_router(admin_auth.router)
+app.include_router(simple_admin.router)
 
 # Initialize services
 session_manager = SessionManager()

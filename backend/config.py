@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     project_root: str = Field(default="/app")
     environment: str = Field(default_factory=lambda: os.getenv("ENVIRONMENT", "development"))  # development, staging, production
 
+    # Admin Authentication
+    admin_password: str = Field(default="admin123")
+
     # Debug settings
     debug_photo_circle: bool = Field(default=False)  # Show red circle instead of photo for debugging
 
@@ -157,7 +160,7 @@ class Settings(BaseSettings):
         sensitive_fields = [
             'secret_key', 'aws_access_key_id', 'aws_secret_access_key',
             'stripe_secret_key', 'stripe_webhook_secret', 'sendgrid_api_key',
-            'local_encryption_key'
+            'local_encryption_key', 'admin_password'
         ]
 
         for field in sensitive_fields:

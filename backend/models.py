@@ -66,10 +66,10 @@ class Order(Base):
     migration_completed_at = Column(DateTime, nullable=True)
     migration_error = Column(Text, nullable=True)
 
-    # Session reference
-    session_token = Column(String(255), nullable=True)  # Link to original session
-    audio_secure_hash = Column(String(64), nullable=True)  # SHA-256 for integrity
+    # Session association
+    session_token = Column(String(255), nullable=True, index=True)
 
+    # Order metadata
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -79,24 +79,31 @@ class EmailSubscriber(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email = Column(String(255), unique=True, nullable=False, index=True)
-    subscribed = Column(Boolean, default=True)
-    source = Column(String(50), default="purchase")  # purchase, referral, etc
-    first_purchase_date = Column(DateTime, nullable=True)
-    total_purchases = Column(Integer, default=1)
-    total_spent_cents = Column(Integer, default=0)
-    last_campaign_sent_at = Column(DateTime, nullable=True)
+    is_active = Column(Boolean, default=True)
+    subscribed_at = Column(DateTime, default=datetime.utcnow)
+    unsubscribed_at = Column(DateTime, nullable=True)
+    source = Column(String(100), nullable=True)  # e.g., "checkout", "newsletter", "manual"
+
+    # GDPR compliance
+    consent_data = Column(Text, nullable=True)  # JSON string storing consent records
+    consent_updated_at = Column(DateTime, nullable=True)
+    data_processing_consent = Column(Boolean, default=False)
+    marketing_consent = Column(Boolean, default=False)
+    analytics_consent = Column(Boolean, default=False)
+
+
+class AdminUser(Base):
+    __tablename__ = "admin_users"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    username = Column(String(50), unique=True, nullable=False, index=True)
+    email = Column(String(255), unique=True, nullable=False, index=True)
+    hashed_password = Column(String(255), nullable=False)
+    is_active = Column(Boolean, default=True)
+    is_superuser = Column(Boolean, default=False)
+    last_login = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
-
-
-class Template(Base):
-    __tablename__ = "templates"
-
-    id = Column(String(50), primary_key=True)
-    name = Column(String(100), nullable=False)
-    is_premium = Column(Boolean, default=False)
-    layout_config = Column(Text, nullable=True)  # JSON string
-    preview_image_url = Column(String(500), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
 class AdminFont(Base):

@@ -26,6 +26,10 @@ export default defineConfig({
       '/admin/suggested-texts': {
         target: 'http://localhost:8000',
         changeOrigin: true,
+      },
+      '/admin/simple': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
       }
     }
   }
