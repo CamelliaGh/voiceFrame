@@ -78,28 +78,22 @@ class SessionUpdate(BaseModel):
     @classmethod
     def validate_background_id(cls, v):
         if v is not None:
-            valid_backgrounds = [
-                "none",
-                "abstract-blurred",
-                "roses-wooden",
-                "cute-hearts",
-                "flat-lay-hearts",
-            ]
-            if v not in valid_backgrounds:
-                raise ValueError(
-                    f'Invalid background. Must be one of: {", ".join(valid_backgrounds)}'
-                )
+            # Allow both hardcoded defaults and admin-managed backgrounds
+            # Admin-managed backgrounds can have any name, so we'll be more permissive
+            # The actual validation will happen in the service layer
+            if v.strip() == "":
+                raise ValueError("Background ID cannot be empty")
         return v
 
     @field_validator("font_id")
     @classmethod
     def validate_font_id(cls, v):
         if v is not None:
-            valid_fonts = ["script", "elegant", "modern", "vintage", "classic"]
-            if v not in valid_fonts:
-                raise ValueError(
-                    f'Invalid font. Must be one of: {", ".join(valid_fonts)}'
-                )
+            # Allow both hardcoded defaults and admin-managed fonts
+            # Admin-managed fonts can have any name, so we'll be more permissive
+            # The actual validation will happen in the service layer
+            if v.strip() == "":
+                raise ValueError("Font ID cannot be empty")
         return v
 
     @field_validator("photo_shape")

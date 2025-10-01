@@ -41,6 +41,13 @@ class SessionManager:
 
     def update_session(self, db: Session, session: SessionModel, data: Dict[str, Any]) -> SessionModel:
         """Update session with new data"""
+        # Validate background_id and font_id against admin resources
+        if 'background_id' in data and data['background_id'] is not None:
+            self._validate_background_id(db, data['background_id'])
+
+        if 'font_id' in data and data['font_id'] is not None:
+            self._validate_font_id(db, data['font_id'])
+
         for key, value in data.items():
             if hasattr(session, key):
                 setattr(session, key, value)
@@ -48,6 +55,42 @@ class SessionManager:
         db.commit()
         db.refresh(session)
         return session
+
+    def _validate_background_id(self, db: Session, background_id: str):
+        """Validate that background_id exists in admin resources or is a default"""
+        from .admin_resource_service import admin_resource_service
+
+        # Check if it's a default background
+        default_backgrounds = [
+            "none",
+            "abstract-blurred",
+            "roses-wooden",
+            "cute-hearts",
+            "flat-lay-hearts",
+        ]
+
+        if background_id in default_backgrounds:
+            return
+
+        # Check if it exists in admin-managed backgrounds
+        background = admin_resource_service.get_background_by_name(db, background_id)
+        if not background:
+            raise ValueError(f"Invalid background ID: {background_id}")
+
+    def _validate_font_id(self, db: Session, font_id: str):
+        """Validate that font_id exists in admin resources or is a default"""
+        from .admin_resource_service import admin_resource_service
+
+        # Check if it's a default font
+        default_fonts = ["script", "elegant", "modern", "vintage", "classic"]
+
+        if font_id in default_fonts:
+            return
+
+        # Check if it exists in admin-managed fonts
+        font = admin_resource_service.get_font_by_name(db, font_id)
+        if not font:
+            raise ValueError(f"Invalid font ID: {font_id}")
 
     def cleanup_expired_sessions(self, db: Session) -> int:
         """Remove expired sessions and their associated files"""
