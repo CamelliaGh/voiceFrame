@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { Image, Eye, Check } from 'lucide-react'
 import { cn } from '../lib/utils'
 
@@ -18,7 +18,8 @@ interface BackgroundSelectionProps {
   className?: string
 }
 
-const backgroundOptions: BackgroundOption[] = [
+// Default fallback data in case API fails
+const defaultBackgroundOptions: BackgroundOption[] = [
   {
     id: 'none',
     name: 'No Background',
@@ -61,7 +62,7 @@ const backgroundOptions: BackgroundOption[] = [
   }
 ]
 
-const categories = ['All', 'Minimal', 'Abstract', 'Romantic']
+const defaultCategories = ['All', 'Minimal', 'Abstract', 'Romantic']
 
 export default function BackgroundSelection({
   value,
@@ -71,6 +72,47 @@ export default function BackgroundSelection({
 }: BackgroundSelectionProps) {
   const [selectedCategory, setSelectedCategory] = useState('All')
   const [previewBackground, setPreviewBackground] = useState<BackgroundOption | null>(null)
+  const [backgroundOptions, setBackgroundOptions] = useState<BackgroundOption[]>(defaultBackgroundOptions)
+  const [categories, setCategories] = useState<string[]>(defaultCategories)
+  const [, setLoading] = useState(true)
+
+  // Fetch admin-managed backgrounds on component mount
+  useEffect(() => {
+    const fetchBackgrounds = async () => {
+      try {
+        setLoading(true)
+
+        const response = await fetch('/api/resources/backgrounds')
+        if (response.ok) {
+          const data = await response.json()
+          const backgrounds = data.backgrounds?.map((bg: any) => ({
+            id: bg.id,
+            name: bg.display_name,
+            description: bg.description || 'Custom background',
+            preview: bg.file_path ? `/backgrounds/${bg.file_path.split('/').pop()}` : null,
+            category: bg.category || 'General',
+            tags: [bg.category || 'general']
+          })) || []
+
+          if (backgrounds.length > 0) {
+            // Add the "none" option at the beginning
+            setBackgroundOptions([defaultBackgroundOptions[0], ...backgrounds])
+
+            // Update categories
+            const uniqueCategories = ['All', ...new Set(backgrounds.map((bg: any) => bg.category).filter(Boolean))] as string[]
+            setCategories(uniqueCategories)
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch backgrounds:', error)
+        // Keep using default data on error
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchBackgrounds()
+  }, [])
 
   const filteredBackgrounds = selectedCategory === 'All'
     ? backgroundOptions

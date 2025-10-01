@@ -9,7 +9,8 @@ import {
   Upload,
   Search,
   Filter,
-  LogOut
+  LogOut,
+  Plus
 } from 'lucide-react'
 import { cn } from '../lib/utils'
 import AdminLogin from './AdminLogin'
@@ -83,6 +84,24 @@ const AdminDashboard: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [apiKey, setApiKey] = useState<string | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editingItem, setEditingItem] = useState<any>(null)
+  const [addFormData, setAddFormData] = useState({
+    name: '',
+    display_name: '',
+    description: '',
+    category: 'general',
+    text: '',
+    file: null as File | null
+  })
+  const [editFormData, setEditFormData] = useState({
+    display_name: '',
+    description: '',
+    category: 'general',
+    text: '',
+    file: null as File | null
+  })
 
   // Check for stored API key on component mount
   useEffect(() => {
@@ -288,6 +307,218 @@ const AdminDashboard: React.FC = () => {
     }
   }
 
+  const handleAddNew = () => {
+    // Reset form data
+    setAddFormData({
+      name: '',
+      display_name: '',
+      description: '',
+      category: 'general',
+      text: '',
+      file: null
+    })
+    setShowAddModal(true)
+  }
+
+  const handleSubmitAdd = async () => {
+    if (!apiKey) return
+
+    try {
+      let endpoint = ''
+      let body = {}
+
+      switch (activeTab) {
+        case 'fonts':
+          if (!addFormData.name || !addFormData.display_name) {
+            alert('Name and display name are required')
+            return
+          }
+          if (!addFormData.file) {
+            alert('Font file is required')
+            return
+          }
+          endpoint = '/admin/fonts'
+          body = {
+            name: addFormData.name,
+            display_name: addFormData.display_name,
+            description: addFormData.description,
+            is_premium: false
+          }
+          break
+        case 'backgrounds':
+          if (!addFormData.name || !addFormData.display_name) {
+            alert('Name and display name are required')
+            return
+          }
+          if (!addFormData.file) {
+            alert('Background image is required')
+            return
+          }
+          endpoint = '/admin/backgrounds'
+          body = {
+            name: addFormData.name,
+            display_name: addFormData.display_name,
+            description: addFormData.description,
+            category: addFormData.category,
+            is_premium: false
+          }
+          break
+        case 'suggested-texts':
+          if (!addFormData.text) {
+            alert('Text message is required')
+            return
+          }
+          endpoint = '/admin/suggested-texts'
+          body = {
+            text: addFormData.text,
+            category: addFormData.category,
+            is_premium: false
+          }
+          break
+      }
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      })
+
+      if (response.ok) {
+        const newItem = await response.json()
+
+        // If there's a file to upload, upload it
+        if (addFormData.file && (activeTab === 'fonts' || activeTab === 'backgrounds')) {
+          await handleFileUpload(activeTab, newItem.id, addFormData.file)
+        }
+
+        // Refresh the current tab
+        switch (activeTab) {
+          case 'fonts':
+            fetchFonts()
+            break
+          case 'suggested-texts':
+            fetchSuggestedTexts()
+            break
+          case 'backgrounds':
+            fetchBackgrounds()
+            break
+        }
+        fetchStats()
+        setShowAddModal(false)
+        alert(`${activeTab.slice(0, -1)} created successfully!`)
+      } else if (response.status === 401 || response.status === 403) {
+        handleLogout()
+      } else {
+        const error = await response.json()
+        alert(`Failed to create ${activeTab.slice(0, -1)}: ${error.detail || 'Unknown error'}`)
+      }
+    } catch (error) {
+      console.error('Failed to create item:', error)
+      alert(`Failed to create ${activeTab.slice(0, -1)}: ${error}`)
+    }
+  }
+
+  const handleEdit = (item: any) => {
+    setEditingItem(item)
+    setEditFormData({
+      display_name: item.display_name || item.name || '',
+      description: item.description || '',
+      category: item.category || 'general',
+      text: item.text || '',
+      file: null
+    })
+    setShowEditModal(true)
+  }
+
+  const handleSubmitEdit = async () => {
+    if (!apiKey || !editingItem) return
+
+    try {
+      let endpoint = ''
+      let body = {}
+
+      switch (activeTab) {
+        case 'fonts':
+          if (!editFormData.display_name) {
+            alert('Display name is required')
+            return
+          }
+          endpoint = `/admin/fonts/${editingItem.id}`
+          body = {
+            display_name: editFormData.display_name,
+            description: editFormData.description
+          }
+          break
+        case 'backgrounds':
+          if (!editFormData.display_name) {
+            alert('Display name is required')
+            return
+          }
+          endpoint = `/admin/backgrounds/${editingItem.id}`
+          body = {
+            display_name: editFormData.display_name,
+            description: editFormData.description,
+            category: editFormData.category
+          }
+          break
+        case 'suggested-texts':
+          if (!editFormData.text) {
+            alert('Text message is required')
+            return
+          }
+          endpoint = `/admin/suggested-texts/${editingItem.id}`
+          body = {
+            text: editFormData.text,
+            category: editFormData.category
+          }
+          break
+      }
+
+      const response = await fetch(endpoint, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      })
+
+      if (response.ok) {
+        // If there's a new file to upload, upload it
+        if (editFormData.file && (activeTab === 'fonts' || activeTab === 'backgrounds')) {
+          await handleFileUpload(activeTab, editingItem.id, editFormData.file)
+        }
+
+        // Refresh the current tab
+        switch (activeTab) {
+          case 'fonts':
+            fetchFonts()
+            break
+          case 'suggested-texts':
+            fetchSuggestedTexts()
+            break
+          case 'backgrounds':
+            fetchBackgrounds()
+            break
+        }
+        setShowEditModal(false)
+        setEditingItem(null)
+        alert(`${activeTab.slice(0, -1)} updated successfully!`)
+      } else if (response.status === 401 || response.status === 403) {
+        handleLogout()
+      } else {
+        const error = await response.json()
+        alert(`Failed to update ${activeTab.slice(0, -1)}: ${error.detail || 'Unknown error'}`)
+      }
+    } catch (error) {
+      console.error('Failed to update item:', error)
+      alert(`Failed to update ${activeTab.slice(0, -1)}: ${error}`)
+    }
+  }
+
   const filteredItems = () => {
     let items: any[] = []
     switch (activeTab) {
@@ -429,6 +660,13 @@ const AdminDashboard: React.FC = () => {
                 <Filter className="h-4 w-4 mr-2" />
                 Filter
               </button>
+              <button
+                onClick={handleAddNew}
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-primary-600 hover:bg-primary-700"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add New {activeTab.slice(0, -1)}
+              </button>
             </div>
           </div>
 
@@ -511,6 +749,7 @@ const AdminDashboard: React.FC = () => {
                         </label>
                       )}
                       <button
+                        onClick={() => handleEdit(item)}
                         className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
                       >
                         <Edit className="h-4 w-4 mr-2" />
@@ -536,6 +775,376 @@ const AdminDashboard: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Add New Item Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">
+              Add New {activeTab.slice(0, -1)}
+            </h3>
+
+            <div className="space-y-4">
+              {activeTab === 'fonts' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Font Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={addFormData.name}
+                      onChange={(e) => setAddFormData({...addFormData, name: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="e.g., my-custom-font"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Display Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={addFormData.display_name}
+                      onChange={(e) => setAddFormData({...addFormData, display_name: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="e.g., My Custom Font"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Description
+                    </label>
+                    <textarea
+                      value={addFormData.description}
+                      onChange={(e) => setAddFormData({...addFormData, description: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                      rows={3}
+                      placeholder="Describe this font..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Font File *
+                    </label>
+                    <input
+                      type="file"
+                      accept=".ttf,.otf,.woff,.woff2"
+                      onChange={(e) => setAddFormData({...addFormData, file: e.target.files?.[0] || null})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                    />
+                  </div>
+                </>
+              )}
+
+              {activeTab === 'backgrounds' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Background Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={addFormData.name}
+                      onChange={(e) => setAddFormData({...addFormData, name: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="e.g., my-background"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Display Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={addFormData.display_name}
+                      onChange={(e) => setAddFormData({...addFormData, display_name: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="e.g., My Beautiful Background"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Category
+                    </label>
+                    <select
+                      value={addFormData.category}
+                      onChange={(e) => setAddFormData({...addFormData, category: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                    >
+                      <option value="general">General</option>
+                      <option value="romantic">Romantic</option>
+                      <option value="birthday">Birthday</option>
+                      <option value="anniversary">Anniversary</option>
+                      <option value="holiday">Holiday</option>
+                      <option value="abstract">Abstract</option>
+                      <option value="nature">Nature</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Description
+                    </label>
+                    <textarea
+                      value={addFormData.description}
+                      onChange={(e) => setAddFormData({...addFormData, description: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                      rows={3}
+                      placeholder="Describe this background..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Background Image *
+                    </label>
+                    <input
+                      type="file"
+                      accept=".jpg,.jpeg,.png,.webp"
+                      onChange={(e) => setAddFormData({...addFormData, file: e.target.files?.[0] || null})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                    />
+                  </div>
+                </>
+              )}
+
+              {activeTab === 'suggested-texts' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Text Message *
+                    </label>
+                    <textarea
+                      value={addFormData.text}
+                      onChange={(e) => setAddFormData({...addFormData, text: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                      rows={3}
+                      placeholder="Enter the text message..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Category
+                    </label>
+                    <select
+                      value={addFormData.category}
+                      onChange={(e) => setAddFormData({...addFormData, category: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                    >
+                      <option value="general">General</option>
+                      <option value="romantic">Romantic</option>
+                      <option value="birthday">Birthday</option>
+                      <option value="anniversary">Anniversary</option>
+                      <option value="holiday">Holiday</option>
+                      <option value="congratulations">Congratulations</option>
+                      <option value="thank_you">Thank You</option>
+                    </select>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="flex justify-end space-x-3 mt-6">
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmitAdd}
+                className="px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-primary-600 hover:bg-primary-700"
+              >
+                Add {activeTab.slice(0, -1)}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Item Modal */}
+      {showEditModal && editingItem && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">
+              Edit {activeTab.slice(0, -1)}
+            </h3>
+
+            <div className="space-y-4">
+              {activeTab === 'fonts' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Font Name
+                    </label>
+                    <input
+                      type="text"
+                      value={editingItem.name}
+                      disabled
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-500"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Font name cannot be changed</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Display Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={editFormData.display_name}
+                      onChange={(e) => setEditFormData({...editFormData, display_name: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Description
+                    </label>
+                    <textarea
+                      value={editFormData.description}
+                      onChange={(e) => setEditFormData({...editFormData, description: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                      rows={3}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Replace Font File
+                    </label>
+                    <input
+                      type="file"
+                      accept=".ttf,.otf,.woff,.woff2"
+                      onChange={(e) => setEditFormData({...editFormData, file: e.target.files?.[0] || null})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Leave empty to keep current file</p>
+                  </div>
+                </>
+              )}
+
+              {activeTab === 'backgrounds' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Background Name
+                    </label>
+                    <input
+                      type="text"
+                      value={editingItem.name}
+                      disabled
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-500"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Background name cannot be changed</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Display Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={editFormData.display_name}
+                      onChange={(e) => setEditFormData({...editFormData, display_name: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Category
+                    </label>
+                    <select
+                      value={editFormData.category}
+                      onChange={(e) => setEditFormData({...editFormData, category: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                    >
+                      <option value="general">General</option>
+                      <option value="romantic">Romantic</option>
+                      <option value="birthday">Birthday</option>
+                      <option value="anniversary">Anniversary</option>
+                      <option value="holiday">Holiday</option>
+                      <option value="abstract">Abstract</option>
+                      <option value="nature">Nature</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Description
+                    </label>
+                    <textarea
+                      value={editFormData.description}
+                      onChange={(e) => setEditFormData({...editFormData, description: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                      rows={3}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Replace Background Image
+                    </label>
+                    <input
+                      type="file"
+                      accept=".jpg,.jpeg,.png,.webp"
+                      onChange={(e) => setEditFormData({...editFormData, file: e.target.files?.[0] || null})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Leave empty to keep current image</p>
+                  </div>
+                </>
+              )}
+
+              {activeTab === 'suggested-texts' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Text Message *
+                    </label>
+                    <textarea
+                      value={editFormData.text}
+                      onChange={(e) => setEditFormData({...editFormData, text: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                      rows={3}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Category
+                    </label>
+                    <select
+                      value={editFormData.category}
+                      onChange={(e) => setEditFormData({...editFormData, category: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                    >
+                      <option value="general">General</option>
+                      <option value="romantic">Romantic</option>
+                      <option value="birthday">Birthday</option>
+                      <option value="anniversary">Anniversary</option>
+                      <option value="holiday">Holiday</option>
+                      <option value="congratulations">Congratulations</option>
+                      <option value="thank_you">Thank You</option>
+                    </select>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="flex justify-end space-x-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowEditModal(false)
+                  setEditingItem(null)
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmitEdit}
+                className="px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-primary-600 hover:bg-primary-700"
+              >
+                Update {activeTab.slice(0, -1)}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

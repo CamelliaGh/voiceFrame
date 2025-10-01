@@ -12,8 +12,8 @@ interface TextCustomizationProps {
   className?: string
 }
 
-const textSuggestions = [
-  // Romantic & Love
+// Default fallback data in case API fails
+const defaultTextSuggestions = [
   "Our Song ♪",
   "I Love You",
   "Forever & Always",
@@ -29,8 +29,6 @@ const textSuggestions = [
   "Made for Each Other",
   "In Love",
   "Love You More",
-
-  // Wedding & Marriage
   "Wedding Day",
   "First Dance 💕",
   "Mr. & Mrs.",
@@ -44,8 +42,6 @@ const textSuggestions = [
   "Wedding Song",
   "Our Vows",
   "Wedding Day Magic",
-
-  // Anniversary & Special Dates
   "Anniversary Memory",
   "One Year Together",
   "5 Years Strong",
@@ -57,8 +53,6 @@ const textSuggestions = [
   "Anniversary Song",
   "Special Date",
   "Our Milestone",
-
-  // Family & Children
   "Baby's First Song",
   "Welcome Little One",
   "Our Family",
@@ -70,8 +64,6 @@ const textSuggestions = [
   "Growing Family",
   "Baby Love",
   "Family Song",
-
-  // Memories & Moments
   "Special Moment",
   "Perfect Day",
   "Our Memories",
@@ -89,7 +81,7 @@ const textSuggestions = [
   "Incredible Day"
 ]
 
-const fontOptions = [
+const defaultFontOptions = [
   { id: 'script', name: 'Script', description: 'Handwritten style', preview: 'Script Font' },
   { id: 'elegant', name: 'Elegant', description: 'Sophisticated serif', preview: 'Elegant Font' },
   { id: 'modern', name: 'Modern', description: 'Clean sans-serif', preview: 'Modern Font' },
@@ -127,11 +119,55 @@ export default function TextCustomization({
   const [characterCount, setCharacterCount] = useState(value.length)
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [isNearLimit, setIsNearLimit] = useState(false)
+  const [textSuggestions, setTextSuggestions] = useState<string[]>(defaultTextSuggestions)
+  const [fontOptions, setFontOptions] = useState(defaultFontOptions)
+  const [, setLoading] = useState(true)
 
   useEffect(() => {
     setCharacterCount(value.length)
     setIsNearLimit(value.length > maxLength * 0.8) // Warning at 80% of limit
   }, [value, maxLength])
+
+  // Fetch admin-managed resources on component mount
+  useEffect(() => {
+    const fetchResources = async () => {
+      try {
+        setLoading(true)
+
+        // Fetch suggested texts
+        const textsResponse = await fetch('/api/resources/suggested-texts')
+        if (textsResponse.ok) {
+          const textsData = await textsResponse.json()
+          const suggestions = textsData.suggested_texts?.map((item: any) => item.text) || []
+          if (suggestions.length > 0) {
+            setTextSuggestions(suggestions)
+          }
+        }
+
+        // Fetch fonts
+        const fontsResponse = await fetch('/api/resources/fonts')
+        if (fontsResponse.ok) {
+          const fontsData = await fontsResponse.json()
+          const fonts = fontsData.fonts?.map((font: any) => ({
+            id: font.id,
+            name: font.display_name,
+            description: font.description || 'Custom font',
+            preview: font.display_name
+          })) || []
+          if (fonts.length > 0) {
+            setFontOptions(fonts)
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch resources:', error)
+        // Keep using default data on error
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchResources()
+  }, [])
 
   const handleTextChange = useCallback((text: string) => {
     if (text.length <= maxLength) {

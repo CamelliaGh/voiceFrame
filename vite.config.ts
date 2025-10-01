@@ -10,6 +10,22 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:8000',
         changeOrigin: true,
+      },
+      '/admin/stats': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/admin/fonts': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/admin/backgrounds': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/admin/suggested-texts': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
       }
     }
   }

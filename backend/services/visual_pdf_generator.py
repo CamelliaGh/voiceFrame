@@ -12,6 +12,7 @@ from ..models import Order, SessionModel
 from .file_uploader import FileUploader
 from .image_processor import ImageProcessor
 from .visual_template_service import VisualTemplateService
+from .admin_resource_service import admin_resource_service
 
 
 class VisualPDFGenerator:
@@ -21,6 +22,19 @@ class VisualPDFGenerator:
         self.template_service = VisualTemplateService()
         self.file_uploader = FileUploader()
         self.image_processor = ImageProcessor()
+        self.admin_resource_service = admin_resource_service
+
+    def _get_admin_font_path(self, font_name: str) -> Optional[str]:
+        """Get the file path for an admin-managed font"""
+        try:
+            from ..database import get_db
+            db = next(get_db())
+            font_data = self.admin_resource_service.get_font_by_name(db, font_name)
+            if font_data and font_data.get('file_path'):
+                return font_data['file_path']
+        except Exception as e:
+            print(f"Error getting admin font path for {font_name}: {e}")
+        return None
 
     async def generate_pdf(
         self,
@@ -369,71 +383,60 @@ class VisualPDFGenerator:
             font_size = placeholder.get("font_size", 32)
             print(f"DEBUG: Using font_name: {font_name}, font_size: {font_size}")
 
-            # Get the project root directory
-            project_root = Path(__file__).parent.parent.parent
+            # First try to load admin-managed font
+            font_path = self._get_admin_font_path(font_name)
+            if font_path and os.path.exists(font_path):
+                try:
+                    print(f"Loading admin-managed font: {font_path}")
+                    font = ImageFont.truetype(font_path, font_size)
+                    print(f"Successfully loaded admin font: {font_name} at size {font_size}")
+                except Exception as e:
+                    print(f"Failed to load admin font {font_name}: {e}")
+                    font_path = None
 
-            # Map font names to system fonts or font files
-            font_mapping = {
-                "script": "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",  # Try DejaVu font
-                "elegant": "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf",  # Try DejaVu serif
-                "modern": "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",  # Try DejaVu sans
-                "vintage": "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf",  # Try DejaVu serif
-                "classic": "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf",  # Try DejaVu serif
-                "Arial": "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-                "Helvetica": "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-                "Times": "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf",
-                "Courier": "/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf",
-            }
+            # If admin font failed, try system fonts
+            if not font_path:
+                # Map font names to system fonts or font files
+                font_mapping = {
+                    "script": "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+                    "elegant": "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf",
+                    "modern": "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+                    "vintage": "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf",
+                    "classic": "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf",
+                    "Arial": "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+                    "Helvetica": "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+                    "Times": "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf",
+                    "Courier": "/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf",
+                }
 
-            font_path = font_mapping.get(font_name, font_name)
+                font_path = font_mapping.get(font_name, font_name)
 
-            try:
-                # Try system font directly
-                print(f"Loading system font: {font_path}")
-                font = ImageFont.truetype(font_path, font_size)
-                print(
-                    f"Successfully loaded system font: {font_name} at size {font_size}"
-                )
-            except Exception as e:
-                print(f"Failed to load font {font_name}: {e}")
-                # Try alternative fonts based on font type
-                if font_name in ["script", "elegant"]:
-                    try:
-                        # Try DejaVu fonts that should be available in Docker
-                        alt_fonts = [
-                            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-                            "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf",
-                            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-                            "/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf",
-                            "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
-                            "/usr/share/fonts/truetype/liberation/LiberationSerif-Bold.ttf",
-                        ]
-                        for alt_font in alt_fonts:
-                            try:
-                                font = ImageFont.truetype(alt_font, font_size)
-                                print(
-                                    f"Successfully loaded alternative font: {alt_font}"
-                                )
-                                break
-                            except:
-                                continue
-                        else:
-                            # If no alternative font works, use default font
-                            font = ImageFont.load_default()
-                            print(f"Using default font as fallback")
-                    except:
+                try:
+                    print(f"Loading system font: {font_path}")
+                    font = ImageFont.truetype(font_path, font_size)
+                    print(f"Successfully loaded system font: {font_name} at size {font_size}")
+                except Exception as e:
+                    print(f"Failed to load font {font_name}: {e}")
+                    # Try alternative fonts
+                    alt_fonts = [
+                        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+                        "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf",
+                        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+                        "/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf",
+                        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+                        "/usr/share/fonts/truetype/liberation/LiberationSerif-Bold.ttf",
+                    ]
+                    for alt_font in alt_fonts:
+                        try:
+                            font = ImageFont.truetype(alt_font, font_size)
+                            print(f"Successfully loaded alternative font: {alt_font}")
+                            break
+                        except:
+                            continue
+                    else:
                         # Last resort - use default font
                         font = ImageFont.load_default()
-                        print(f"Using default font as last resort")
-                else:
-                    try:
-                        # Fallback to default font with size
-                        font = ImageFont.load_default()
                         print(f"Using default font as fallback")
-                    except:
-                        # Last resort - use default
-                        font = ImageFont.load_default()
-                        print(f"Using default font as last resort")
 
             # Calculate text position
             bbox = draw.textbbox((0, 0), text, font=font)
