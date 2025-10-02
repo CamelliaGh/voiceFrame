@@ -73,15 +73,25 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
 
     checkProcessingStatus()
 
-    // If audio processing is not complete, check periodically
-    const interval = setInterval(() => {
-      if (processingStatus && !processingStatus.waveform_ready) {
-        checkProcessingStatus()
+    // Check periodically, but stop once everything is ready
+    const interval = setInterval(async () => {
+      if (!session) return
+
+      try {
+        const status = await getProcessingStatus(session.session_token)
+        setProcessingStatus(status)
+
+        // Stop polling if everything is ready
+        if (status.audio_ready && status.waveform_ready && status.preview_ready) {
+          clearInterval(interval)
+        }
+      } catch (error) {
+        console.error('Failed to get processing status:', error)
       }
-    }, 2000) // Check every 2 seconds
+    }, 5000) // Check every 5 seconds (reduced frequency)
 
     return () => clearInterval(interval)
-  }, [session, processingStatus])
+  }, [session]) // Removed processingStatus from dependencies
 
   // Debounced update function for real-time preview
   const debouncedUpdate = useCallback(
