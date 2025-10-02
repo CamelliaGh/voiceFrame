@@ -1,12 +1,12 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
-import { SessionData, createSession, getSession, updateSession } from '../lib/api'
+import { SessionData, SessionUpdateData, createSession, getSession, updateSession } from '../lib/api'
 // import { generateSessionToken } from '../lib/utils'
 
 interface SessionContextType {
   session: SessionData | null
   loading: boolean
   error: string | null
-  updateSessionData: (data: Partial<SessionData>) => Promise<void>
+  updateSessionData: (data: SessionUpdateData) => Promise<void>
   refreshSession: () => Promise<void>
 }
 
@@ -83,7 +83,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
     }
   }
 
-  const updateSessionData = async (data: Partial<SessionData>) => {
+  const updateSessionData = async (data: SessionUpdateData) => {
     if (!session) return
 
     try {

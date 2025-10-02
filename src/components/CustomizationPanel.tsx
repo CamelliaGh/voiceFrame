@@ -314,8 +314,10 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
 
     try {
       const response = await getPreviewUrl(session.session_token)
+      // Extract the actual URL from the response object
+      const previewUrl = response.preview_url
       // Add cache-busting parameter to prevent browser caching
-      const cacheBustingUrl = `${response}?t=${Date.now()}`
+      const cacheBustingUrl = `${previewUrl}?t=${Date.now()}`
       setPreviewUrl(cacheBustingUrl)
     } catch (err: any) {
       console.error('Failed to generate preview:', err)
