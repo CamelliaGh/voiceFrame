@@ -1,8 +1,9 @@
 import os
 import tempfile
+import re
 from io import BytesIO
 from pathlib import Path
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, List
 
 import qrcode
 from PIL import Image, ImageDraw, ImageFont
@@ -336,6 +337,87 @@ class VisualPDFGenerator:
         except Exception as e:
             print(f"Error adding QR code: {e}")
 
+    def _detect_emojis(self, text: str) -> List[Tuple[str, int, int]]:
+        """Detect emojis in text and return list of (emoji, start_pos, end_pos)"""
+        emoji_pattern = re.compile(
+            r'[\U0001F600-\U0001F64F]'  # Emoticons
+            r'|[\U0001F300-\U0001F5FF]'  # Misc Symbols and Pictographs
+            r'|[\U0001F680-\U0001F6FF]'  # Transport and Map
+            r'|[\U0001F1E0-\U0001F1FF]'  # Regional indicator symbols
+            r'|[\U00002600-\U000026FF]'  # Misc symbols
+            r'|[\U00002700-\U000027BF]'  # Dingbats
+            r'|[\U0001F900-\U0001F9FF]'  # Supplemental Symbols and Pictographs
+            r'|[\U0001FA70-\U0001FAFF]'  # Symbols and Pictographs Extended-A
+        )
+
+        emojis = []
+        for match in emoji_pattern.finditer(text):
+            emojis.append((match.group(), match.start(), match.end()))
+
+        return emojis
+
+    def _render_text_with_emojis(self, draw: ImageDraw.Draw, text: str, font: ImageFont.ImageFont,
+                                emoji_font: ImageFont.ImageFont, position: Tuple[int, int],
+                                color: str) -> None:
+        """Render text with emoji support by splitting text and emojis"""
+        x, y = position
+        emojis = self._detect_emojis(text)
+
+        if not emojis:
+            # No emojis, render normally
+            draw.text((x, y), text, font=font, fill=color)
+            return
+
+        # Get font metrics for proper alignment
+        font_bbox = draw.textbbox((0, 0), "Ay", font=font)  # Use "Ay" to get proper height
+        font_height = font_bbox[3] - font_bbox[1]
+        font_baseline = -font_bbox[1]  # Distance from top to baseline
+
+        emoji_bbox = draw.textbbox((0, 0), "😀", font=emoji_font)
+        emoji_height = emoji_bbox[3] - emoji_bbox[1]
+        emoji_baseline = -emoji_bbox[1]
+
+        # Calculate emoji scaling and positioning
+        emoji_scale = font_height / emoji_height
+        emoji_y_offset = (font_baseline - emoji_baseline * emoji_scale)
+
+        # Split text around emojis and render each part
+        current_x = x
+        last_end = 0
+
+        for emoji, start, end in emojis:
+            # Render text before emoji
+            if start > last_end:
+                text_before = text[last_end:start]
+                draw.text((current_x, y), text_before, font=font, fill=color)
+                # Get width of rendered text
+                bbox = draw.textbbox((0, 0), text_before, font=font)
+                current_x += bbox[2] - bbox[0]
+
+            # Render emoji with proper scaling and positioning
+            emoji_y = y + emoji_y_offset
+            # Create a temporary image for the emoji to scale it
+            emoji_img = Image.new('RGBA', (200, 200), (0, 0, 0, 0))
+            emoji_draw = ImageDraw.Draw(emoji_img)
+            emoji_draw.text((0, 0), emoji, font=emoji_font, fill=color)
+
+            # Scale the emoji to match the text size
+            new_size = (int(200 * emoji_scale), int(200 * emoji_scale))
+            emoji_img = emoji_img.resize(new_size, Image.Resampling.LANCZOS)
+
+            # Paste the scaled emoji onto the main image
+            draw._image.paste(emoji_img, (int(current_x), int(emoji_y)), emoji_img)
+
+            # Update current_x position (approximate emoji width)
+            current_x += int(200 * emoji_scale * 0.8)  # 0.8 is a rough width/height ratio for emojis
+
+            last_end = end
+
+        # Render remaining text after last emoji
+        if last_end < len(text):
+            text_after = text[last_end:]
+            draw.text((current_x, y), text_after, font=font, fill=color)
+
     async def _add_text_to_template(
         self, base_image: Image.Image, text: str, template: Dict, session: SessionModel
     ):
@@ -434,7 +516,25 @@ class VisualPDFGenerator:
                 f"DEBUG: Drawing text at position ({x}, {y}) with font {font_name} size {font_size}"
             )
             print(f"DEBUG: Using color: {text_color}")
-            draw.text((x, y), text, font=font, fill=text_color)
+
+            # Check if text contains emojis and load emoji font if needed
+            emojis = self._detect_emojis(text)
+            if emojis:
+                print(f"DEBUG: Detected {len(emojis)} emojis in text: {[e[0] for e in emojis]}")
+                try:
+                    # Load emoji font with fixed size (Noto Color Emoji requires specific size)
+                    emoji_font = ImageFont.truetype("/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf", 109)
+                    print("DEBUG: Loaded Noto Color Emoji font for emoji rendering")
+                    # Use emoji-aware rendering
+                    self._render_text_with_emojis(draw, text, font, emoji_font, (x, y), text_color)
+                    print("DEBUG: Text with emojis rendered successfully")
+                except Exception as e:
+                    print(f"DEBUG: Failed to load emoji font, falling back to regular rendering: {e}")
+                    draw.text((x, y), text, font=font, fill=text_color)
+            else:
+                # No emojis, render normally
+                draw.text((x, y), text, font=font, fill=text_color)
+
             print(
                 f"DEBUG: Text successfully added at ({x}, {y}): '{text}' with font {font_name} size {font_size}"
             )
