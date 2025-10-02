@@ -239,18 +239,18 @@ export default function TextCustomization({
         {/* Text Suggestions */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-gray-700">Suggestions:</p>
+            <p className="text-sm font-medium text-gray-700">Quick suggestions:</p>
             <button
               onClick={() => setShowSuggestions(!showSuggestions)}
               className="text-xs text-primary-600 hover:text-primary-700 font-medium transition-colors"
             >
-              {showSuggestions ? 'Hide' : 'Show all'}
+              {showSuggestions ? 'Show less' : 'Show more'}
             </button>
           </div>
 
           <div className={cn(
-            "flex flex-wrap gap-2 transition-all duration-200",
-            showSuggestions ? "max-h-96 overflow-y-auto" : "max-h-20 overflow-hidden"
+            "flex flex-wrap gap-1.5 transition-all duration-200",
+            showSuggestions ? "max-h-96 overflow-y-auto" : "max-h-16 overflow-hidden"
           )}>
             {textSuggestions.map((suggestion) => (
               <button
@@ -258,7 +258,7 @@ export default function TextCustomization({
                 onClick={() => handleSuggestionClick(suggestion)}
                 disabled={disabled}
                 className={cn(
-                  "px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full transition-colors duration-200 border border-transparent hover:border-gray-300",
+                  "px-2.5 py-1 text-xs bg-white hover:bg-primary-50 text-gray-700 hover:text-primary-700 rounded-md transition-colors duration-200 border border-gray-200 hover:border-primary-300",
                   disabled && "opacity-50 cursor-not-allowed",
                   suggestion.length > maxLength && "opacity-50 cursor-not-allowed"
                 )}
@@ -278,12 +278,12 @@ export default function TextCustomization({
           <h4 className="text-sm font-medium text-gray-700">Font Style</h4>
         </div>
 
-        <div className="grid grid-cols-1 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {fontOptions.map((font) => (
             <label
               key={font.id}
               className={cn(
-                "flex items-center space-x-3 p-3 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-sm",
+                "flex flex-col items-center p-2.5 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-sm",
                 selectedFont === font.id
                   ? "border-primary-500 bg-primary-50 shadow-sm"
                   : "border-gray-200 hover:border-gray-300",
@@ -297,41 +297,24 @@ export default function TextCustomization({
                 checked={selectedFont === font.id}
                 onChange={(e) => onFontChange(e.target.value)}
                 disabled={disabled}
-                className="text-primary-600 focus:ring-primary-500"
+                className="sr-only"
               />
 
-              <div className="flex-1 flex items-center justify-between">
-                <div>
-                  <div className="font-medium text-gray-900">{font.name}</div>
-                  <div className="text-xs text-gray-500">{font.description}</div>
-                </div>
-
-                {/* Font preview */}
-                <div className={cn(
-                  "text-sm text-gray-600 px-2 py-1 rounded border bg-white",
-                  getFontStyle(font.id)
-                )}>
-                  {font.preview}
-                </div>
+              {/* Font preview word */}
+              <div className={cn(
+                "text-base text-gray-800 mb-1 text-center",
+                getFontStyle(font.id)
+              )}>
+                Love
               </div>
+
+              {/* Font name */}
+              <div className="text-xs font-medium text-gray-700">{font.name}</div>
             </label>
           ))}
         </div>
       </div>
 
-      {/* Current text preview with selected font */}
-      {value && (
-        <div className="space-y-2">
-          <p className="text-sm font-medium text-gray-700">Preview:</p>
-          <div className={cn(
-            "p-4 border rounded-lg bg-gray-50 text-center",
-            getFontStyle(selectedFont),
-            "text-lg"
-          )}>
-            {value}
-          </div>
-        </div>
-      )}
     </div>
   )
 }
