@@ -350,32 +350,34 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
 
   return (
     <div className="space-y-6">
-      <div className="text-center">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Customize Your Poster</h2>
-        <p className="text-gray-600">
+      <div className="text-center px-4">
+        <h2 className="section-title">Customize Your Poster</h2>
+        <p className="section-subtitle">
           Personalize your audio poster with custom text, size, and background options.
         </p>
         {isUpdating && (
-          <div className="mt-2 flex items-center justify-center space-x-2 text-sm text-primary-600">
+          <div className="mt-3 flex items-center justify-center space-x-2 text-sm text-primary-600 bg-primary-50 py-2 px-4 rounded-lg">
             <div className="w-4 h-4 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
-            <span>Updating preview...</span>
+            <span className="font-medium">Updating preview...</span>
           </div>
         )}
         {processingStatus && !processingStatus.waveform_ready && (
-          <div className="mt-2 flex items-center justify-center space-x-2 text-sm text-amber-600">
+          <div className="mt-3 flex items-center justify-center space-x-2 text-sm text-amber-600 bg-amber-50 py-2 px-4 rounded-lg">
             <div className="w-4 h-4 border-2 border-amber-600 border-t-transparent rounded-full animate-spin" />
-            <span>Processing audio... Please wait before customizing.</span>
+            <span className="font-medium">Processing audio... Please wait before customizing.</span>
           </div>
         )}
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
+      <div className="grid lg:grid-cols-2 gap-6 sm:gap-8 max-w-6xl mx-auto">
         {/* Customization Options */}
-        <div className={`space-y-6 ${processingStatus && !processingStatus.waveform_ready ? 'opacity-50 pointer-events-none' : ''}`}>
+        <div className={`space-y-4 sm:space-y-6 ${processingStatus && !processingStatus.waveform_ready ? 'opacity-50 pointer-events-none' : ''}`}>
           {/* Custom Text */}
           <div className="card">
             <div className="flex items-center space-x-2 mb-4">
-              <Type className="w-5 h-5 text-primary-600" />
+              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary-100">
+                <Type className="w-5 h-5 text-primary-600" />
+              </div>
               <h3 className="text-lg font-semibold text-gray-900">Custom Text</h3>
             </div>
 
@@ -393,7 +395,9 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
           {/* PDF Size */}
           <div className="card">
             <div className="flex items-center space-x-2 mb-4">
-              <FileText className="w-5 h-5 text-primary-600" />
+              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary-100">
+                <FileText className="w-5 h-5 text-primary-600" />
+              </div>
               <h3 className="text-lg font-semibold text-gray-900">PDF Size & Orientation</h3>
             </div>
 
@@ -407,7 +411,9 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
           {/* Background Selection */}
           <div className="card">
             <div className="flex items-center space-x-2 mb-4">
-              <Image className="w-5 h-5 text-primary-600" />
+              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary-100">
+                <Image className="w-5 h-5 text-primary-600" />
+              </div>
               <h3 className="text-lg font-semibold text-gray-900">Background</h3>
             </div>
 
@@ -421,7 +427,9 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
           {/* Photo Shape Selection */}
           <div className="card">
             <div className="flex items-center space-x-2 mb-4">
-              <Image className="w-5 h-5 text-primary-600" />
+              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary-100">
+                <Image className="w-5 h-5 text-primary-600" />
+              </div>
               <h3 className="text-lg font-semibold text-gray-900">Photo Shape</h3>
             </div>
 
@@ -506,10 +514,10 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
       </div>
 
       {/* Navigation */}
-      <div className="flex justify-between pt-6">
+      <div className="flex flex-col sm:flex-row gap-3 sm:justify-between pt-6">
         <button
           onClick={onBack}
-          className="btn-secondary flex items-center space-x-2"
+          className="btn-secondary flex items-center justify-center space-x-2 w-full sm:w-auto order-2 sm:order-1"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back to Upload</span>
@@ -518,7 +526,7 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
         <button
           onClick={handleNext}
           disabled={processingStatus ? !processingStatus.waveform_ready : false}
-          className={`btn-primary flex items-center space-x-2 ${
+          className={`btn-primary flex items-center justify-center space-x-2 w-full sm:w-auto order-1 sm:order-2 ${
             processingStatus && !processingStatus.waveform_ready
               ? 'opacity-50 cursor-not-allowed'
               : ''

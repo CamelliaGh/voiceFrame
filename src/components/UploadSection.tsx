@@ -604,9 +604,9 @@ export default function UploadSection({
 
   return (
     <div className="space-y-6">
-      <div className="text-center">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Upload Your Files</h2>
-        <p className="text-gray-600 max-w-2xl mx-auto">
+      <div className="text-center px-4">
+        <h2 className="section-title">Upload Your Files</h2>
+        <p className="section-subtitle max-w-2xl mx-auto">
           Start by uploading a photo and an audio file. We'll create a beautiful poster combining
           your image with the audio waveform and any custom text you add.
         </p>
@@ -632,11 +632,13 @@ export default function UploadSection({
         </div>
       )}
 
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="grid sm:grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
         {/* Photo Upload */}
         <div className="card">
           <div className="flex items-center space-x-2 mb-4">
-            <Image className="w-5 h-5 text-primary-600" />
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary-100">
+              <Image className="w-5 h-5 text-primary-600" />
+            </div>
             <h3 className="text-lg font-semibold text-gray-900">Upload Photo</h3>
           </div>
 
@@ -756,7 +758,9 @@ export default function UploadSection({
         {/* Audio Upload */}
         <div className="card">
           <div className="flex items-center space-x-2 mb-4">
-            <Music className="w-5 h-5 text-primary-600" />
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary-100">
+              <Music className="w-5 h-5 text-primary-600" />
+            </div>
             <h3 className="text-lg font-semibold text-gray-900">Upload Audio</h3>
           </div>
 
@@ -878,12 +882,12 @@ export default function UploadSection({
 
       {/* Continue Button */}
       {canProceed && (
-        <div className="flex justify-center pt-6">
+        <div className="flex justify-center pt-4 sm:pt-6">
           <button
             onClick={onNext}
-            className="btn-primary px-8 py-3 text-lg"
+            className="btn-primary w-full sm:w-auto px-8 py-4 text-base sm:text-lg font-semibold"
           >
-            Continue to Customize
+            Continue to Customize →
           </button>
         </div>
       )}

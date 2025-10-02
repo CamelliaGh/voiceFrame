@@ -43,49 +43,91 @@ function MainApp() {
   ] as const
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50">
       <Header />
 
-      {/* Progress Steps */}
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="flex items-center justify-center mb-8">
+      {/* Progress Steps - Mobile Optimized */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        {/* Desktop Progress Stepper */}
+        <div className="hidden md:flex items-center justify-center mb-8">
           {steps.map((step, index) => (
             <React.Fragment key={step.id}>
-              <div
-                className={cn(
-                  'flex items-center justify-center w-10 h-10 rounded-full text-sm font-medium transition-all duration-200',
-                  currentStep === step.id
-                    ? 'bg-primary-600 text-white'
-                    : step.enabled
-                    ? 'bg-primary-100 text-primary-700 cursor-pointer hover:bg-primary-200'
-                    : 'bg-gray-200 text-gray-500'
-                )}
-                onClick={() => step.enabled && setCurrentStep(step.id)}
-              >
-                {index + 1}
+              <div className="flex flex-col items-center">
+                <div
+                  className={cn(
+                    'flex items-center justify-center w-12 h-12 rounded-full text-sm font-semibold transition-all duration-300 shadow-sm',
+                    currentStep === step.id
+                      ? 'bg-primary-600 text-white shadow-lg shadow-primary-200 scale-110'
+                      : step.enabled
+                      ? 'bg-white text-primary-700 border-2 border-primary-300 cursor-pointer hover:bg-primary-50 hover:scale-105'
+                      : 'bg-gray-100 text-gray-400 border-2 border-gray-200'
+                  )}
+                  onClick={() => step.enabled && setCurrentStep(step.id)}
+                >
+                  {index + 1}
+                </div>
+                <span
+                  className={cn(
+                    'mt-2 text-xs font-medium transition-colors',
+                    currentStep === step.id
+                      ? 'text-primary-700'
+                      : step.enabled
+                      ? 'text-gray-600'
+                      : 'text-gray-400'
+                  )}
+                >
+                  {step.label}
+                </span>
               </div>
-              <span
-                className={cn(
-                  'mx-3 text-sm font-medium',
-                  currentStep === step.id
-                    ? 'text-primary-700'
-                    : step.enabled
-                    ? 'text-gray-700'
-                    : 'text-gray-400'
-                )}
-              >
-                {step.label}
-              </span>
               {index < steps.length - 1 && (
                 <div
                   className={cn(
-                    'w-16 h-1 mx-4 rounded-full transition-colors duration-200',
-                    step.enabled ? 'bg-primary-200' : 'bg-gray-200'
+                    'w-20 h-1 mx-4 rounded-full transition-all duration-300 mb-6',
+                    step.enabled ? 'bg-primary-300' : 'bg-gray-200'
                   )}
                 />
               )}
             </React.Fragment>
           ))}
+        </div>
+
+        {/* Mobile Progress Stepper */}
+        <div className="md:hidden mb-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-semibold text-gray-900">
+                Step {steps.findIndex(s => s.id === currentStep) + 1} of {steps.length}
+              </span>
+              <span className="text-xs font-medium text-primary-600">
+                {steps.find(s => s.id === currentStep)?.label}
+              </span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div
+                className="bg-gradient-to-r from-primary-500 to-primary-600 h-2 rounded-full transition-all duration-500"
+                style={{ width: `${((steps.findIndex(s => s.id === currentStep) + 1) / steps.length) * 100}%` }}
+              />
+            </div>
+            <div className="flex justify-between mt-2">
+              {steps.map((step, index) => (
+                <button
+                  key={step.id}
+                  onClick={() => step.enabled && setCurrentStep(step.id)}
+                  disabled={!step.enabled}
+                  className={cn(
+                    'flex-1 py-2 text-xs font-medium transition-colors rounded-lg mx-0.5',
+                    currentStep === step.id
+                      ? 'text-primary-700 bg-primary-50'
+                      : step.enabled
+                      ? 'text-gray-600 hover:bg-gray-50'
+                      : 'text-gray-400 cursor-not-allowed'
+                  )}
+                >
+                  {index + 1}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Step Content */}
