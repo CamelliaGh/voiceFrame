@@ -227,41 +227,19 @@ class VisualPDFGenerator:
             print(f"🔴 DEBUG: PHOTO PASTE #{id(photo)} - Photo size: {photo.size}, Paste position: ({placeholder['x']}, {placeholder['y']})")
             print(f"🔴 DEBUG: PHOTO PASTE #{id(photo)} - Photo shape being used: {session.photo_shape}")
 
-            # Handle transparency for circular images
+            # Handle transparency for circular images using PIL's mask-based paste
+            # PIL can paste RGBA onto RGB using the alpha channel as a mask
             if photo.mode == 'RGBA':
-                print("DEBUG: Photo has RGBA mode, checking for transparency")
-                alpha_channel = photo.getchannel('A')
-                alpha_bbox = alpha_channel.getbbox()
-                print(f"DEBUG: Alpha channel bbox: {alpha_bbox}")
+                print(f"DEBUG: Photo has RGBA mode with transparency")
+                print(f"DEBUG: Photo size: {photo.size}, position: ({placeholder['x']}, {placeholder['y']})")
+                print(f"DEBUG: Base image mode: {base_image.mode} (keeping as RGB)")
 
-                if alpha_bbox:
-                    print("DEBUG: Photo has transparency, using alpha compositing")
-                    # Convert base image to RGBA if needed for transparency support
-                    if base_image.mode != 'RGBA':
-                        print("DEBUG: Converting base image to RGBA")
-                        base_image = base_image.convert('RGBA')
-
-                    # For circular images, we need to handle the white background issue
-                    # Create a temporary image with the same size as the photo area
-                    photo_area = base_image.crop((
-                        placeholder["x"],
-                        placeholder["y"],
-                        placeholder["x"] + placeholder["width"],
-                        placeholder["y"] + placeholder["height"]
-                    ))
-
-                    # Composite the circular photo onto the photo area
-                    # This will properly handle the transparency
-                    composited_area = Image.alpha_composite(photo_area, photo)
-
-                    # Paste the composited area back onto the base image
-                    base_image.paste(composited_area, (placeholder["x"], placeholder["y"]))
-                    print("DEBUG: Alpha compositing completed")
-                else:
-                    print("DEBUG: Photo has no transparency, using regular paste")
-                    base_image.paste(photo, (placeholder["x"], placeholder["y"]))
+                # Use PIL's built-in mask paste - the third parameter uses the alpha channel as mask
+                # This works even when pasting RGBA onto RGB - transparent areas show the base image
+                base_image.paste(photo, (placeholder["x"], placeholder["y"]), photo)
+                print("DEBUG: Photo pasted with alpha mask successfully!")
             else:
-                print("DEBUG: Photo has no alpha channel, using regular paste")
+                print(f"DEBUG: Photo has no alpha channel (mode: {photo.mode}), using regular paste")
                 base_image.paste(photo, (placeholder["x"], placeholder["y"]))
 
             print(f"DEBUG: Photo pasted successfully. Final base image mode: {base_image.mode}")
@@ -583,21 +561,15 @@ class VisualPDFGenerator:
     async def _convert_image_to_pdf(self, image: Image.Image, template: Dict) -> str:
         """Convert image to PDF"""
         try:
-            # Convert to RGB if needed, but preserve alpha compositing
+            # Convert to RGB if needed
             print(f"DEBUG: Converting image to PDF - current mode: {image.mode}")
             if image.mode == "RGBA":
-                print(
-                    "DEBUG: Image has alpha channel - compositing onto white background"
-                )
-                # Create a white background for proper alpha compositing
+                print("DEBUG: Image has alpha channel - compositing onto white background")
+                # Create white background and composite (for watermark)
                 rgb_image = Image.new("RGB", image.size, (255, 255, 255))
-                rgb_image.paste(
-                    image, mask=image.split()[-1]
-                )  # Use alpha channel as mask
+                rgb_image.paste(image, mask=image.split()[-1])  # Use alpha channel as mask
                 image = rgb_image
-                print(
-                    "DEBUG: Alpha compositing completed - watermark should be preserved"
-                )
+                print("DEBUG: Conversion completed")
             elif image.mode != "RGB":
                 print(f"DEBUG: Converting from {image.mode} to RGB")
                 image = image.convert("RGB")

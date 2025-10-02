@@ -48,12 +48,13 @@ services:
     ports:
       - "8000:8000"
     environment:
+      - PYTHONUNBUFFERED=1
       - DATABASE_URL=${DATABASE_URL:-postgresql://audioposter:audioposter_password@db:5432/audioposter}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379}
       - DEBUG=${DEBUG:-true}
       - ENVIRONMENT=${ENVIRONMENT:-development}
       # Debug settings
-      - DEBUG_PHOTO_CIRCLE=${DEBUG_PHOTO_CIRCLE:-false}
+      - DEBUG_PHOTO_CIRCLE=false
       # AWS S3 credentials
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
@@ -101,7 +102,7 @@ services:
       - DEBUG=${DEBUG:-true}
       - ENVIRONMENT=${ENVIRONMENT:-development}
       # Debug settings
-      - DEBUG_PHOTO_CIRCLE=${DEBUG_PHOTO_CIRCLE:-false}
+      - DEBUG_PHOTO_CIRCLE=false
       # AWS S3 credentials
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}

@@ -34,6 +34,7 @@ from .services.privacy_service import PrivacyService
 from .services.file_uploader import FileUploader
 from .services.image_processor import ImageProcessor
 from .services.pdf_generator import PDFGenerator
+from .services.visual_pdf_generator import VisualPDFGenerator
 from .services.permanent_audio_service import PermanentAudioService
 from .services.rate_limiter import rate_limiter
 from .services.session_manager import SessionManager
@@ -119,7 +120,7 @@ session_manager = SessionManager()
 file_uploader = FileUploader()
 audio_processor = AudioProcessor()
 image_processor = ImageProcessor()
-pdf_generator = PDFGenerator()
+pdf_generator = VisualPDFGenerator()  # Using VisualPDFGenerator for template-based PDFs
 stripe_service = StripeService()
 email_service = EmailService()
 privacy_service = PrivacyService()
@@ -482,8 +483,13 @@ async def get_processing_status(token: str, db: Session = Depends(get_db)):
 @app.get("/api/session/{token}/preview")
 async def get_preview(token: str, db: Session = Depends(get_db)):
     """Generate watermarked preview PDF"""
-    print("🚨 PREVIEW REQUEST RECEIVED!")
+    print("=" * 100)
+    print("🚨🚨🚨 PREVIEW REQUEST RECEIVED! 🚨🚨🚨")
+    print(f"Token: {token}")
+    print("=" * 100)
     session = session_manager.get_session(db, token)
+    print(f"Session retrieved: {session is not None}")
+    print(f"Session photo_shape: {session.photo_shape if session else 'N/A'}")
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
@@ -559,9 +565,10 @@ async def get_preview(token: str, db: Session = Depends(get_db)):
         )
 
         # Generate preview PDF with watermark
-        print(f"DEBUG: Calling pdf_generator.generate_preview_pdf")
+        print(f"DEBUG: Calling pdf_generator.generate_pdf with watermark")
         print(f"DEBUG: Session template_id: {session.template_id}")
-        pdf_url = await pdf_generator.generate_preview_pdf(session)
+        print(f"DEBUG: Session photo_shape: {session.photo_shape}")
+        pdf_url = await pdf_generator.generate_pdf(session, add_watermark=True)
         print(f"DEBUG: PDF generation successful, URL: {pdf_url}")
 
         expires_at = (datetime.utcnow() + timedelta(hours=1)).isoformat()
@@ -759,7 +766,7 @@ async def complete_order(
                 headers={"X-Migration-Error": "true"},
             )
 
-        pdf_url = await pdf_generator.generate_final_pdf(session, order)
+        pdf_url = await pdf_generator.generate_pdf(session, add_watermark=False, order=order)
 
         # Add email to subscribers if not exists
         subscriber = (
