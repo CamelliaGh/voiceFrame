@@ -46,9 +46,9 @@ export default function PreviewSection({ onNext, onBack }: PreviewSectionProps) 
     try {
       console.log('🎯 PreviewSection: Making preview request...')
       const response = await getPreviewUrl(session.session_token)
-      console.log('🎯 PreviewSection: Preview response received:', response.preview_url)
+      console.log('🎯 PreviewSection: Preview response received:', response)
       // Add cache-busting parameter to prevent browser caching
-      const cacheBustingUrl = `${response.preview_url}?t=${Date.now()}`
+      const cacheBustingUrl = `${response}?t=${Date.now()}`
       console.log('🎯 PreviewSection: Using cache-busting URL:', cacheBustingUrl)
       setPreviewUrl(cacheBustingUrl)
     } catch (err: any) {

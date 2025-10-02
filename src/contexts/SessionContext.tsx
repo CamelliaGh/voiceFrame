@@ -88,7 +88,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
 
     try {
       await updateSession(session.session_token, data)
-      setSession(prev => prev ? { ...prev, ...data } : null)
+      setSession((prev: SessionData | null) => prev ? { ...prev, ...data } : null)
     } catch (err) {
       console.error('Failed to update session:', err)
       setError('Failed to update session')

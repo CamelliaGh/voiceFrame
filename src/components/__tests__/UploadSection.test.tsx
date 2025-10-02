@@ -164,7 +164,7 @@ describe('UploadSection Component', () => {
   })
 
   describe('File Display and Remove Functionality', () => {
-    it('should show uploaded photo with remove button when photo is uploaded', () => {
+    it('should show uploaded photo with remove button when photo is uploaded', async () => {
       // Mock session with uploaded photo
       const sessionWithPhoto = {
         ...mockSession,
@@ -173,10 +173,14 @@ describe('UploadSection Component', () => {
         photo_size: 1024000 // 1MB
       }
 
-      vi.mocked(vi.importActual('../../contexts/SessionContext')).useSession = () => ({
+      const mockUseSession = vi.mocked(await import('../../contexts/SessionContext'))
+      mockUseSession.useSession = vi.fn(() => ({
         session: sessionWithPhoto,
-        refreshSession: mockRefreshSession
-      })
+        refreshSession: mockRefreshSession,
+        loading: false,
+        error: null,
+        updateSessionData: vi.fn(),
+      })) as any
 
       render(<UploadSection {...mockProps} />)
 
@@ -188,7 +192,7 @@ describe('UploadSection Component', () => {
       expect(screen.getByTitle('Remove photo')).toBeInTheDocument()
     })
 
-    it('should show uploaded audio with remove button when audio is uploaded', () => {
+    it('should show uploaded audio with remove button when audio is uploaded', async () => {
       // Mock session with uploaded audio
       const sessionWithAudio = {
         ...mockSession,
@@ -197,10 +201,14 @@ describe('UploadSection Component', () => {
         audio_size: 2048000 // 2MB
       }
 
-      vi.mocked(vi.importActual('../../contexts/SessionContext')).useSession = () => ({
+      const mockUseSession = vi.mocked(await import('../../contexts/SessionContext'))
+      mockUseSession.useSession = vi.fn(() => ({
         session: sessionWithAudio,
-        refreshSession: mockRefreshSession
-      })
+        refreshSession: mockRefreshSession,
+        loading: false,
+        error: null,
+        updateSessionData: vi.fn(),
+      })) as any
 
       render(<UploadSection {...mockProps} />)
 

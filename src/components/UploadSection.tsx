@@ -55,9 +55,10 @@ export default function UploadSection({
       // Check if audio is uploaded
       if (session.audio_duration && session.audio_filename) {
         setAudioUploaded(true)
+        const duration = session.audio_duration
         setPreviewImages(prev => ({
           ...prev,
-          audio: `Audio file: ${session.audio_filename} (${session.audio_size ? formatFileSize(session.audio_size) : 'Unknown size'}, ${Math.floor(session.audio_duration / 60)}:${Math.floor(session.audio_duration % 60).toString().padStart(2, '0')})`
+          audio: `Audio file: ${session.audio_filename} (${session.audio_size ? formatFileSize(session.audio_size) : 'Unknown size'}, ${Math.floor(duration / 60)}:${Math.floor(duration % 60).toString().padStart(2, '0')})`
         }))
       }
     }

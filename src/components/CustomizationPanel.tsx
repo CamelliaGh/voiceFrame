@@ -40,10 +40,10 @@ const getFramedTemplateId = (pdfSize: string) => {
 export default function CustomizationPanel({ onNext, onBack }: CustomizationPanelProps) {
   const { session, updateSessionData } = useSession()
   const [customText, setCustomText] = useState(session?.custom_text || 'Our Song ♪')
-  const [pdfSize, setPdfSize] = useState<'A4' | 'A4_Landscape' | 'Letter' | 'Letter_Landscape' | 'A3' | 'A3_Landscape'>(session?.pdf_size || 'A4')
+  const [pdfSize, setPdfSize] = useState<'A4' | 'A4_Landscape' | 'Letter' | 'Letter_Landscape' | 'A3' | 'A3_Landscape'>((session?.pdf_size as any) || 'A4')
   const [backgroundId, setBackgroundId] = useState(session?.background_id || 'none')
   const [fontId, setFontId] = useState(session?.font_id || 'script')
-  const [photoShape, setPhotoShape] = useState<'square' | 'circle'>(session?.photo_shape || 'square')
+  const [photoShape, setPhotoShape] = useState<'square' | 'circle'>((session?.photo_shape as any) || 'square')
   const [isUpdating, setIsUpdating] = useState(false)
   const [processingStatus, setProcessingStatus] = useState<{
     photo_ready: boolean
@@ -65,7 +65,12 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
 
       try {
         const status = await getProcessingStatus(session.session_token)
-        setProcessingStatus(status)
+        setProcessingStatus({
+          photo_ready: status.photo_ready || false,
+          audio_ready: status.audio_ready || false,
+          waveform_ready: status.waveform_ready || false,
+          preview_ready: status.preview_ready || false,
+        })
       } catch (error) {
         console.error('Failed to get processing status:', error)
       }
@@ -79,7 +84,12 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
 
       try {
         const status = await getProcessingStatus(session.session_token)
-        setProcessingStatus(status)
+        setProcessingStatus({
+          photo_ready: status.photo_ready || false,
+          audio_ready: status.audio_ready || false,
+          waveform_ready: status.waveform_ready || false,
+          preview_ready: status.preview_ready || false,
+        })
 
         // Stop polling if everything is ready
         if (status.audio_ready && status.waveform_ready && status.preview_ready) {
@@ -104,7 +114,7 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
   // Debounced update function for real-time preview
   const debouncedUpdate = useCallback(
     (() => {
-      let timeoutId: NodeJS.Timeout
+      let timeoutId: ReturnType<typeof setTimeout>
       return (data: Partial<SessionData>) => {
         console.log('⏱️ debouncedUpdate called with data:', data)
         clearTimeout(timeoutId)
@@ -138,7 +148,12 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
             if (error instanceof Error && error.message.includes('Audio processing not complete')) {
               try {
                 const status = await getProcessingStatus(session.session_token)
-                setProcessingStatus(status)
+                setProcessingStatus({
+                  photo_ready: status.photo_ready || false,
+                  audio_ready: status.audio_ready || false,
+                  waveform_ready: status.waveform_ready || false,
+                  preview_ready: status.preview_ready || false,
+                })
               } catch (statusError) {
                 console.error('Failed to refresh processing status:', statusError)
               }
@@ -300,7 +315,7 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
     try {
       const response = await getPreviewUrl(session.session_token)
       // Add cache-busting parameter to prevent browser caching
-      const cacheBustingUrl = `${response.preview_url}?t=${Date.now()}`
+      const cacheBustingUrl = `${response}?t=${Date.now()}`
       setPreviewUrl(cacheBustingUrl)
     } catch (err: any) {
       console.error('Failed to generate preview:', err)
