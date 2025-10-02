@@ -1,5 +1,6 @@
 import { Music, AudioLines, Shield, Cookie } from 'lucide-react'
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import CookieConsentBanner from './CookieConsentBanner'
 
 export default function Header() {
@@ -28,15 +29,13 @@ export default function Header() {
 
               {/* Privacy Links */}
               <div className="flex items-center space-x-3">
-                <a
-                  href="/privacy"
+                <Link
+                  to="/privacy"
                   className="flex items-center space-x-1 text-sm text-gray-600 hover:text-gray-900 transition-colors"
-                  target="_blank"
-                  rel="noopener noreferrer"
                 >
                   <Shield className="w-4 h-4" />
                   <span className="hidden sm:inline">Privacy</span>
-                </a>
+                </Link>
 
                 <button
                   onClick={() => setShowCookieSettings(true)}

@@ -39,7 +39,7 @@ const getFramedTemplateId = (pdfSize: string) => {
 
 export default function CustomizationPanel({ onNext, onBack }: CustomizationPanelProps) {
   const { session, updateSessionData } = useSession()
-  const [customText, setCustomText] = useState(session?.custom_text || '')
+  const [customText, setCustomText] = useState(session?.custom_text || 'Our Song ♪')
   const [pdfSize, setPdfSize] = useState<'A4' | 'A4_Landscape' | 'Letter' | 'Letter_Landscape' | 'A3' | 'A3_Landscape'>(session?.pdf_size || 'A4')
   const [backgroundId, setBackgroundId] = useState(session?.background_id || 'none')
   const [fontId, setFontId] = useState(session?.font_id || 'script')
@@ -92,6 +92,14 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
 
     return () => clearInterval(interval)
   }, [session]) // Removed processingStatus from dependencies
+
+  // Initialize default custom text if not set
+  useEffect(() => {
+    if (session && !session.custom_text && customText === 'Our Song ♪') {
+      // Update session with default custom text
+      updateSessionData({ custom_text: customText })
+    }
+  }, [session, customText, updateSessionData])
 
   // Debounced update function for real-time preview
   const debouncedUpdate = useCallback(

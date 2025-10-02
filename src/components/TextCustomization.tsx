@@ -201,7 +201,7 @@ export default function TextCustomization({
           <textarea
             value={value}
             onChange={(e) => handleTextChange(e.target.value)}
-            placeholder="Enter your custom message..."
+            placeholder="Enter your custom message or choose from suggestions below..."
             className={cn(
               "w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none transition-all duration-200",
               disabled && "opacity-50 cursor-not-allowed bg-gray-50",

@@ -8,6 +8,7 @@ import CustomizationPanel from './components/CustomizationPanel'
 import PreviewSection from './components/PreviewSection'
 import PricingSection from './components/PricingSection'
 import AdminDashboard from './components/AdminDashboard'
+import Privacy from './components/Privacy'
 import { SessionProvider } from './contexts/SessionContext'
 import { cn } from './lib/utils'
 
@@ -131,6 +132,7 @@ function App() {
           <Routes>
             <Route path="/" element={<MainApp />} />
             <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/privacy" element={<Privacy />} />
           </Routes>
         </Router>
       </SessionProvider>

@@ -190,6 +190,10 @@ async def get_session(token: str, db: Session = Depends(get_db)):
         photo_url=photo_url,
         waveform_url=waveform_url,
         audio_duration=session.audio_duration,
+        photo_filename=session.photo_filename,
+        photo_size=session.photo_size,
+        audio_filename=session.audio_filename,
+        audio_size=session.audio_size,
     )
 
 
@@ -355,8 +359,10 @@ async def upload_photo(
         # Upload with specific key name
         await file_uploader.upload_file_with_key(photo, temp_photo_key)
 
-        # Update session with temporary key
+        # Update session with temporary key and file info
         session.photo_s3_key = temp_photo_key
+        session.photo_filename = photo.filename
+        session.photo_size = photo.size
         db.commit()
 
         # Get temporary URL for preview
@@ -443,8 +449,10 @@ async def upload_audio(
         # Upload with specific key name
         await file_uploader.upload_file_with_key(audio, temp_audio_key)
 
-        # Update session with temporary key
+        # Update session with temporary key and file info
         session.audio_s3_key = temp_audio_key
+        session.audio_filename = audio.filename
+        session.audio_size = audio.size
         db.commit()
 
         # Start background audio processing with temporary file
@@ -461,6 +469,64 @@ async def upload_audio(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Audio upload failed: {str(e)}")
+
+
+@app.delete("/api/session/{token}/photo")
+async def remove_photo(token: str, db: Session = Depends(get_db)):
+    """Remove uploaded photo from session"""
+    session = session_manager.get_session(db, token)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    if not session.photo_s3_key:
+        raise HTTPException(status_code=404, detail="No photo found to remove")
+
+    try:
+        # Delete from S3
+        file_uploader.delete_file(session.photo_s3_key)
+
+        # Update session to remove photo reference and file info
+        session.photo_s3_key = None
+        session.photo_filename = None
+        session.photo_size = None
+        db.commit()
+
+        return {"status": "success", "message": "Photo removed successfully"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to remove photo: {str(e)}")
+
+
+@app.delete("/api/session/{token}/audio")
+async def remove_audio(token: str, db: Session = Depends(get_db)):
+    """Remove uploaded audio from session"""
+    session = session_manager.get_session(db, token)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    if not session.audio_s3_key:
+        raise HTTPException(status_code=404, detail="No audio found to remove")
+
+    try:
+        # Delete audio file from S3
+        file_uploader.delete_file(session.audio_s3_key)
+
+        # Delete waveform file from S3 if it exists
+        if session.waveform_s3_key:
+            file_uploader.delete_file(session.waveform_s3_key)
+
+        # Update session to remove audio and waveform references and file info
+        session.audio_s3_key = None
+        session.waveform_s3_key = None
+        session.audio_duration = None
+        session.audio_filename = None
+        session.audio_size = None
+        db.commit()
+
+        return {"status": "success", "message": "Audio removed successfully"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to remove audio: {str(e)}")
 
 
 @app.get("/api/session/{token}/status", response_model=ProcessingStatus)

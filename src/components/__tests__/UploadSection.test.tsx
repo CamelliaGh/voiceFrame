@@ -5,30 +5,59 @@ import UploadSection from '../UploadSection'
 // Mock the session context
 const mockSession = {
   session_token: 'test-session-token',
-  photo_uploaded: false,
-  audio_uploaded: false,
+  expires_at: '2024-10-03T12:00:00Z',
+  photo_url: null,
+  waveform_url: null,
   audio_duration: null,
   custom_text: null,
-  background_selected: null,
-  photo_shape: null,
-  pdf_size: null,
-  pdf_orientation: null
+  photo_shape: 'square',
+  pdf_size: 'A4',
+  template_id: 'framed_a4_portrait',
+  background_id: 'none',
+  font_id: 'script',
+  photo_filename: null,
+  photo_size: null,
+  audio_filename: null,
+  audio_size: null
 }
+
+const mockRefreshSession = vi.fn()
 
 // Mock the session context hook
 vi.mock('../../contexts/SessionContext', () => ({
-  useSession: () => ({ session: mockSession })
+  useSession: () => ({
+    session: mockSession,
+    refreshSession: mockRefreshSession
+  })
 }))
 
 // Mock the API functions
 vi.mock('../../lib/api', () => ({
   uploadPhoto: vi.fn().mockResolvedValue({ success: true }),
-  uploadAudio: vi.fn().mockResolvedValue({ success: true })
+  uploadAudio: vi.fn().mockResolvedValue({ success: true }),
+  removePhoto: vi.fn().mockResolvedValue({ status: 'success', message: 'Photo removed successfully' }),
+  removeAudio: vi.fn().mockResolvedValue({ status: 'success', message: 'Audio removed successfully' })
 }))
 
 // Mock the utils
 vi.mock('../../lib/utils', () => ({
-  cn: (...classes: string[]) => classes.filter(Boolean).join(' ')
+  cn: (...classes: string[]) => classes.filter(Boolean).join(' '),
+  isChrome: () => false,
+  hasPotentialUploadIssues: () => false
+}))
+
+// Mock exifr
+vi.mock('exifr', () => ({
+  parse: vi.fn().mockResolvedValue({ Orientation: 1 })
+}))
+
+// Mock react-dropzone
+vi.mock('react-dropzone', () => ({
+  useDropzone: vi.fn(() => ({
+    getRootProps: () => ({ role: 'presentation' }),
+    getInputProps: () => ({ value: '' }),
+    isDragActive: false
+  }))
 }))
 
 describe('UploadSection Component', () => {
@@ -130,6 +159,65 @@ describe('UploadSection Component', () => {
       render(<UploadSection {...mockProps} />)
 
       // Check that the component renders without errors
+      expect(screen.getByText('Upload Your Files')).toBeInTheDocument()
+    })
+  })
+
+  describe('File Display and Remove Functionality', () => {
+    it('should show uploaded photo with remove button when photo is uploaded', () => {
+      // Mock session with uploaded photo
+      const sessionWithPhoto = {
+        ...mockSession,
+        photo_url: 'https://example.com/photo.jpg',
+        photo_filename: 'test-photo.jpg',
+        photo_size: 1024000 // 1MB
+      }
+
+      vi.mocked(vi.importActual('../../contexts/SessionContext')).useSession = () => ({
+        session: sessionWithPhoto,
+        refreshSession: mockRefreshSession
+      })
+
+      render(<UploadSection {...mockProps} />)
+
+      // Should show the uploaded file info
+      expect(screen.getByText('test-photo.jpg')).toBeInTheDocument()
+      expect(screen.getByText('1000.00 KB')).toBeInTheDocument()
+
+      // Should show remove button
+      expect(screen.getByTitle('Remove photo')).toBeInTheDocument()
+    })
+
+    it('should show uploaded audio with remove button when audio is uploaded', () => {
+      // Mock session with uploaded audio
+      const sessionWithAudio = {
+        ...mockSession,
+        audio_duration: 120, // 2 minutes
+        audio_filename: 'test-audio.mp3',
+        audio_size: 2048000 // 2MB
+      }
+
+      vi.mocked(vi.importActual('../../contexts/SessionContext')).useSession = () => ({
+        session: sessionWithAudio,
+        refreshSession: mockRefreshSession
+      })
+
+      render(<UploadSection {...mockProps} />)
+
+      // Should show the uploaded file info
+      expect(screen.getByText('test-audio.mp3')).toBeInTheDocument()
+      expect(screen.getByText(/2.00 MB/)).toBeInTheDocument()
+      expect(screen.getByText(/2:00/)).toBeInTheDocument()
+
+      // Should show remove button
+      expect(screen.getByTitle('Remove audio')).toBeInTheDocument()
+    })
+
+    it('should format file sizes correctly', () => {
+      render(<UploadSection {...mockProps} />)
+
+      // The formatFileSize function should be working
+      // This is tested indirectly through the file display tests above
       expect(screen.getByText('Upload Your Files')).toBeInTheDocument()
     })
   })

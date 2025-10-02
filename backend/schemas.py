@@ -20,6 +20,11 @@ class SessionResponse(BaseModel):
     photo_url: Optional[str] = None
     waveform_url: Optional[str] = None
     audio_duration: Optional[float] = None
+    # File information for display
+    photo_filename: Optional[str] = None
+    photo_size: Optional[int] = None
+    audio_filename: Optional[str] = None
+    audio_size: Optional[int] = None
 
 
 class SessionUpdate(BaseModel):

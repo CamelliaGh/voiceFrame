@@ -1,10 +1,17 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useDropzone } from 'react-dropzone'
-import { Upload, Image, Music, CheckCircle, AlertCircle, RotateCcw } from 'lucide-react'
+import { Upload, Image, Music, CheckCircle, AlertCircle, RotateCcw, X } from 'lucide-react'
 import { useSession } from '../contexts/SessionContext'
-import { uploadPhoto, uploadAudio } from '../lib/api'
-// import { formatFileSize } from '../lib/utils'
-import { cn } from '../lib/utils'
+import { uploadPhoto, uploadAudio, removePhoto, removeAudio } from '../lib/api'
+// Utility function to format file size
+const formatFileSize = (bytes: number): string => {
+  if (bytes === 0) return '0 Bytes'
+  const k = 1024
+  const sizes = ['Bytes', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+}
+import { cn, isChrome, hasPotentialUploadIssues } from '../lib/utils'
 import { parse as parseExif } from 'exifr'
 
 interface UploadSectionProps {
@@ -20,7 +27,7 @@ export default function UploadSection({
   canProceed,
   onNext
 }: UploadSectionProps) {
-  const { session } = useSession()
+  const { session, refreshSession } = useSession()
   const [photoUploading, setPhotoUploading] = useState(false)
   const [audioUploading, setAudioUploading] = useState(false)
   const [photoUploaded, setPhotoUploaded] = useState(false)
@@ -32,6 +39,29 @@ export default function UploadSection({
   const [previewImages, setPreviewImages] = useState<{ photo?: string; audio?: string }>({})
   const [retryCount, setRetryCount] = useState<{ photo?: number; audio?: number }>({})
   const [lastUploadAttempt, setLastUploadAttempt] = useState<{ photo?: File; audio?: File }>({})
+  const [removing, setRemoving] = useState<{ photo?: boolean; audio?: boolean }>({})
+
+  // Check if files are already uploaded when session loads
+  useEffect(() => {
+    if (session) {
+      // Check if photo is uploaded
+      if (session.photo_url && session.photo_filename) {
+        setPhotoUploaded(true)
+        if (session.photo_url) {
+          setPreviewImages(prev => ({ ...prev, photo: session.photo_url }))
+        }
+      }
+
+      // Check if audio is uploaded
+      if (session.audio_duration && session.audio_filename) {
+        setAudioUploaded(true)
+        setPreviewImages(prev => ({
+          ...prev,
+          audio: `Audio file: ${session.audio_filename} (${session.audio_size ? formatFileSize(session.audio_size) : 'Unknown size'}, ${Math.floor(session.audio_duration / 60)}:${Math.floor(session.audio_duration % 60).toString().padStart(2, '0')})`
+        }))
+      }
+    }
+  }, [session])
 
   // Function to handle and categorize errors
   const handleUploadError = (error: any, fileType: 'photo' | 'audio'): string => {
@@ -40,6 +70,21 @@ export default function UploadSection({
     // Network errors
     if (!navigator.onLine) {
       return 'No internet connection. Please check your network and try again.'
+    }
+
+    // Chrome-specific error handling
+    if (error?.message?.includes('Failed to fetch') || error?.message?.includes('NetworkError')) {
+      return 'Network error detected. This might be caused by browser extensions or security settings. Try disabling ad blockers or use incognito mode.'
+    }
+
+    // CORS errors (common in Chrome after updates)
+    if (error?.message?.includes('CORS') || error?.code === 'ERR_BLOCKED_BY_CLIENT') {
+      return 'Upload blocked by browser security. Please disable ad blockers or privacy extensions and try again.'
+    }
+
+    // File API errors (Chrome can be strict about file handling)
+    if (error?.message?.includes('File is empty') || error?.message?.includes('corrupted')) {
+      return 'File appears to be corrupted or empty. Please try selecting the file again.'
     }
 
     // Server errors
@@ -80,8 +125,36 @@ export default function UploadSection({
       return 'Upload was cancelled.'
     }
 
-    // Generic fallback
-    return error?.message || `Failed to upload ${fileType}. Please try again.`
+    // Generic fallback with Chrome-specific advice
+    return error?.message || `Failed to upload ${fileType}. If you're using Chrome, try disabling extensions or use incognito mode.`
+  }
+
+  // Function to remove uploaded file
+  const handleRemoveFile = async (fileType: 'photo' | 'audio') => {
+    if (!session) return
+
+    setRemoving(prev => ({ ...prev, [fileType]: true }))
+    setUploadErrors(prev => ({ ...prev, [fileType]: undefined }))
+
+    try {
+      if (fileType === 'photo') {
+        await removePhoto(session.session_token)
+        setPhotoUploaded(false)
+        setPreviewImages(prev => ({ ...prev, photo: undefined }))
+      } else {
+        await removeAudio(session.session_token)
+        setAudioUploaded(false)
+        setPreviewImages(prev => ({ ...prev, audio: undefined }))
+      }
+
+      // Refresh session to get updated data
+      await refreshSession()
+    } catch (error: any) {
+      const errorMessage = handleUploadError(error, fileType)
+      setUploadErrors(prev => ({ ...prev, [fileType]: `Failed to remove ${fileType}: ${errorMessage}` }))
+    } finally {
+      setRemoving(prev => ({ ...prev, [fileType]: false }))
+    }
   }
 
   // Function to retry upload
@@ -224,6 +297,31 @@ export default function UploadSection({
     const file = files[0]
     if (!file || !session) return
 
+    // Chrome-specific file validation
+    if (file.size === 0 || !file.type || !file.name) {
+      setUploadErrors(prev => ({
+        ...prev,
+        photo: 'Invalid file detected. Please try selecting the file again or use a different browser.'
+      }))
+      return
+    }
+
+    // Check if file is actually readable (Chrome sometimes has issues with this)
+    try {
+      const testReader = new FileReader()
+      await new Promise((resolve, reject) => {
+        testReader.onload = resolve
+        testReader.onerror = reject
+        testReader.readAsArrayBuffer(file.slice(0, 1024)) // Read first 1KB to test
+      })
+    } catch (error) {
+      setUploadErrors(prev => ({
+        ...prev,
+        photo: 'File cannot be read. Please try selecting the file again or use a different file.'
+      }))
+      return
+    }
+
     // Client-side validation
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/bmp', 'image/webp']
     const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp']
@@ -337,6 +435,31 @@ export default function UploadSection({
   const handleAudioUpload = async (files: File[]) => {
     const file = files[0]
     if (!file || !session) return
+
+    // Chrome-specific file validation
+    if (file.size === 0 || !file.type || !file.name) {
+      setUploadErrors(prev => ({
+        ...prev,
+        audio: 'Invalid file detected. Please try selecting the file again or use a different browser.'
+      }))
+      return
+    }
+
+    // Check if file is actually readable (Chrome sometimes has issues with this)
+    try {
+      const testReader = new FileReader()
+      await new Promise((resolve, reject) => {
+        testReader.onload = resolve
+        testReader.onerror = reject
+        testReader.readAsArrayBuffer(file.slice(0, 1024)) // Read first 1KB to test
+      })
+    } catch (error) {
+      setUploadErrors(prev => ({
+        ...prev,
+        audio: 'File cannot be read. Please try selecting the file again or use a different file.'
+      }))
+      return
+    }
 
     // Client-side validation
     const allowedTypes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/m4a', 'audio/aac', 'audio/ogg', 'audio/flac']
@@ -488,6 +611,26 @@ export default function UploadSection({
         </p>
       </div>
 
+      {/* Chrome Warning Banner */}
+      {isChrome() && hasPotentialUploadIssues() && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div className="flex items-start space-x-3">
+            <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <h3 className="text-sm font-medium text-yellow-800">Chrome Upload Notice</h3>
+              <p className="text-sm text-yellow-700 mt-1">
+                We've detected you're using Chrome. If uploads don't work, try:
+              </p>
+              <ul className="text-sm text-yellow-700 mt-2 list-disc list-inside space-y-1">
+                <li>Using incognito mode (Ctrl+Shift+N)</li>
+                <li>Disabling ad blockers temporarily</li>
+                <li>Clearing browser cache</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="grid md:grid-cols-2 gap-6">
         {/* Photo Upload */}
         <div className="card">
@@ -534,9 +677,37 @@ export default function UploadSection({
                 </div>
               </div>
             ) : photoUploaded ? (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <CheckCircle className="w-8 h-8 text-green-600 mx-auto" />
-                <p className="text-sm text-green-700 font-medium">Photo uploaded successfully!</p>
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Image className="w-4 h-4 text-green-600" />
+                      <div className="text-sm">
+                        <p className="font-medium text-green-800">
+                          {session?.photo_filename || 'Photo uploaded'}
+                        </p>
+                        {session?.photo_size && (
+                          <p className="text-green-600">
+                            {formatFileSize(session.photo_size)}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleRemoveFile('photo')}
+                      disabled={removing.photo}
+                      className="flex items-center justify-center w-6 h-6 rounded-full bg-red-100 hover:bg-red-200 text-red-600 transition-colors disabled:opacity-50"
+                      title="Remove photo"
+                    >
+                      {removing.photo ? (
+                        <div className="w-3 h-3 border border-red-600 border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <X className="w-3 h-3" />
+                      )}
+                    </button>
+                  </div>
+                </div>
               </div>
             ) : (
               <div className="space-y-2">
@@ -557,6 +728,17 @@ export default function UploadSection({
                 <AlertCircle className="w-4 h-4" />
                 <p className="text-sm flex-1">{uploadErrors.photo}</p>
               </div>
+              {uploadErrors.photo.includes('Chrome') && (
+                <div className="text-xs text-red-600 bg-red-50 p-2 rounded border border-red-200">
+                  <strong>Chrome Troubleshooting:</strong>
+                  <ul className="mt-1 list-disc list-inside space-y-1">
+                    <li>Try using incognito mode (Ctrl+Shift+N)</li>
+                    <li>Disable ad blockers and privacy extensions</li>
+                    <li>Clear browser cache and cookies</li>
+                    <li>Try a different browser (Firefox, Safari, Edge)</li>
+                  </ul>
+                </div>
+              )}
               {lastUploadAttempt.photo && (retryCount.photo || 0) < 3 && (
                 <button
                   onClick={() => retryUpload('photo')}
@@ -612,9 +794,42 @@ export default function UploadSection({
                 </div>
               </div>
             ) : audioUploaded ? (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <CheckCircle className="w-8 h-8 text-green-600 mx-auto" />
-                <p className="text-sm text-green-700 font-medium">Audio uploaded successfully!</p>
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Music className="w-4 h-4 text-green-600" />
+                      <div className="text-sm">
+                        <p className="font-medium text-green-800">
+                          {session?.audio_filename || 'Audio uploaded'}
+                        </p>
+                        <div className="text-green-600 space-x-2">
+                          {session?.audio_size && (
+                            <span>{formatFileSize(session.audio_size)}</span>
+                          )}
+                          {session?.audio_duration && (
+                            <span>
+                              • {Math.floor(session.audio_duration / 60)}:{Math.floor(session.audio_duration % 60).toString().padStart(2, '0')}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleRemoveFile('audio')}
+                      disabled={removing.audio}
+                      className="flex items-center justify-center w-6 h-6 rounded-full bg-red-100 hover:bg-red-200 text-red-600 transition-colors disabled:opacity-50"
+                      title="Remove audio"
+                    >
+                      {removing.audio ? (
+                        <div className="w-3 h-3 border border-red-600 border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <X className="w-3 h-3" />
+                      )}
+                    </button>
+                  </div>
+                </div>
               </div>
             ) : (
               <div className="space-y-2">
@@ -635,6 +850,17 @@ export default function UploadSection({
                 <AlertCircle className="w-4 h-4" />
                 <p className="text-sm flex-1">{uploadErrors.audio}</p>
               </div>
+              {uploadErrors.audio.includes('Chrome') && (
+                <div className="text-xs text-red-600 bg-red-50 p-2 rounded border border-red-200">
+                  <strong>Chrome Troubleshooting:</strong>
+                  <ul className="mt-1 list-disc list-inside space-y-1">
+                    <li>Try using incognito mode (Ctrl+Shift+N)</li>
+                    <li>Disable ad blockers and privacy extensions</li>
+                    <li>Clear browser cache and cookies</li>
+                    <li>Try a different browser (Firefox, Safari, Edge)</li>
+                  </ul>
+                </div>
+              )}
               {lastUploadAttempt.audio && (retryCount.audio || 0) < 3 && (
                 <button
                   onClick={() => retryUpload('audio')}

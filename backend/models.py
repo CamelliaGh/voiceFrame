@@ -15,6 +15,11 @@ class SessionModel(Base):
     photo_s3_key = Column(String(500), nullable=True)
     audio_s3_key = Column(String(500), nullable=True)
     waveform_s3_key = Column(String(500), nullable=True)
+    # File information for display
+    photo_filename = Column(String(255), nullable=True)
+    photo_size = Column(Integer, nullable=True)
+    audio_filename = Column(String(255), nullable=True)
+    audio_size = Column(Integer, nullable=True)
     custom_text = Column(Text, nullable=True)
     photo_shape = Column(String(20), default="square")
     pdf_size = Column(String(20), default="A4")
