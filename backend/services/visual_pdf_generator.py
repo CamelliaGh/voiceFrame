@@ -554,7 +554,7 @@ class VisualPDFGenerator:
             watermark_draw = ImageDraw.Draw(watermark_img)
 
             # Watermark text - back to working version
-            text = "PREVIEW"
+            text = "vocaframe.com"
 
             # Use a larger font size for better visibility
             # Scale font size based on image dimensions

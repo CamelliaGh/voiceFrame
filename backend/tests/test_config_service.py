@@ -8,8 +8,8 @@ import os
 # Add the parent directory to the path so we can import from backend
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from services.config_service import ConfigService
-from models import AdminConfig
+from backend.services.config_service import ConfigService
+from backend.models import AdminConfig
 
 
 def test_config_service_get_price_cents_default():
