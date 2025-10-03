@@ -118,13 +118,13 @@ const getFontStyle = (fontId: string) => {
     case 'script':
       return 'font-script'
     case 'elegant':
-      return 'font-serif'
+      return 'font-elegant'
     case 'modern':
-      return 'font-sans'
+      return 'font-modern'
     case 'vintage':
-      return 'font-serif italic'
+      return 'font-vintage'
     case 'classic':
-      return 'font-serif'
+      return 'font-classic'
     default:
       return 'font-sans'
   }

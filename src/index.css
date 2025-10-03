@@ -2,14 +2,76 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Custom Font Faces */
+@font-face {
+  font-family: 'ScriptFont';
+  src: url('/fonts/elegant.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'ElegantFont';
+  src: url('/fonts/elegant.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'ModernFont';
+  src: url('/fonts/modern.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'VintageFont';
+  src: url('/fonts/vintage.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'ClassicFont';
+  src: url('/fonts/classic.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 @layer base {
   html {
     font-family: 'Inter', ui-sans-serif, system-ui;
   }
-  
+
   body {
     @apply bg-gray-50 text-gray-900;
   }
+}
+
+/* Font Preview Styles */
+.font-script {
+  font-family: 'ScriptFont', cursive;
+}
+
+.font-elegant {
+  font-family: 'ElegantFont', serif;
+}
+
+.font-modern {
+  font-family: 'ModernFont', sans-serif;
+}
+
+.font-vintage {
+  font-family: 'VintageFont', serif;
+}
+
+.font-classic {
+  font-family: 'ClassicFont', serif;
 }
 
 @layer components {
