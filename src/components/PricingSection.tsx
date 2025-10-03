@@ -49,6 +49,7 @@ const cardStyle = {
       color: '#9e2146',
     },
   },
+  hidePostalCode: true, // This disables the postal code field
 }
 
 export default function PricingSection({ onBack }: PricingSectionProps) {
@@ -61,6 +62,7 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
   const [pricingTiers, setPricingTiers] = useState<PricingTier[]>(createPricingTiers(299))
   const [priceLoading, setPriceLoading] = useState<boolean>(true)
   const [email, setEmail] = useState('')
+  const [zipCode, setZipCode] = useState('')
   const [processing, setProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -123,6 +125,9 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
             card: cardElement,
             billing_details: {
               email: email,
+              address: {
+                postal_code: zipCode,
+              },
             },
           }
         }
@@ -272,6 +277,26 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
             </div>
 
             <div>
+              <label htmlFor="zipCode" className="block text-sm font-medium text-gray-700 mb-1">
+                ZIP Code
+              </label>
+              <input
+                type="text"
+                id="zipCode"
+                value={zipCode}
+                onChange={(e) => setZipCode(e.target.value)}
+                maxLength={10}
+                pattern="^\d{5}(-\d{4})?$"
+                title="Enter a 5-digit ZIP code or ZIP+4 code (e.g., 12345 or 12345-6789)"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                placeholder="12345 or 12345-6789"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                5-digit ZIP code or ZIP+4 format
+              </p>
+            </div>
+
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Card Information
               </label>
@@ -288,7 +313,7 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
 
             <button
               type="submit"
-              disabled={!stripe || processing || !email}
+              disabled={!stripe || processing || !email || !zipCode}
               className="btn-primary w-full flex items-center justify-center space-x-2"
             >
               {processing ? (
