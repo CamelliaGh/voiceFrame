@@ -12,73 +12,96 @@ interface TextCustomizationProps {
   className?: string
 }
 
-// Default fallback data in case API fails
-const defaultTextSuggestions = [
-  "Our Song ♪",
-  "I Love You",
-  "Forever & Always",
-  "Together Forever",
-  "My Heart",
-  "You & Me",
-  "Love Always",
-  "My Everything",
-  "Heart & Soul",
-  "True Love",
-  "Soulmates",
-  "Love Story",
-  "Made for Each Other",
-  "In Love",
-  "Love You More",
-  "Wedding Day",
-  "First Dance 💕",
-  "Mr. & Mrs.",
-  "Happily Ever After",
-  "Just Married",
-  "Wedding Memories",
-  "Our Big Day",
-  "I Do",
-  "Married Life",
-  "Husband & Wife",
-  "Wedding Song",
-  "Our Vows",
-  "Wedding Day Magic",
-  "Anniversary Memory",
-  "One Year Together",
-  "5 Years Strong",
-  "10 Years of Love",
-  "Golden Anniversary",
-  "Our Anniversary",
-  "Celebrating Us",
-  "Years of Happiness",
-  "Anniversary Song",
-  "Special Date",
-  "Our Milestone",
-  "Baby's First Song",
-  "Welcome Little One",
-  "Our Family",
-  "Mommy & Daddy Love You",
-  "Sweet Dreams Baby",
-  "Little Angel",
-  "Family Love",
-  "Our Child",
-  "Growing Family",
-  "Baby Love",
-  "Family Song",
-  "Special Moment",
-  "Perfect Day",
-  "Our Memories",
-  "Best Day Ever",
-  "Unforgettable",
-  "Precious Moments",
-  "Sweet Memories",
-  "Amazing Day",
-  "Wonderful Time",
-  "Happy Times",
-  "Beautiful Memory",
-  "Magical Moment",
-  "Cherished Memory",
-  "Special Time",
-  "Incredible Day"
+// Default fallback data in case API fails - organized by category
+interface SuggestionCategory {
+  id: string
+  name: string
+  emoji: string
+  suggestions: string[]
+}
+
+const defaultSuggestionCategories: SuggestionCategory[] = [
+  {
+    id: 'romantic',
+    name: 'Romantic',
+    emoji: '💕',
+    suggestions: [
+      "Our Song ♪",
+      "I Love You",
+      "Forever & Always",
+      "Together Forever",
+      "My Heart",
+      "You & Me",
+      "Love Always",
+      "My Everything",
+      "Heart & Soul",
+      "True Love",
+      "Soulmates",
+      "Love Story"
+    ]
+  },
+  {
+    id: 'wedding',
+    name: 'Wedding',
+    emoji: '💍',
+    suggestions: [
+      "Wedding Day",
+      "First Dance 💕",
+      "Mr. & Mrs.",
+      "Happily Ever After",
+      "Just Married",
+      "I Do",
+      "Our Vows",
+      "Wedding Song",
+      "Our Big Day",
+      "Husband & Wife"
+    ]
+  },
+  {
+    id: 'anniversary',
+    name: 'Anniversary',
+    emoji: '🎊',
+    suggestions: [
+      "Our Anniversary",
+      "One Year Together",
+      "5 Years Strong",
+      "10 Years of Love",
+      "Celebrating Us",
+      "Anniversary Song",
+      "Years of Happiness",
+      "Our Milestone"
+    ]
+  },
+  {
+    id: 'baby',
+    name: 'Baby & Family',
+    emoji: '👶',
+    suggestions: [
+      "Baby's First Song",
+      "Welcome Little One",
+      "Our Family",
+      "Sweet Dreams Baby",
+      "Little Angel",
+      "Family Love",
+      "Baby Love",
+      "Growing Family"
+    ]
+  },
+  {
+    id: 'moments',
+    name: 'Special Moments',
+    emoji: '✨',
+    suggestions: [
+      "Perfect Day",
+      "Best Day Ever",
+      "Unforgettable",
+      "Precious Moments",
+      "Sweet Memories",
+      "Magical Moment",
+      "Beautiful Memory",
+      "Special Time"
+    ]
+  }
 ]
 
 const defaultFontOptions = [
@@ -117,9 +140,9 @@ export default function TextCustomization({
   className = ''
 }: TextCustomizationProps) {
   const [characterCount, setCharacterCount] = useState(value.length)
-  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['romantic']))
   const [isNearLimit, setIsNearLimit] = useState(false)
-  const [textSuggestions, setTextSuggestions] = useState<string[]>(defaultTextSuggestions)
+  const [suggestionCategories, setSuggestionCategories] = useState<SuggestionCategory[]>(defaultSuggestionCategories)
   const [fontOptions, setFontOptions] = useState(defaultFontOptions)
   const [, setLoading] = useState(true)
 
@@ -134,13 +157,20 @@ export default function TextCustomization({
       try {
         setLoading(true)
 
-        // Fetch suggested texts
+        // Fetch suggested texts (keep existing API, but organize by category if available)
         const textsResponse = await fetch('/api/resources/suggested-texts')
         if (textsResponse.ok) {
           const textsData = await textsResponse.json()
           const suggestions = textsData.suggested_texts?.map((item: any) => item.text) || []
+          // If API returns suggestions, add them to the "Popular" category
           if (suggestions.length > 0) {
-            setTextSuggestions(suggestions)
+            const popularCategory: SuggestionCategory = {
+              id: 'popular',
+              name: 'Popular',
+              emoji: '⭐',
+              suggestions: suggestions.slice(0, 12)
+            }
+            setSuggestionCategories([popularCategory, ...defaultSuggestionCategories])
           }
         }
 
@@ -178,9 +208,20 @@ export default function TextCustomization({
   const handleSuggestionClick = useCallback((suggestion: string) => {
     if (suggestion.length <= maxLength) {
       onChange(suggestion)
-      setShowSuggestions(false)
     }
   }, [onChange, maxLength])
+
+  const toggleCategory = useCallback((categoryId: string) => {
+    setExpandedCategories(prev => {
+      const next = new Set(prev)
+      if (next.has(categoryId)) {
+        next.delete(categoryId)
+      } else {
+        next.add(categoryId)
+      }
+      return next
+    })
+  }, [])
 
   const getCharacterCountColor = () => {
     if (characterCount > maxLength * 0.9) return "text-red-600"
@@ -236,37 +277,72 @@ export default function TextCustomization({
           </div>
         </div>
 
-        {/* Text Suggestions */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-gray-700">Quick suggestions:</p>
-            <button
-              onClick={() => setShowSuggestions(!showSuggestions)}
-              className="text-xs text-primary-600 hover:text-primary-700 font-medium transition-colors"
-            >
-              {showSuggestions ? 'Show less' : 'Show more'}
-            </button>
-          </div>
+        {/* Text Suggestions - Categorized */}
+        <div className="space-y-3">
+          <p className="text-sm font-medium text-gray-700">Quick suggestions:</p>
 
-          <div className={cn(
-            "flex flex-wrap gap-1.5 transition-all duration-200",
-            showSuggestions ? "max-h-96 overflow-y-auto" : "max-h-16 overflow-hidden"
-          )}>
-            {textSuggestions.map((suggestion) => (
-              <button
-                key={suggestion}
-                onClick={() => handleSuggestionClick(suggestion)}
-                disabled={disabled}
-                className={cn(
-                  "px-2.5 py-1 text-xs bg-white hover:bg-primary-50 text-gray-700 hover:text-primary-700 rounded-md transition-colors duration-200 border border-gray-200 hover:border-primary-300",
-                  disabled && "opacity-50 cursor-not-allowed",
-                  suggestion.length > maxLength && "opacity-50 cursor-not-allowed"
-                )}
-                title={suggestion.length > maxLength ? `Too long (${suggestion.length}/${maxLength})` : suggestion}
-              >
-                {suggestion}
-              </button>
-            ))}
+          <div className="space-y-2">
+            {suggestionCategories.map((category) => {
+              const isExpanded = expandedCategories.has(category.id)
+              const visibleSuggestions = isExpanded ? category.suggestions : category.suggestions.slice(0, 4)
+
+              return (
+                <div key={category.id} className="border border-gray-200 rounded-lg overflow-hidden">
+                  {/* Category Header */}
+                  <button
+                    onClick={() => toggleCategory(category.id)}
+                    className="w-full flex items-center justify-between px-3 py-2 bg-gray-50 hover:bg-gray-100 transition-colors"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <span className="text-base">{category.emoji}</span>
+                      <span className="text-sm font-medium text-gray-900">{category.name}</span>
+                      <span className="text-xs text-gray-500">({category.suggestions.length})</span>
+                    </div>
+                    <svg
+                      className={cn(
+                        "w-4 h-4 text-gray-500 transition-transform duration-200",
+                        isExpanded && "rotate-180"
+                      )}
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+
+                  {/* Category Suggestions */}
+                  <div className="p-2 bg-white">
+                    <div className="flex flex-wrap gap-1.5">
+                      {visibleSuggestions.map((suggestion) => (
+                        <button
+                          key={suggestion}
+                          onClick={() => handleSuggestionClick(suggestion)}
+                          disabled={disabled}
+                          className={cn(
+                            "px-2.5 py-1 text-xs bg-white hover:bg-primary-50 text-gray-700 hover:text-primary-700 rounded-md transition-colors duration-200 border border-gray-200 hover:border-primary-300",
+                            disabled && "opacity-50 cursor-not-allowed",
+                            suggestion.length > maxLength && "opacity-50 cursor-not-allowed"
+                          )}
+                          title={suggestion.length > maxLength ? `Too long (${suggestion.length}/${maxLength})` : suggestion}
+                        >
+                          {suggestion}
+                        </button>
+                      ))}
+                    </div>
+
+                    {!isExpanded && category.suggestions.length > 4 && (
+                      <button
+                        onClick={() => toggleCategory(category.id)}
+                        className="mt-2 text-xs text-primary-600 hover:text-primary-700 font-medium"
+                      >
+                        +{category.suggestions.length - 4} more
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </div>
       </div>
