@@ -809,31 +809,32 @@ export default function UploadSection({
               </div>
             ) : audioUploaded ? (
               <div className="space-y-3">
-                <CheckCircle className="w-8 h-8 text-green-600 mx-auto" />
+                <CheckCircle className="w-6 h-6 text-green-600 mx-auto" />
                 <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Music className="w-4 h-4 text-green-600" />
-                      <div className="text-sm">
-                        <p className="font-medium text-green-800">
+                    <div className="flex items-center space-x-2 min-w-0 flex-1">
+                      <Music className="w-4 h-4 text-green-600 flex-shrink-0" />
+                      <div className="text-sm min-w-0 flex-1">
+                        <p className="font-medium text-green-800 truncate">
                           {session?.audio_filename || 'Audio uploaded'}
                         </p>
-                        <div className="text-green-600 space-x-2">
-                          {session?.audio_size && (
-                            <span>{formatFileSize(session.audio_size)}</span>
-                          )}
-                          {session?.audio_duration && (
-                            <span>
-                              • {Math.floor(session.audio_duration / 60)}:{Math.floor(session.audio_duration % 60).toString().padStart(2, '0')}
-                            </span>
-                          )}
-                        </div>
+                        {(session?.audio_size || session?.audio_duration) && (
+                          <p className="text-green-600 text-xs">
+                            {session.audio_size && formatFileSize(session.audio_size)}
+                            {session.audio_size && session.audio_duration && ' • '}
+                            {session.audio_duration && (
+                              <>
+                                {Math.floor(session.audio_duration / 60)}:{Math.floor(session.audio_duration % 60).toString().padStart(2, '0')}
+                              </>
+                            )}
+                          </p>
+                        )}
                       </div>
                     </div>
                     <button
                       onClick={() => handleRemoveFile('audio')}
                       disabled={removing.audio}
-                      className="flex items-center justify-center w-6 h-6 rounded-full bg-red-100 hover:bg-red-200 text-red-600 transition-colors disabled:opacity-50"
+                      className="flex items-center justify-center w-6 h-6 rounded-full bg-red-100 hover:bg-red-200 text-red-600 transition-colors disabled:opacity-50 flex-shrink-0 ml-2"
                       title="Remove audio"
                     >
                       {removing.audio ? (
