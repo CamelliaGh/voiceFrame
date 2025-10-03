@@ -151,6 +151,7 @@ class AdminBackground(Base):
     is_premium = Column(Boolean, default=False)
     description = Column(Text, nullable=True)
     category = Column(String(50), nullable=True)  # e.g., "nature", "abstract", "patterns"
+    orientation = Column(String(20), nullable=False, default="both")  # "portrait", "landscape", "both"
     usage_count = Column(Integer, default=0)  # Track how often it's used
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

@@ -56,12 +56,19 @@ class AdminResourceService:
 
         return result
 
-    def get_active_backgrounds(self, db: Session, category: Optional[str] = None) -> List[Dict[str, Any]]:
-        """Get active backgrounds, optionally filtered by category"""
+    def get_active_backgrounds(self, db: Session, category: Optional[str] = None, orientation: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Get active backgrounds, optionally filtered by category and orientation"""
         query = db.query(AdminBackground).filter(AdminBackground.is_active == True)
 
         if category:
             query = query.filter(AdminBackground.category == category)
+
+        if orientation:
+            # Filter by orientation: show backgrounds that match the requested orientation or are suitable for 'both'
+            query = query.filter(
+                (AdminBackground.orientation == orientation) |
+                (AdminBackground.orientation == 'both')
+            )
 
         backgrounds = query.all()
 
@@ -75,6 +82,7 @@ class AdminResourceService:
                 'is_premium': background.is_premium,
                 'description': background.description,
                 'category': background.category,
+                'orientation': background.orientation,
                 'usage_count': background.usage_count
             })
 
@@ -117,6 +125,7 @@ class AdminResourceService:
             'is_premium': background.is_premium,
             'description': background.description,
             'category': background.category,
+            'orientation': background.orientation,
             'usage_count': background.usage_count
         }
 

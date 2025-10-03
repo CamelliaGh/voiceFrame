@@ -1789,11 +1789,12 @@ async def get_suggested_texts(
 @app.get("/api/resources/backgrounds")
 async def get_backgrounds(
     category: Optional[str] = None,
+    orientation: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-    """Get backgrounds, optionally filtered by category"""
+    """Get backgrounds, optionally filtered by category and orientation"""
     try:
-        backgrounds = admin_resource_service.get_active_backgrounds(db, category)
+        backgrounds = admin_resource_service.get_active_backgrounds(db, category, orientation)
         return {"backgrounds": backgrounds}
     except Exception as e:
         logger.error(f"Error getting backgrounds: {str(e)}")

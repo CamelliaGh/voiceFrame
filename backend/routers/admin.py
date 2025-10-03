@@ -369,6 +369,7 @@ async def create_background(
         display_name=background_data.display_name,
         description=background_data.description,
         category=background_data.category,
+        orientation=background_data.orientation,
         is_premium=background_data.is_premium,
         file_path="",  # Will be set when file is uploaded
     )

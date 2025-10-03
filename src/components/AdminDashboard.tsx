@@ -68,6 +68,7 @@ interface AdminBackground {
   is_premium: boolean
   description?: string
   category?: string
+  orientation: string
   usage_count: number
   created_at: string
   updated_at: string
@@ -105,6 +106,7 @@ const AdminDashboard: React.FC = () => {
     display_name: '',
     description: '',
     category: 'general',
+    orientation: 'both',
     text: '',
     file: null as File | null
   })
@@ -112,6 +114,7 @@ const AdminDashboard: React.FC = () => {
     display_name: '',
     description: '',
     category: 'general',
+    orientation: 'both',
     text: '',
     file: null as File | null
   })
@@ -357,6 +360,7 @@ const AdminDashboard: React.FC = () => {
       display_name: '',
       description: '',
       category: 'general',
+      orientation: 'both',
       text: '',
       file: null
     })
@@ -403,6 +407,7 @@ const AdminDashboard: React.FC = () => {
             display_name: addFormData.display_name,
             description: addFormData.description,
             category: addFormData.category,
+            orientation: addFormData.orientation,
             is_premium: false
           }
           break
@@ -486,6 +491,7 @@ const AdminDashboard: React.FC = () => {
       display_name: item.display_name || item.name || item.value || '',
       description: item.description || '',
       category: item.category || item.data_type || 'general',
+      orientation: item.orientation || 'both',
       text: item.text || '',
       file: null
     })
@@ -520,7 +526,8 @@ const AdminDashboard: React.FC = () => {
           body = {
             display_name: editFormData.display_name,
             description: editFormData.description,
-            category: editFormData.category
+            category: editFormData.category,
+            orientation: editFormData.orientation
           }
           break
         case 'suggested-texts':
@@ -791,11 +798,24 @@ const AdminDashboard: React.FC = () => {
                           </p>
                         </div>
                       )}
-                      {item.category && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mt-2">
-                          {item.category}
-                        </span>
-                      )}
+                      <div className="flex items-center space-x-2 mt-2">
+                        {item.category && (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {item.category}
+                          </span>
+                        )}
+                        {activeTab === 'backgrounds' && item.orientation && (
+                          <span className={cn(
+                            "inline-flex items-center px-2 py-1 rounded-full text-xs font-medium",
+                            item.orientation === 'portrait' ? "bg-green-100 text-green-800" :
+                            item.orientation === 'landscape' ? "bg-orange-100 text-orange-800" :
+                            "bg-gray-100 text-gray-800"
+                          )}>
+                            {item.orientation === 'both' ? 'Any Orientation' :
+                             item.orientation === 'portrait' ? 'Portrait' : 'Landscape'}
+                          </span>
+                        )}
+                      </div>
                       <div className="flex items-center space-x-4 mt-2 text-xs text-gray-500">
                         <span>Created: {new Date(item.created_at).toLocaleDateString()}</span>
                         {item.usage_count !== undefined && (
@@ -969,6 +989,21 @@ const AdminDashboard: React.FC = () => {
                       <option value="abstract">Abstract</option>
                       <option value="nature">Nature</option>
                     </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Orientation
+                    </label>
+                    <select
+                      value={addFormData.orientation}
+                      onChange={(e) => setAddFormData({...addFormData, orientation: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                    >
+                      <option value="both">Both (Portrait & Landscape)</option>
+                      <option value="portrait">Portrait Only</option>
+                      <option value="landscape">Landscape Only</option>
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">Choose which orientations this background works best for</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1208,6 +1243,21 @@ const AdminDashboard: React.FC = () => {
                       <option value="abstract">Abstract</option>
                       <option value="nature">Nature</option>
                     </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Orientation
+                    </label>
+                    <select
+                      value={editFormData.orientation}
+                      onChange={(e) => setEditFormData({...editFormData, orientation: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                    >
+                      <option value="both">Both (Portrait & Landscape)</option>
+                      <option value="portrait">Portrait Only</option>
+                      <option value="landscape">Landscape Only</option>
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">Choose which orientations this background works best for</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">

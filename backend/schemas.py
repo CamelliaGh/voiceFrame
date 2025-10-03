@@ -240,6 +240,7 @@ class AdminBackgroundCreate(BaseModel):
     display_name: str = Field(..., min_length=1, max_length=100)
     description: Optional[str] = None
     category: Optional[str] = Field(None, max_length=50)
+    orientation: Literal["portrait", "landscape", "both"] = "both"
     is_premium: bool = False
 
 
@@ -247,6 +248,7 @@ class AdminBackgroundUpdate(BaseModel):
     display_name: Optional[str] = Field(None, min_length=1, max_length=100)
     description: Optional[str] = None
     category: Optional[str] = Field(None, max_length=50)
+    orientation: Optional[Literal["portrait", "landscape", "both"]] = None
     is_active: Optional[bool] = None
     is_premium: Optional[bool] = None
 
@@ -261,6 +263,7 @@ class AdminBackgroundResponse(BaseModel):
     is_premium: bool
     description: Optional[str]
     category: Optional[str]
+    orientation: str
     usage_count: int
     created_at: datetime
     updated_at: datetime

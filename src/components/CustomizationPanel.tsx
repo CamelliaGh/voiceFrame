@@ -423,6 +423,7 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
               value={backgroundId}
               onChange={handleBackgroundChange}
               disabled={processingStatus ? !processingStatus.waveform_ready : false}
+              pdfSize={pdfSize}
             />
           </div>
 

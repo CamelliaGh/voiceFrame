@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '004'
+revision = '004_increase_background_font_id_lengths'
 down_revision = '003'
 branch_labels = None
 depends_on = None

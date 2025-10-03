@@ -16,6 +16,7 @@ interface BackgroundSelectionProps {
   onChange: (backgroundId: string) => void
   disabled?: boolean
   className?: string
+  pdfSize?: 'A4' | 'A4_Landscape' | 'Letter' | 'Letter_Landscape' | 'A3' | 'A3_Landscape'
 }
 
 // Default fallback data in case API fails
@@ -64,11 +65,17 @@ const defaultBackgroundOptions: BackgroundOption[] = [
 
 const defaultCategories = ['All', 'Minimal', 'Abstract', 'Romantic']
 
+// Helper function to determine orientation from PDF size
+const getOrientationFromPdfSize = (pdfSize: string): 'portrait' | 'landscape' => {
+  return pdfSize.includes('Landscape') ? 'landscape' : 'portrait'
+}
+
 export default function BackgroundSelection({
   value,
   onChange,
   disabled = false,
-  className = ''
+  className = '',
+  pdfSize = 'A4'
 }: BackgroundSelectionProps) {
   const [selectedCategory, setSelectedCategory] = useState('All')
   const [previewBackground, setPreviewBackground] = useState<BackgroundOption | null>(null)
@@ -76,13 +83,17 @@ export default function BackgroundSelection({
   const [categories, setCategories] = useState<string[]>(defaultCategories)
   const [, setLoading] = useState(true)
 
-  // Fetch admin-managed backgrounds on component mount
+  // Fetch admin-managed backgrounds on component mount and when pdfSize changes
   useEffect(() => {
     const fetchBackgrounds = async () => {
       try {
         setLoading(true)
 
-        const response = await fetch('/api/resources/backgrounds')
+        // Determine orientation from PDF size
+        const orientation = getOrientationFromPdfSize(pdfSize)
+
+        // Fetch backgrounds filtered by orientation
+        const response = await fetch(`/api/resources/backgrounds?orientation=${orientation}`)
         if (response.ok) {
           const data = await response.json()
           const backgrounds = data.backgrounds?.map((bg: any) => {
@@ -134,7 +145,7 @@ export default function BackgroundSelection({
     }
 
     fetchBackgrounds()
-  }, [])
+  }, [pdfSize])
 
   const filteredBackgrounds = selectedCategory === 'All'
     ? backgroundOptions
