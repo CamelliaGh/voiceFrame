@@ -516,10 +516,10 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
       </div>
 
       {/* Navigation */}
-      <div className="flex flex-col sm:flex-row gap-3 sm:justify-between pt-6">
+      <div className="flex flex-col sm:flex-row gap-4 sm:justify-between pt-6 px-4 sm:px-0">
         <button
           onClick={onBack}
-          className="btn-secondary flex items-center justify-center space-x-2 w-full sm:w-auto order-2 sm:order-1"
+          className="btn-secondary flex items-center justify-center space-x-2 w-full sm:w-auto"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back to Upload</span>
@@ -528,7 +528,7 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
         <button
           onClick={handleNext}
           disabled={processingStatus ? !processingStatus.waveform_ready : false}
-          className={`btn-primary flex items-center justify-center space-x-2 w-full sm:w-auto order-1 sm:order-2 ${
+          className={`btn-primary flex items-center justify-center space-x-2 w-full sm:w-auto ${
             processingStatus && !processingStatus.waveform_ready
               ? 'opacity-50 cursor-not-allowed'
               : ''
