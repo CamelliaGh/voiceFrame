@@ -12,97 +12,12 @@ interface TextCustomizationProps {
   className?: string
 }
 
-// Default fallback data in case API fails - organized by category
+// Interface for suggestion categories from API
 interface SuggestionCategory {
   id: string
   name: string
-  emoji: string
   suggestions: string[]
 }
-
-const defaultSuggestionCategories: SuggestionCategory[] = [
-  {
-    id: 'romantic',
-    name: 'Romantic',
-    emoji: '💕',
-    suggestions: [
-      "Our Song ♪",
-      "I Love You",
-      "Forever & Always",
-      "Together Forever",
-      "My Heart",
-      "You & Me",
-      "Love Always",
-      "My Everything",
-      "Heart & Soul",
-      "True Love",
-      "Soulmates",
-      "Love Story"
-    ]
-  },
-  {
-    id: 'wedding',
-    name: 'Wedding',
-    emoji: '💍',
-    suggestions: [
-      "Wedding Day",
-      "First Dance 💕",
-      "Mr. & Mrs.",
-      "Happily Ever After",
-      "Just Married",
-      "I Do",
-      "Our Vows",
-      "Wedding Song",
-      "Our Big Day",
-      "Husband & Wife"
-    ]
-  },
-  {
-    id: 'anniversary',
-    name: 'Anniversary',
-    emoji: '🎊',
-    suggestions: [
-      "Our Anniversary",
-      "One Year Together",
-      "5 Years Strong",
-      "10 Years of Love",
-      "Celebrating Us",
-      "Anniversary Song",
-      "Years of Happiness",
-      "Our Milestone"
-    ]
-  },
-  {
-    id: 'baby',
-    name: 'Baby & Family',
-    emoji: '👶',
-    suggestions: [
-      "Baby's First Song",
-      "Welcome Little One",
-      "Our Family",
-      "Sweet Dreams Baby",
-      "Little Angel",
-      "Family Love",
-      "Baby Love",
-      "Growing Family"
-    ]
-  },
-  {
-    id: 'moments',
-    name: 'Special Moments',
-    emoji: '✨',
-    suggestions: [
-      "Perfect Day",
-      "Best Day Ever",
-      "Unforgettable",
-      "Precious Moments",
-      "Sweet Memories",
-      "Magical Moment",
-      "Beautiful Memory",
-      "Special Time"
-    ]
-  }
-]
 
 const defaultFontOptions = [
   { id: 'script', name: 'Script', description: 'Handwritten style', preview: 'Script Font' },
@@ -142,7 +57,7 @@ export default function TextCustomization({
   const [characterCount, setCharacterCount] = useState(value.length)
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
   const [isNearLimit, setIsNearLimit] = useState(false)
-  const [suggestionCategories, setSuggestionCategories] = useState<SuggestionCategory[]>(defaultSuggestionCategories)
+  const [suggestionCategories, setSuggestionCategories] = useState<SuggestionCategory[]>([])
   const [fontOptions, setFontOptions] = useState(defaultFontOptions)
   const [, setLoading] = useState(true)
 
@@ -157,21 +72,51 @@ export default function TextCustomization({
       try {
         setLoading(true)
 
-        // Fetch suggested texts (keep existing API, but organize by category if available)
+        // Fetch suggested texts and organize by category
         const textsResponse = await fetch('/api/resources/suggested-texts')
         if (textsResponse.ok) {
           const textsData = await textsResponse.json()
-          const suggestions = textsData.suggested_texts?.map((item: any) => item.text) || []
-          // If API returns suggestions, add them to the "Popular" category
-          if (suggestions.length > 0) {
-            const popularCategory: SuggestionCategory = {
-              id: 'popular',
-              name: 'Popular',
-              emoji: '⭐',
-              suggestions: suggestions.slice(0, 12)
+          const suggestions = textsData.suggested_texts || []
+
+          // Group suggestions by category
+          const categoryMap = new Map<string, string[]>()
+
+          suggestions.forEach((item: any) => {
+            const category = item.category || 'other'
+            if (!categoryMap.has(category)) {
+              categoryMap.set(category, [])
             }
-            setSuggestionCategories([popularCategory, ...defaultSuggestionCategories])
+            categoryMap.get(category)!.push(item.text)
+          })
+
+          // Convert to category objects with proper names
+          const categoryNames: Record<string, string> = {
+            'romantic': 'Romantic',
+            'wedding': 'Wedding',
+            'anniversary': 'Anniversary',
+            'baby': 'Baby & Family',
+            'moments': 'Special Moments',
+            'other': 'Other'
           }
+
+          const categories: SuggestionCategory[] = []
+          categoryMap.forEach((suggestions, categoryId) => {
+            categories.push({
+              id: categoryId,
+              name: categoryNames[categoryId] || categoryId.charAt(0).toUpperCase() + categoryId.slice(1),
+              suggestions: suggestions
+            })
+          })
+
+          // Sort categories by priority
+          const categoryOrder = ['romantic', 'wedding', 'anniversary', 'baby', 'moments', 'other']
+          categories.sort((a, b) => {
+            const aIndex = categoryOrder.indexOf(a.id)
+            const bIndex = categoryOrder.indexOf(b.id)
+            return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex)
+          })
+
+          setSuggestionCategories(categories)
         }
 
         // Fetch fonts
@@ -293,7 +238,6 @@ export default function TextCustomization({
                     className="w-full flex items-center justify-between px-3 py-1.5 bg-gray-50 hover:bg-gray-100 transition-colors"
                   >
                     <div className="flex items-center space-x-2">
-                      <span className="text-sm">{category.emoji}</span>
                       <span className="text-xs font-medium text-gray-900">{category.name}</span>
                       <span className="text-xs text-gray-500">({category.suggestions.length})</span>
                     </div>
