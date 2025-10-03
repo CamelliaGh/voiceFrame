@@ -218,26 +218,8 @@ export default function PDFSizeSelection({
         })}
       </div>
 
-      {/* Current Selection Preview */}
-      <div className="space-y-2">
-        <p className="text-sm font-medium text-gray-700">Selected Format:</p>
-        <div className="flex items-center space-x-4 p-3 bg-gray-50 rounded-lg">
-          {(() => {
-            const selectedOption = pdfSizeOptions.find(option => option.value === value)
-            if (!selectedOption) return null
 
-            return (
-              <>
-                {getSizePreview(selectedOption)}
-                <div>
-                  <p className="text-sm font-medium text-gray-900">{selectedOption.label}</p>
-                  <p className="text-xs text-gray-500">{selectedOption.dimensions}</p>
-                </div>
-              </>
-            )
-          })()}
-        </div>
-      </div>
+
     </div>
   )
 }
