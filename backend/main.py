@@ -48,6 +48,7 @@ from .services.consent_manager import consent_manager, ConsentType
 from .services.gdpr_service import gdpr_service
 from .services.data_minimization_service import data_minimization_service, DataCategory, ProcessingPurpose
 from .services.file_audit_logger import file_audit_logger, FileOperationContext, FileOperationType, FileType, FileOperationStatus
+from .metrics import get_metrics_response, MetricsMiddleware
 from .services.admin_resource_service import admin_resource_service
 from .routers import admin, admin_auth, simple_admin
 
@@ -80,6 +81,9 @@ app.add_middleware(
 )
 
 app.add_middleware(SecurityLoggingMiddleware)
+
+# Add metrics middleware
+app.add_middleware(MetricsMiddleware)
 
 # Initialize rate limiter on startup
 @app.on_event("startup")
@@ -139,6 +143,12 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "timestamp": datetime.utcnow()}
+
+
+@app.get("/metrics")
+async def metrics():
+    """Prometheus metrics endpoint"""
+    return get_metrics_response()
 
 
 @app.get("/api/price")

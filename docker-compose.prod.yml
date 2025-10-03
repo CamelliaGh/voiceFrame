@@ -5,22 +5,34 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-audioposter}
       POSTGRES_USER: ${POSTGRES_USER:-audioposter}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-audioposter_password}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"  # Bind to localhost only
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U audioposter"]
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
+    # Optimize PostgreSQL for production
+    command: >
+      postgres
+      -c shared_buffers=256MB
+      -c effective_cache_size=1GB
+      -c maintenance_work_mem=64MB
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=16MB
+      -c default_statistics_target=100
+      -c random_page_cost=1.1
+      -c effective_io_concurrency=200
 
   # Redis for caching and Celery
   redis:
     image: redis:7-alpine
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"  # Bind to localhost only
     volumes:
       - redis_data:/data
     healthcheck:
@@ -28,38 +40,32 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-
-  # ClamAV for virus scanning (disabled for ARM64 compatibility)
-  # clamav:
-  #   image: clamav/clamav:1.0
-  #   ports:
-  #     - "3310:3310"
-  #   volumes:
-  #     - clamav_data:/var/lib/clamav
-  #   healthcheck:
-  #     test: ["CMD", "clamdscan", "--version"]
-  #     interval: 30s
-  #     timeout: 10s
-  #     retries: 5
+    restart: unless-stopped
+    # Optimize Redis for production
+    command: >
+      redis-server
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --save 900 1
+      --save 300 10
+      --save 60 10000
 
   # FastAPI Backend
   api:
     build: .
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"  # Bind to localhost only
     environment:
       - PYTHONUNBUFFERED=1
-      - DATABASE_URL=${DATABASE_URL:-postgresql://audioposter:audioposter_password@db:5432/audioposter}
-      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
-      - DEBUG=${DEBUG:-true}
-      - ENVIRONMENT=${ENVIRONMENT:-development}
-      # Debug settings
-      - DEBUG_PHOTO_CIRCLE=false
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - DEBUG=${DEBUG:-false}
+      - ENVIRONMENT=${ENVIRONMENT:-production}
       # AWS S3 credentials
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - S3_BUCKET=${S3_BUCKET:-audioposter-bucket}
-      - S3_REGION=${S3_REGION:-us-east-2}
+      - S3_BUCKET=${S3_BUCKET}
+      - S3_REGION=${S3_REGION}
       # Stripe credentials
       - STRIPE_PUBLIC_KEY=${STRIPE_PUBLIC_KEY}
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
@@ -69,51 +75,48 @@ services:
       - FROM_EMAIL=${FROM_EMAIL}
       # Application settings
       - SECRET_KEY=${SECRET_KEY}
-      - BASE_URL=${BASE_URL:-http://localhost:3000}
+      - BASE_URL=${BASE_URL}
       # Admin authentication
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}
-
-
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
     volumes:
-      - ./backend:/app/backend
-      - ./templates:/app/templates
-      - ./fonts:/app/fonts
-      - file_storage:/tmp/audioposter
+      # Only mount essential directories, not the entire backend
+      - ./templates:/app/templates:ro
+      - ./fonts:/app/fonts:ro
+      # Use a smaller, managed volume for temporary files
+      - temp_files:/tmp/audioposter
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
-      # clamav:
-      #   condition: service_healthy
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
+    # Resource limits
     deploy:
       resources:
         limits:
-          memory: 2G
-        reservations:
           memory: 1G
+        reservations:
+          memory: 512M
 
   # Celery Worker for background tasks
   celery-worker:
     build: .
     command: celery -A backend.tasks worker --loglevel=info --concurrency=2
     environment:
-      - DATABASE_URL=${DATABASE_URL:-postgresql://audioposter:audioposter_password@db:5432/audioposter}
-      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
-      - DEBUG=${DEBUG:-true}
-      - ENVIRONMENT=${ENVIRONMENT:-development}
-      # Debug settings
-      - DEBUG_PHOTO_CIRCLE=false
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - DEBUG=${DEBUG:-false}
+      - ENVIRONMENT=${ENVIRONMENT:-production}
       # AWS S3 credentials
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - S3_BUCKET=${S3_BUCKET:-audioposter-bucket}
-      - S3_REGION=${S3_REGION:-us-east-2}
+      - S3_BUCKET=${S3_BUCKET}
+      - S3_REGION=${S3_REGION}
       # Stripe credentials
       - STRIPE_PUBLIC_KEY=${STRIPE_PUBLIC_KEY}
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
@@ -123,13 +126,13 @@ services:
       - FROM_EMAIL=${FROM_EMAIL}
       # Application settings
       - SECRET_KEY=${SECRET_KEY}
-      - BASE_URL=${BASE_URL:-http://localhost:3000}
+      - BASE_URL=${BASE_URL}
       # Admin authentication
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
     volumes:
-      - ./backend:/app/backend
-      - ./fonts:/app/fonts
-      - file_storage:/tmp/audioposter
+      - ./templates:/app/templates:ro
+      - ./fonts:/app/fonts:ro
+      - temp_files:/tmp/audioposter
     depends_on:
       db:
         condition: service_healthy
@@ -142,17 +145,25 @@ services:
       timeout: 5s
       retries: 3
       start_period: 60s
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
 
   # Celery Beat for periodic tasks
   celery-beat:
     build: .
     command: celery -A backend.tasks beat --loglevel=info
     environment:
-      - DATABASE_URL=postgresql://audioposter:audioposter_password@db:5432/audioposter
-      - REDIS_URL=redis://redis:6379
-      - DEBUG=true
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - DEBUG=${DEBUG:-false}
+      - ENVIRONMENT=${ENVIRONMENT:-production}
     volumes:
-      - ./backend:/app/backend
+      - ./backend:/app/backend:ro
     depends_on:
       db:
         condition: service_healthy
@@ -165,46 +176,52 @@ services:
       timeout: 5s
       retries: 3
       start_period: 60s
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
 
-  # Test environment
-  test:
-    build:
-      context: .
-      dockerfile: Dockerfile.test
-    environment:
-      - DATABASE_URL=sqlite:///./test.db
-      - TESTING=true
-      - DEBUG=true
-      # Add AWS S3 credentials for testing
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - S3_BUCKET=audioposter-bucket
-      - S3_REGION=us-east-2
-    volumes:
-      - ./backend:/app/backend
-      - ./templates:/app/templates
-      - ./fonts:/app/fonts
-      - ./scripts:/app/scripts
-      - ./requirements-test.txt:/app/requirements-test.txt
-    working_dir: /app
-    command: tail -f /dev/null  # Keep container running for interactive testing
-
-  # Nginx for serving static files and reverse proxy (production)
+  # Nginx for serving static files and reverse proxy
   nginx:
     image: nginx:alpine
     ports:
       - "80:80"
+      - "443:443"
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf
-      - file_storage:/var/www/static
+      - ./nginx.prod.conf:/etc/nginx/nginx.conf:ro
+      - ./dist:/var/www/html:ro
+      - temp_files:/var/www/static:ro
+      - ./ssl:/etc/nginx/ssl:ro  # For SSL certificates
     depends_on:
       - api
     restart: unless-stopped
-    profiles:
-      - production
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
 
 volumes:
   postgres_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/voiceframe/data/postgres
   redis_data:
-  # clamav_data:
-  file_storage:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/voiceframe/data/redis
+  temp_files:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/voiceframe/data/temp

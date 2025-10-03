@@ -1,0 +1,125 @@
+groups:
+  - name: voiceframe_alerts
+    rules:
+      # Disk space alerts
+      - alert: HighDiskUsage
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 10
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High disk usage on {{ $labels.instance }}"
+          description: "Disk usage is above 90% on {{ $labels.instance }}. Current usage: {{ $value }}%"
+
+      - alert: MediumDiskUsage
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 20
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Medium disk usage on {{ $labels.instance }}"
+          description: "Disk usage is above 80% on {{ $labels.instance }}. Current usage: {{ $value }}%"
+
+      # Memory alerts
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 90
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High memory usage on {{ $labels.instance }}"
+          description: "Memory usage is above 90% on {{ $labels.instance }}. Current usage: {{ $value }}%"
+
+      # Container alerts
+      - alert: ContainerHighCPU
+        expr: rate(container_cpu_usage_seconds_total{name=~"voiceframe.*"}[5m]) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage in container {{ $labels.name }}"
+          description: "Container {{ $labels.name }} is using more than 80% CPU"
+
+      - alert: ContainerHighMemory
+        expr: (container_memory_usage_bytes{name=~"voiceframe.*"} / container_spec_memory_limit_bytes{name=~"voiceframe.*"}) * 100 > 90
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High memory usage in container {{ $labels.name }}"
+          description: "Container {{ $labels.name }} is using more than 90% of its memory limit"
+
+      - alert: ContainerRestarted
+        expr: increase(container_start_time_seconds{name=~"voiceframe.*"}[1h]) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ $labels.name }} has restarted"
+          description: "Container {{ $labels.name }} has restarted in the last hour"
+
+      # Application alerts
+      - alert: VoiceFrameAPIDown
+        expr: up{job="voiceframe-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "VoiceFrame API is down"
+          description: "VoiceFrame API has been down for more than 1 minute"
+
+      - alert: VoiceFrameHighResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="voiceframe-api"}[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High response time for VoiceFrame API"
+          description: "95th percentile response time is above 2 seconds"
+
+      - alert: VoiceFrameHighErrorRate
+        expr: rate(http_requests_total{job="voiceframe-api",status=~"5.."}[5m]) / rate(http_requests_total{job="voiceframe-api"}[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High error rate for VoiceFrame API"
+          description: "Error rate is above 5% for VoiceFrame API"
+
+      # Database alerts
+      - alert: PostgreSQLDown
+        expr: up{job="postgres"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL is down"
+          description: "PostgreSQL database has been down for more than 1 minute"
+
+      - alert: PostgreSQLHighConnections
+        expr: pg_stat_database_numbackends / pg_settings_max_connections * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High PostgreSQL connection usage"
+          description: "PostgreSQL is using more than 80% of its max connections"
+
+      # Redis alerts
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis is down"
+          description: "Redis cache has been down for more than 1 minute"
+
+      - alert: RedisHighMemory
+        expr: redis_memory_used_bytes / redis_memory_max_bytes * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High Redis memory usage"
+          description: "Redis is using more than 90% of its memory limit"
