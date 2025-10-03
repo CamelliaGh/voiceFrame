@@ -48,19 +48,19 @@ function MainApp() {
       <Header />
 
       {/* Progress Steps - Mobile Optimized */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-8 sm:py-12">
         {/* Desktop Progress Stepper */}
-        <div className="hidden md:flex items-center justify-center mb-8">
+        <div className="hidden md:flex items-center justify-center mb-12">
           {steps.map((step, index) => (
             <React.Fragment key={step.id}>
               <div className="flex flex-col items-center">
                 <div
                   className={cn(
-                    'flex items-center justify-center w-12 h-12 rounded-full text-sm font-semibold transition-all duration-300 shadow-sm',
+                    'flex items-center justify-center w-14 h-14 rounded-full text-base font-bold transition-all duration-300 shadow-md',
                     currentStep === step.id
-                      ? 'bg-primary-600 text-white shadow-lg shadow-primary-200 scale-110'
+                      ? 'bg-primary-600 text-white shadow-xl shadow-primary-200 scale-110 ring-4 ring-primary-100'
                       : step.enabled
-                      ? 'bg-white text-primary-700 border-2 border-primary-300 cursor-pointer hover:bg-primary-50 hover:scale-105'
+                      ? 'bg-white text-primary-700 border-2 border-primary-300 cursor-pointer hover:bg-primary-50 hover:scale-110 active:scale-95'
                       : 'bg-gray-100 text-gray-400 border-2 border-gray-200'
                   )}
                   onClick={() => step.enabled && setCurrentStep(step.id)}
@@ -69,7 +69,7 @@ function MainApp() {
                 </div>
                 <span
                   className={cn(
-                    'mt-2 text-xs font-medium transition-colors',
+                    'mt-3 text-sm font-semibold transition-colors',
                     currentStep === step.id
                       ? 'text-primary-700'
                       : step.enabled
@@ -83,8 +83,8 @@ function MainApp() {
               {index < steps.length - 1 && (
                 <div
                   className={cn(
-                    'w-20 h-1 mx-4 rounded-full transition-all duration-300 mb-6',
-                    step.enabled ? 'bg-primary-300' : 'bg-gray-200'
+                    'w-24 h-1.5 mx-6 rounded-full transition-all duration-300 mb-8',
+                    step.enabled ? 'bg-primary-400' : 'bg-gray-200'
                   )}
                 />
               )}
@@ -132,7 +132,7 @@ function MainApp() {
         </div>
 
         {/* Step Content */}
-        <div className="space-y-8">
+        <div className="space-y-10">
           {currentStep === 'upload' && (
             <UploadSection
               onPhotosUploaded={() => setHasPhotos(true)}
