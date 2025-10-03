@@ -140,7 +140,7 @@ export default function TextCustomization({
   className = ''
 }: TextCustomizationProps) {
   const [characterCount, setCharacterCount] = useState(value.length)
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['romantic']))
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
   const [isNearLimit, setIsNearLimit] = useState(false)
   const [suggestionCategories, setSuggestionCategories] = useState<SuggestionCategory[]>(defaultSuggestionCategories)
   const [fontOptions, setFontOptions] = useState(defaultFontOptions)
@@ -277,30 +277,29 @@ export default function TextCustomization({
           </div>
         </div>
 
-        {/* Text Suggestions - Categorized */}
-        <div className="space-y-3">
+        {/* Text Suggestions - Categorized & Compact */}
+        <div className="space-y-2">
           <p className="text-sm font-medium text-gray-700">Quick suggestions:</p>
 
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {suggestionCategories.map((category) => {
               const isExpanded = expandedCategories.has(category.id)
-              const visibleSuggestions = isExpanded ? category.suggestions : category.suggestions.slice(0, 4)
 
               return (
                 <div key={category.id} className="border border-gray-200 rounded-lg overflow-hidden">
-                  {/* Category Header */}
+                  {/* Category Header - Clickable */}
                   <button
                     onClick={() => toggleCategory(category.id)}
-                    className="w-full flex items-center justify-between px-3 py-2 bg-gray-50 hover:bg-gray-100 transition-colors"
+                    className="w-full flex items-center justify-between px-3 py-1.5 bg-gray-50 hover:bg-gray-100 transition-colors"
                   >
                     <div className="flex items-center space-x-2">
-                      <span className="text-base">{category.emoji}</span>
-                      <span className="text-sm font-medium text-gray-900">{category.name}</span>
+                      <span className="text-sm">{category.emoji}</span>
+                      <span className="text-xs font-medium text-gray-900">{category.name}</span>
                       <span className="text-xs text-gray-500">({category.suggestions.length})</span>
                     </div>
                     <svg
                       className={cn(
-                        "w-4 h-4 text-gray-500 transition-transform duration-200",
+                        "w-3.5 h-3.5 text-gray-500 transition-transform duration-200",
                         isExpanded && "rotate-180"
                       )}
                       fill="none"
@@ -311,35 +310,28 @@ export default function TextCustomization({
                     </svg>
                   </button>
 
-                  {/* Category Suggestions */}
-                  <div className="p-2 bg-white">
-                    <div className="flex flex-wrap gap-1.5">
-                      {visibleSuggestions.map((suggestion) => (
-                        <button
-                          key={suggestion}
-                          onClick={() => handleSuggestionClick(suggestion)}
-                          disabled={disabled}
-                          className={cn(
-                            "px-2.5 py-1 text-xs bg-white hover:bg-primary-50 text-gray-700 hover:text-primary-700 rounded-md transition-colors duration-200 border border-gray-200 hover:border-primary-300",
-                            disabled && "opacity-50 cursor-not-allowed",
-                            suggestion.length > maxLength && "opacity-50 cursor-not-allowed"
-                          )}
-                          title={suggestion.length > maxLength ? `Too long (${suggestion.length}/${maxLength})` : suggestion}
-                        >
-                          {suggestion}
-                        </button>
-                      ))}
+                  {/* Category Suggestions - Only show when expanded */}
+                  {isExpanded && (
+                    <div className="p-2 bg-white border-t border-gray-100">
+                      <div className="flex flex-wrap gap-1.5">
+                        {category.suggestions.map((suggestion) => (
+                          <button
+                            key={suggestion}
+                            onClick={() => handleSuggestionClick(suggestion)}
+                            disabled={disabled}
+                            className={cn(
+                              "px-2.5 py-1 text-xs bg-white hover:bg-primary-50 text-gray-700 hover:text-primary-700 rounded-md transition-colors duration-200 border border-gray-200 hover:border-primary-300",
+                              disabled && "opacity-50 cursor-not-allowed",
+                              suggestion.length > maxLength && "opacity-50 cursor-not-allowed"
+                            )}
+                            title={suggestion.length > maxLength ? `Too long (${suggestion.length}/${maxLength})` : suggestion}
+                          >
+                            {suggestion}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-
-                    {!isExpanded && category.suggestions.length > 4 && (
-                      <button
-                        onClick={() => toggleCategory(category.id)}
-                        className="mt-2 text-xs text-primary-600 hover:text-primary-700 font-medium"
-                      >
-                        +{category.suggestions.length - 4} more
-                      </button>
-                    )}
-                  </div>
+                  )}
                 </div>
               )
             })}
