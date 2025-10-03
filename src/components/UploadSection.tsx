@@ -50,6 +50,8 @@ export default function UploadSection({
         if (session.photo_url) {
           setPreviewImages(prev => ({ ...prev, photo: session.photo_url }))
         }
+        // Notify parent component that photo is uploaded
+        onPhotosUploaded()
       }
 
       // Check if audio is uploaded
@@ -60,9 +62,11 @@ export default function UploadSection({
           ...prev,
           audio: `Audio file: ${session.audio_filename} (${session.audio_size ? formatFileSize(session.audio_size) : 'Unknown size'}, ${Math.floor(duration / 60)}:${Math.floor(duration % 60).toString().padStart(2, '0')})`
         }))
+        // Notify parent component that audio is uploaded
+        onAudioUploaded()
       }
     }
-  }, [session])
+  }, [session, onPhotosUploaded, onAudioUploaded])
 
   // Function to handle and categorize errors
   const handleUploadError = (error: any, fileType: 'photo' | 'audio'): string => {
