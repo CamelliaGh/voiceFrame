@@ -681,7 +681,16 @@ export default function UploadSection({
               </div>
             ) : photoUploaded ? (
               <div className="space-y-3">
-                <CheckCircle className="w-8 h-8 text-green-600 mx-auto" />
+                {previewImages.photo && (
+                  <div className="w-24 h-24 mx-auto rounded-lg overflow-hidden border-2 border-green-300">
+                    <img
+                      src={previewImages.photo}
+                      alt="Uploaded photo"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
+                <CheckCircle className="w-6 h-6 text-green-600 mx-auto" />
                 <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
