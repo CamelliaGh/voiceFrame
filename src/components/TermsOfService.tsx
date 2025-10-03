@@ -1,4 +1,5 @@
 import { FileText, Shield, Clock, CreditCard, Download, AlertTriangle, Mail, Scale, Users, Globe } from 'lucide-react'
+import Footer from './Footer'
 
 export default function TermsOfService() {
   const lastUpdated = "December 2024"
@@ -402,6 +403,7 @@ export default function TermsOfService() {
           </a>
         </div>
       </div>
+      <Footer />
     </div>
   )
 }

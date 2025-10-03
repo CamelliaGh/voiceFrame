@@ -1,4 +1,5 @@
-import { Shield, Lock, Eye, Download, Trash2, Edit, Mail, FileText, Clock, Globe } from 'lucide-react'
+import { Shield, Lock, Eye, Download, Trash2, CreditCard as Edit, Mail, FileText, Clock, Globe } from 'lucide-react'
+import Footer from './Footer'
 
 export default function Privacy() {
   const lastUpdated = "December 2024"
@@ -409,6 +410,7 @@ export default function Privacy() {
           </a>
         </div>
       </div>
+      <Footer />
     </div>
   )
 }

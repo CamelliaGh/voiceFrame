@@ -3,6 +3,7 @@ import { loadStripe } from '@stripe/stripe-js'
 import { Elements } from '@stripe/react-stripe-js'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import Header from './components/Header'
+import Footer from './components/Footer'
 import UploadSection from './components/UploadSection'
 import CustomizationPanel from './components/CustomizationPanel'
 import PreviewSection from './components/PreviewSection'
@@ -163,6 +164,7 @@ function MainApp() {
           )}
         </div>
       </div>
+      <Footer />
     </div>
   )
 }
