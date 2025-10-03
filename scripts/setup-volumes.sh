@@ -33,6 +33,9 @@ $LOG_DIR/*.log {
 }
 EOF
 
+# Create scripts directory if it doesn't exist
+mkdir -p "$APP_DIR/scripts"
+
 # Create volume monitoring script
 cat > "$APP_DIR/scripts/monitor-volumes.sh" << 'EOF'
 #!/bin/bash
