@@ -317,3 +317,37 @@ class AdminUserUpdate(BaseModel):
     password: Optional[str] = None
     is_active: Optional[bool] = None
     is_superuser: Optional[bool] = None
+
+
+# Admin Configuration Schemas
+class AdminConfigCreate(BaseModel):
+    key: str = Field(..., min_length=1, max_length=100)
+    value: str = Field(..., min_length=1, max_length=500)
+    description: Optional[str] = None
+    data_type: Literal["string", "integer", "float", "boolean"] = "string"
+
+
+class AdminConfigUpdate(BaseModel):
+    value: Optional[str] = Field(None, min_length=1, max_length=500)
+    description: Optional[str] = None
+    data_type: Optional[Literal["string", "integer", "float", "boolean"]] = None
+    is_active: Optional[bool] = None
+
+
+class AdminConfigResponse(BaseModel):
+    id: str
+    key: str
+    value: str
+    description: Optional[str]
+    data_type: str
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+
+    @field_validator('id', mode='before')
+    @classmethod
+    def convert_uuid_to_str(cls, v):
+        return str(v) if v is not None else v
+
+    class Config:
+        from_attributes = True

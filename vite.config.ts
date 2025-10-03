@@ -33,6 +33,10 @@ export default defineConfig({
         target: 'http://localhost:8000',
         changeOrigin: true,
       },
+      '/admin/config': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
       '/admin/simple': {
         target: 'http://localhost:8000',
         changeOrigin: true,

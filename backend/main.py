@@ -28,6 +28,7 @@ from .schemas import (
     UploadResponse,
 )
 from .services.audio_processor import AudioProcessor
+from .services.config_service import config_service
 from .services.content_filter import content_filter
 from .services.email_service import EmailService
 from .services.privacy_service import PrivacyService
@@ -138,6 +139,26 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "timestamp": datetime.utcnow()}
+
+
+@app.get("/api/price")
+async def get_current_price(db: Session = Depends(get_db)):
+    """Get the current price in cents for the audio poster"""
+    try:
+        price_cents = config_service.get_price_cents(db)
+        return {
+            "price_cents": price_cents,
+            "price_dollars": price_cents / 100,
+            "formatted_price": f"${price_cents / 100:.2f}"
+        }
+    except Exception as e:
+        logger.error(f"Error getting current price: {str(e)}")
+        # Return default price if there's an error
+        return {
+            "price_cents": 299,
+            "price_dollars": 2.99,
+            "formatted_price": "$2.99"
+        }
 
 
 # Session Management
@@ -665,9 +686,9 @@ async def create_payment_intent(
         raise HTTPException(status_code=404, detail="Session not found")
 
     try:
-        # Create order record with fixed price
+        # Create order record with configurable price
         order_id = str(uuid.uuid4())
-        amount = 299  # Fixed price: $2.99
+        amount = config_service.get_price_cents(db)  # Get price from database configuration
 
         order = Order(
             id=order_id,

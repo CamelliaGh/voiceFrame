@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useStripe, useElements, CardElement } from '@stripe/react-stripe-js'
 import { Check, ArrowLeft, CreditCard, Lock, Download, Star } from 'lucide-react'
 import { useSession } from '../contexts/SessionContext'
@@ -9,11 +9,20 @@ interface PricingSectionProps {
   onBack: () => void
 }
 
-const pricingTiers = [
+interface PricingTier {
+  id: string
+  name: string
+  price: number
+  description: string
+  features: string[]
+  popular: boolean
+}
+
+const createPricingTiers = (price: number): PricingTier[] => [
   {
     id: 'standard',
     name: 'Download Your Poster',
-    price: 299,
+    price: price,
     description: 'Get your high-quality audio poster PDF',
     features: [
       'Remove watermark',
@@ -46,13 +55,40 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
   const { session } = useSession()
   const stripe = useStripe()
   const elements = useElements()
-  
+
   const [selectedTier, setSelectedTier] = useState<'standard' | 'premium'>('standard')
+  const [currentPrice, setCurrentPrice] = useState<number>(299) // Default price
+  const [pricingTiers, setPricingTiers] = useState<PricingTier[]>(createPricingTiers(299))
+  const [priceLoading, setPriceLoading] = useState<boolean>(true)
   const [email, setEmail] = useState('')
   const [processing, setProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null)
+
+  // Fetch current price from API
+  useEffect(() => {
+    const fetchPrice = async () => {
+      try {
+        setPriceLoading(true)
+        const response = await fetch('/api/price')
+        if (response.ok) {
+          const priceData = await response.json()
+          setCurrentPrice(priceData.price_cents)
+          setPricingTiers(createPricingTiers(priceData.price_cents))
+        } else {
+          console.error('Failed to fetch price, using default')
+        }
+      } catch (error) {
+        console.error('Error fetching price:', error)
+        // Keep default price if fetch fails
+      } finally {
+        setPriceLoading(false)
+      }
+    }
+
+    fetchPrice()
+  }, [])
 
   const selectedPrice = pricingTiers.find(tier => tier.id === selectedTier)
 
@@ -124,12 +160,12 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <Check className="w-8 h-8 text-green-600" />
           </div>
-          
+
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Payment Successful!</h2>
           <p className="text-gray-600 mb-6">
             Your audio poster is ready for download. We've also sent the download link to your email.
           </p>
-          
+
           <button
             onClick={handleDownload}
             className="btn-primary w-full flex items-center justify-center space-x-2 mb-4"
@@ -137,7 +173,7 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
             <Download className="w-4 h-4" />
             <span>Download Your Poster</span>
           </button>
-          
+
           <p className="text-sm text-gray-500">
             Download link expires in 7 days
           </p>
@@ -169,7 +205,7 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
                 </div>
               </div>
             )}
-            
+
             <div className="flex items-center space-x-3 mb-4">
               <input
                 type="radio"
@@ -184,16 +220,23 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
                 <p className="text-sm text-gray-600">{tier.description}</p>
               </div>
             </div>
-            
+
             <div className="mb-4">
               <div className="flex items-baseline space-x-2">
                 <span className="text-3xl font-bold text-gray-900">
-                  ${(tier.price / 100).toFixed(2)}
+                  {priceLoading ? (
+                    <div className="inline-flex items-center">
+                      <div className="w-6 h-6 border-2 border-gray-300 border-t-gray-900 rounded-full animate-spin mr-2" />
+                      Loading...
+                    </div>
+                  ) : (
+                    `$${(tier.price / 100).toFixed(2)}`
+                  )}
                 </span>
                 {/* Original price removed for simplicity */}
               </div>
             </div>
-            
+
             <ul className="space-y-2">
               {tier.features.map((feature, index) => (
                 <li key={index} className="flex items-center space-x-2 text-sm">
@@ -257,7 +300,7 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
                 <>
                   <CreditCard className="w-4 h-4" />
                   <span>
-                    Pay ${selectedPrice ? (selectedPrice.price / 100).toFixed(2) : '0.00'}
+                    Pay {priceLoading ? '...' : `$${selectedPrice ? (selectedPrice.price / 100).toFixed(2) : '0.00'}`}
                   </span>
                 </>
               )}

@@ -154,3 +154,16 @@ class AdminBackground(Base):
     usage_count = Column(Integer, default=0)  # Track how often it's used
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class AdminConfig(Base):
+    __tablename__ = "admin_config"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    key = Column(String(100), nullable=False, unique=True)  # Configuration key (e.g., "price_cents")
+    value = Column(String(500), nullable=False)  # Configuration value as string
+    description = Column(Text, nullable=True)  # Human-readable description
+    data_type = Column(String(20), nullable=False, default="string")  # "string", "integer", "float", "boolean"
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

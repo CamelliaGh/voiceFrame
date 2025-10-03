@@ -10,7 +10,8 @@ import {
   Search,
   Filter,
   LogOut,
-  Plus
+  Plus,
+  Cog
 } from 'lucide-react'
 import { cn } from '../lib/utils'
 import AdminLogin from './AdminLogin'
@@ -72,7 +73,18 @@ interface AdminBackground {
   updated_at: string
 }
 
-type ResourceType = 'fonts' | 'suggested-texts' | 'backgrounds'
+interface AdminConfig {
+  id: string
+  key: string
+  value: string
+  description?: string
+  data_type: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+type ResourceType = 'fonts' | 'suggested-texts' | 'backgrounds' | 'config'
 
 const AdminDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<ResourceType>('fonts')
@@ -80,6 +92,7 @@ const AdminDashboard: React.FC = () => {
   const [fonts, setFonts] = useState<AdminFont[]>([])
   const [suggestedTexts, setSuggestedTexts] = useState<AdminSuggestedText[]>([])
   const [backgrounds, setBackgrounds] = useState<AdminBackground[]>([])
+  const [configs, setConfigs] = useState<AdminConfig[]>([])
   const [loading, setLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [adminPassword, setAdminPassword] = useState<string | null>(null)
@@ -218,6 +231,30 @@ const AdminDashboard: React.FC = () => {
     }
   }
 
+  const fetchConfigs = async () => {
+    if (!adminPassword) return
+
+    setLoading(true)
+    try {
+      const response = await fetch('/admin/config', {
+        headers: {
+          'Authorization': `Bearer ${adminPassword}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setConfigs(data.items)
+      } else if (response.status === 401 || response.status === 403) {
+        handleLogout()
+      }
+    } catch (error) {
+      console.error('Failed to fetch configurations:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   useEffect(() => {
     if (isAuthenticated) {
       fetchStats()
@@ -235,6 +272,9 @@ const AdminDashboard: React.FC = () => {
           break
         case 'backgrounds':
           fetchBackgrounds()
+          break
+        case 'config':
+          fetchConfigs()
           break
       }
     }
@@ -263,6 +303,9 @@ const AdminDashboard: React.FC = () => {
             break
           case 'backgrounds':
             fetchBackgrounds()
+            break
+          case 'config':
+            fetchConfigs()
             break
         }
         fetchStats()
@@ -375,6 +418,19 @@ const AdminDashboard: React.FC = () => {
             is_premium: false
           }
           break
+        case 'config':
+          if (!addFormData.name || !addFormData.display_name) {
+            alert('Key and value are required')
+            return
+          }
+          endpoint = '/admin/config'
+          body = {
+            key: addFormData.name,
+            value: addFormData.display_name,
+            description: addFormData.description,
+            data_type: addFormData.category || 'string'
+          }
+          break
       }
 
       const response = await fetch(endpoint, {
@@ -405,6 +461,9 @@ const AdminDashboard: React.FC = () => {
           case 'backgrounds':
             fetchBackgrounds()
             break
+          case 'config':
+            fetchConfigs()
+            break
         }
         fetchStats()
         setShowAddModal(false)
@@ -424,9 +483,9 @@ const AdminDashboard: React.FC = () => {
   const handleEdit = (item: any) => {
     setEditingItem(item)
     setEditFormData({
-      display_name: item.display_name || item.name || '',
+      display_name: item.display_name || item.name || item.value || '',
       description: item.description || '',
-      category: item.category || 'general',
+      category: item.category || item.data_type || 'general',
       text: item.text || '',
       file: null
     })
@@ -475,6 +534,17 @@ const AdminDashboard: React.FC = () => {
             category: editFormData.category
           }
           break
+        case 'config':
+          if (!editFormData.display_name) {
+            alert('Value is required')
+            return
+          }
+          endpoint = `/admin/config/${editingItem.id}`
+          body = {
+            value: editFormData.display_name,
+            description: editFormData.description
+          }
+          break
       }
 
       const response = await fetch(endpoint, {
@@ -502,6 +572,9 @@ const AdminDashboard: React.FC = () => {
             break
           case 'backgrounds':
             fetchBackgrounds()
+            break
+          case 'config':
+            fetchConfigs()
             break
         }
         setShowEditModal(false)
@@ -531,13 +604,18 @@ const AdminDashboard: React.FC = () => {
       case 'backgrounds':
         items = backgrounds
         break
+      case 'config':
+        items = configs
+        break
     }
 
     if (searchTerm) {
       items = items.filter(item =>
         item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.display_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.text?.toLowerCase().includes(searchTerm.toLowerCase())
+        item.text?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.key?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.value?.toLowerCase().includes(searchTerm.toLowerCase())
       )
     }
 
@@ -548,6 +626,7 @@ const AdminDashboard: React.FC = () => {
     { id: 'fonts' as ResourceType, label: 'Fonts', icon: Type, count: stats?.fonts.total || 0 },
     { id: 'suggested-texts' as ResourceType, label: 'Suggested Texts', icon: FileText, count: stats?.suggested_texts.total || 0 },
     { id: 'backgrounds' as ResourceType, label: 'Backgrounds', icon: Image, count: stats?.backgrounds.total || 0 },
+    { id: 'config' as ResourceType, label: 'Configuration', icon: Cog, count: configs.length },
   ]
 
   // Show login form if not authenticated
@@ -683,7 +762,7 @@ const AdminDashboard: React.FC = () => {
                     <div className="flex-1">
                       <div className="flex items-center space-x-3">
                         <h3 className="text-lg font-medium text-gray-900">
-                          {item.display_name || item.name}
+                          {activeTab === 'config' ? item.key : (item.display_name || item.name)}
                         </h3>
                         {item.is_premium && (
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
@@ -701,6 +780,16 @@ const AdminDashboard: React.FC = () => {
                       )}
                       {item.text && (
                         <p className="text-sm text-gray-600 mt-1 line-clamp-2">{item.text}</p>
+                      )}
+                      {activeTab === 'config' && (
+                        <div className="mt-1">
+                          <p className="text-sm text-gray-600">
+                            <span className="font-medium">Value:</span> {item.value}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            <span className="font-medium">Type:</span> {item.data_type}
+                          </p>
+                        </div>
                       )}
                       {item.category && (
                         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mt-2">
@@ -941,6 +1030,62 @@ const AdminDashboard: React.FC = () => {
                   </div>
                 </>
               )}
+
+              {activeTab === 'config' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Configuration Key *
+                    </label>
+                    <input
+                      type="text"
+                      value={addFormData.name}
+                      onChange={(e) => setAddFormData({...addFormData, name: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="e.g., price_cents"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Value *
+                    </label>
+                    <input
+                      type="text"
+                      value={addFormData.display_name}
+                      onChange={(e) => setAddFormData({...addFormData, display_name: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="e.g., 299"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Data Type
+                    </label>
+                    <select
+                      value={addFormData.category}
+                      onChange={(e) => setAddFormData({...addFormData, category: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                    >
+                      <option value="string">String</option>
+                      <option value="integer">Integer</option>
+                      <option value="float">Float</option>
+                      <option value="boolean">Boolean</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Description
+                    </label>
+                    <textarea
+                      value={addFormData.description}
+                      onChange={(e) => setAddFormData({...addFormData, description: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                      rows={3}
+                      placeholder="Describe this configuration setting..."
+                    />
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="flex justify-end space-x-3 mt-6">
@@ -1120,6 +1265,57 @@ const AdminDashboard: React.FC = () => {
                       <option value="congratulations">Congratulations</option>
                       <option value="thank_you">Thank You</option>
                     </select>
+                  </div>
+                </>
+              )}
+
+              {activeTab === 'config' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Configuration Key
+                    </label>
+                    <input
+                      type="text"
+                      value={editingItem.key}
+                      disabled
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-500"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Configuration key cannot be changed</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Value *
+                    </label>
+                    <input
+                      type="text"
+                      value={editFormData.display_name}
+                      onChange={(e) => setEditFormData({...editFormData, display_name: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Data Type
+                    </label>
+                    <input
+                      type="text"
+                      value={editingItem.data_type}
+                      disabled
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-500"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Data type cannot be changed</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Description
+                    </label>
+                    <textarea
+                      value={editFormData.description}
+                      onChange={(e) => setEditFormData({...editFormData, description: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                      rows={3}
+                    />
                   </div>
                 </>
               )}

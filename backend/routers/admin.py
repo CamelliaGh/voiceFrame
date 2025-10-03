@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from ..database import get_db
-from ..models import AdminFont, AdminSuggestedText, AdminBackground
+from ..models import AdminFont, AdminSuggestedText, AdminBackground, AdminConfig
 from ..schemas import (
     AdminFontCreate,
     AdminFontUpdate,
@@ -25,8 +25,12 @@ from ..schemas import (
     AdminBackgroundUpdate,
     AdminBackgroundResponse,
     AdminResourceListResponse,
+    AdminConfigCreate,
+    AdminConfigUpdate,
+    AdminConfigResponse,
 )
 from ..services.admin_auth import AdminAuthService
+from ..services.config_service import config_service
 
 # Initialize admin auth service
 admin_auth = AdminAuthService()
@@ -514,3 +518,158 @@ async def get_admin_stats(
             "premium": background_stats.premium
         }
     }
+
+
+# Configuration Management Endpoints
+@router.get("/config", response_model=AdminResourceListResponse)
+async def list_config(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+    search: Optional[str] = None,
+    is_active: Optional[bool] = None,
+    db: Session = Depends(get_db),
+    _: bool = admin_auth.get_simple_password_dependency(),
+):
+    """List all configuration settings with pagination and filtering"""
+    query = db.query(AdminConfig)
+
+    if search:
+        query = query.filter(
+            AdminConfig.key.ilike(f"%{search}%") |
+            AdminConfig.description.ilike(f"%{search}%")
+        )
+
+    if is_active is not None:
+        query = query.filter(AdminConfig.is_active == is_active)
+
+    total = query.count()
+    items = query.offset((page - 1) * per_page).limit(per_page).all()
+
+    return AdminResourceListResponse(
+        items=[AdminConfigResponse.model_validate(item) for item in items],
+        total=total,
+        page=page,
+        per_page=per_page,
+        total_pages=(total + per_page - 1) // per_page
+    )
+
+
+@router.post("/config", response_model=AdminConfigResponse)
+async def create_config(
+    config_data: AdminConfigCreate,
+    db: Session = Depends(get_db),
+    _: bool = admin_auth.get_simple_password_dependency(),
+):
+    """Create a new configuration setting"""
+    # Check if config key already exists
+    existing_config = db.query(AdminConfig).filter(AdminConfig.key == config_data.key).first()
+    if existing_config:
+        raise HTTPException(status_code=400, detail="Configuration key already exists")
+
+    config = AdminConfig(
+        key=config_data.key,
+        value=config_data.value,
+        description=config_data.description,
+        data_type=config_data.data_type,
+    )
+
+    db.add(config)
+    db.commit()
+    db.refresh(config)
+
+    return AdminConfigResponse.model_validate(config)
+
+
+@router.get("/config/{config_id}", response_model=AdminConfigResponse)
+async def get_config(
+    config_id: str,
+    db: Session = Depends(get_db),
+    _: bool = admin_auth.get_simple_password_dependency(),
+):
+    """Get a specific configuration setting by ID"""
+    config = db.query(AdminConfig).filter(AdminConfig.id == config_id).first()
+    if not config:
+        raise HTTPException(status_code=404, detail="Configuration not found")
+
+    return AdminConfigResponse.model_validate(config)
+
+
+@router.get("/config/key/{config_key}", response_model=AdminConfigResponse)
+async def get_config_by_key(
+    config_key: str,
+    db: Session = Depends(get_db),
+    _: bool = admin_auth.get_simple_password_dependency(),
+):
+    """Get a specific configuration setting by key"""
+    config = db.query(AdminConfig).filter(AdminConfig.key == config_key).first()
+    if not config:
+        raise HTTPException(status_code=404, detail="Configuration not found")
+
+    return AdminConfigResponse.model_validate(config)
+
+
+@router.put("/config/{config_id}", response_model=AdminConfigResponse)
+async def update_config(
+    config_id: str,
+    config_data: AdminConfigUpdate,
+    db: Session = Depends(get_db),
+    _: bool = admin_auth.get_simple_password_dependency(),
+):
+    """Update a configuration setting"""
+    config = db.query(AdminConfig).filter(AdminConfig.id == config_id).first()
+    if not config:
+        raise HTTPException(status_code=404, detail="Configuration not found")
+
+    # Update fields
+    for field, value in config_data.model_dump(exclude_unset=True).items():
+        setattr(config, field, value)
+
+    db.commit()
+    db.refresh(config)
+
+    # Invalidate cache for this configuration key
+    config_service.invalidate_cache_key(config.key)
+
+    return AdminConfigResponse.model_validate(config)
+
+
+@router.put("/config/key/{config_key}", response_model=AdminConfigResponse)
+async def update_config_by_key(
+    config_key: str,
+    config_data: AdminConfigUpdate,
+    db: Session = Depends(get_db),
+    _: bool = admin_auth.get_simple_password_dependency(),
+):
+    """Update a configuration setting by key"""
+    config = db.query(AdminConfig).filter(AdminConfig.key == config_key).first()
+    if not config:
+        raise HTTPException(status_code=404, detail="Configuration not found")
+
+    # Update fields
+    for field, value in config_data.model_dump(exclude_unset=True).items():
+        setattr(config, field, value)
+
+    db.commit()
+    db.refresh(config)
+
+    # Invalidate cache for this configuration key
+    config_service.invalidate_cache_key(config.key)
+
+    return AdminConfigResponse.model_validate(config)
+
+
+@router.delete("/config/{config_id}")
+async def delete_config(
+    config_id: str,
+    db: Session = Depends(get_db),
+    _: bool = admin_auth.get_simple_password_dependency(),
+):
+    """Delete a configuration setting"""
+    config = db.query(AdminConfig).filter(AdminConfig.id == config_id).first()
+    if not config:
+        raise HTTPException(status_code=404, detail="Configuration not found")
+
+    db.delete(config)
+    db.commit()
+
+    return {"message": "Configuration deleted successfully"}
