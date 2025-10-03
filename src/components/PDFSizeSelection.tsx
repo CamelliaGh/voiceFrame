@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react'
-import { FileText, Maximize2, RotateCcw, Monitor } from 'lucide-react'
+import { FileText, Maximize2, RotateCcw, Monitor, Info } from 'lucide-react'
 import { cn } from '../lib/utils'
 
 interface PDFSizeOption {
@@ -87,6 +87,7 @@ export default function PDFSizeSelection({
   const [selectedCategory, setSelectedCategory] = useState<string>(
     pdfSizeOptions.find(option => option.value === value)?.category || 'A4'
   )
+  const [showTooltip, setShowTooltip] = useState(false)
 
   const filteredOptions = selectedCategory === 'All'
     ? pdfSizeOptions
@@ -122,7 +123,32 @@ export default function PDFSizeSelection({
     <div className={cn("space-y-4", className)}>
       {/* Category Filter */}
       <div className="space-y-2">
-        <p className="text-sm font-medium text-gray-700">Paper Size:</p>
+        <div className="flex items-center space-x-2">
+          <p className="text-sm font-medium text-gray-700">Paper Size:</p>
+          <div className="relative">
+            <button
+              onMouseEnter={() => setShowTooltip(true)}
+              onMouseLeave={() => setShowTooltip(false)}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+              type="button"
+            >
+              <Info className="w-4 h-4" />
+            </button>
+
+            {showTooltip && (
+              <div className="absolute left-0 top-6 z-50 w-64 bg-gray-900 text-white text-xs rounded-lg shadow-lg p-3 space-y-2">
+                <div className="absolute -top-1 left-2 w-2 h-2 bg-gray-900 transform rotate-45"></div>
+                <p className="font-semibold">Size Guide:</p>
+                <ul className="space-y-1.5">
+                  <li><strong>A4:</strong> International standard (210 × 297 mm)</li>
+                  <li><strong>Letter:</strong> US standard (8.5 × 11 in)</li>
+                  <li><strong>A3:</strong> Large format, twice the size of A4</li>
+                  <li><strong>Landscape:</strong> Wide format, great for panoramic photos</li>
+                </ul>
+              </div>
+            )}
+          </div>
+        </div>
         <div className="flex flex-wrap gap-2">
           {categories.map((category) => (
             <button
@@ -190,26 +216,6 @@ export default function PDFSizeSelection({
             </div>
           )
         })}
-      </div>
-
-      {/* Size Comparison Info */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-        <div className="flex items-start space-x-2">
-          <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-            <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-            </svg>
-          </div>
-          <div>
-            <h4 className="text-sm font-medium text-blue-900">Size Guide</h4>
-            <ul className="text-xs text-blue-700 mt-1 space-y-1">
-              <li>• <strong>A4:</strong> International standard (210 × 297 mm)</li>
-              <li>• <strong>Letter:</strong> US standard (8.5 × 11 in)</li>
-              <li>• <strong>A3:</strong> Large format, twice the size of A4</li>
-              <li>• <strong>Landscape:</strong> Wide format, great for panoramic photos</li>
-            </ul>
-          </div>
-        </div>
       </div>
 
       {/* Current Selection Preview */}

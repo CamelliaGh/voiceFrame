@@ -58,7 +58,6 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
   const elements = useElements()
 
   const [selectedTier, setSelectedTier] = useState<'standard' | 'premium'>('standard')
-  const [currentPrice, setCurrentPrice] = useState<number>(299) // Default price
   const [pricingTiers, setPricingTiers] = useState<PricingTier[]>(createPricingTiers(299))
   const [priceLoading, setPriceLoading] = useState<boolean>(true)
   const [email, setEmail] = useState('')
@@ -76,7 +75,6 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
         const response = await fetch('/api/price')
         if (response.ok) {
           const priceData = await response.json()
-          setCurrentPrice(priceData.price_cents)
           setPricingTiers(createPricingTiers(priceData.price_cents))
         } else {
           console.error('Failed to fetch price, using default')
