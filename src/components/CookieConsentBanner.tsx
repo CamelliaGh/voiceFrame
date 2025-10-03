@@ -4,6 +4,8 @@ import { cn } from '../lib/utils'
 
 interface CookieConsentBannerProps {
   onConsentChange?: (consent: CookieConsent) => void
+  showSettings?: boolean
+  onSettingsClose?: () => void
 }
 
 export interface CookieConsent {
@@ -18,9 +20,17 @@ export interface CookieConsent {
 const COOKIE_CONSENT_KEY = 'audioposter_cookie_consent'
 const CONSENT_VERSION = '1.0'
 
-export default function CookieConsentBanner({ onConsentChange }: CookieConsentBannerProps) {
+export default function CookieConsentBanner({ onConsentChange, showSettings, onSettingsClose }: CookieConsentBannerProps) {
   const [isVisible, setIsVisible] = useState(false)
   const [showDetails, setShowDetails] = useState(false)
+
+  // Handle external showSettings prop
+  useEffect(() => {
+    if (showSettings) {
+      setShowDetails(true)
+      setIsVisible(true)
+    }
+  }, [showSettings])
   const [consent, setConsent] = useState<CookieConsent>({
     necessary: true, // Always true - required for basic functionality
     analytics: false,
@@ -59,7 +69,9 @@ export default function CookieConsentBanner({ onConsentChange }: CookieConsentBa
     localStorage.setItem(COOKIE_CONSENT_KEY, JSON.stringify(consentWithTimestamp))
     setConsent(consentWithTimestamp)
     setIsVisible(false)
+    setShowDetails(false)
     onConsentChange?.(consentWithTimestamp)
+    onSettingsClose?.()
 
     // Send consent to backend
     sendConsentToBackend(consentWithTimestamp)
@@ -186,7 +198,10 @@ export default function CookieConsentBanner({ onConsentChange }: CookieConsentBa
                 Cookie Preferences
               </h3>
               <button
-                onClick={() => setShowDetails(false)}
+                onClick={() => {
+                  setShowDetails(false)
+                  onSettingsClose?.()
+                }}
                 className="text-gray-400 hover:text-gray-600"
               >
                 <X className="w-5 h-5" />

@@ -393,13 +393,19 @@ export default function Privacy() {
           </div>
         </div>
 
-        {/* Back to Home */}
-        <div className="mt-8 text-center">
+        {/* Navigation Links */}
+        <div className="mt-8 flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-6">
+          <a
+            href="/terms"
+            className="inline-flex items-center space-x-2 text-purple-600 hover:text-purple-700 font-medium"
+          >
+            <span>Terms of Service</span>
+          </a>
           <a
             href="/"
             className="inline-flex items-center space-x-2 text-purple-600 hover:text-purple-700 font-medium"
           >
-            <span>← Back to AudioPoster</span>
+            <span>← Back to VoiceFrame</span>
           </a>
         </div>
       </div>

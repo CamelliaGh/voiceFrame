@@ -1,10 +1,10 @@
-import { Music, AudioLines, Shield, Cookie } from 'lucide-react'
+import { Music, AudioLines, Shield, Cookie, Scale } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import CookieConsentBanner from './CookieConsentBanner'
 
 export default function Header() {
-  const [, setShowCookieSettings] = useState(false)
+  const [showCookieSettings, setShowCookieSettings] = useState(false)
 
   return (
     <>
@@ -30,8 +30,8 @@ export default function Header() {
                 <span className="font-medium text-gray-700">Turn your memories into art</span>
               </div>
 
-              {/* Privacy Links */}
-              <div className="flex items-center space-x-2 sm:space-x-3">
+              {/* Legal Links */}
+              <div className="flex items-center space-x-1 sm:space-x-2">
                 <Link
                   to="/privacy"
                   className="flex items-center space-x-1 px-2 sm:px-3 py-2 text-xs sm:text-sm text-gray-600 hover:text-primary-700 hover:bg-primary-50 rounded-lg transition-all"
@@ -39,6 +39,15 @@ export default function Header() {
                 >
                   <Shield className="w-4 h-4" />
                   <span className="hidden md:inline font-medium">Privacy</span>
+                </Link>
+
+                <Link
+                  to="/terms"
+                  className="flex items-center space-x-1 px-2 sm:px-3 py-2 text-xs sm:text-sm text-gray-600 hover:text-primary-700 hover:bg-primary-50 rounded-lg transition-all"
+                  title="Terms of Service"
+                >
+                  <Scale className="w-4 h-4" />
+                  <span className="hidden md:inline font-medium">Terms</span>
                 </Link>
 
                 <button
@@ -57,6 +66,8 @@ export default function Header() {
 
       {/* Cookie Consent Banner */}
       <CookieConsentBanner
+        showSettings={showCookieSettings}
+        onSettingsClose={() => setShowCookieSettings(false)}
         onConsentChange={(consent) => {
           console.log('Cookie consent updated:', consent)
         }}

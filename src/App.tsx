@@ -9,6 +9,7 @@ import PreviewSection from './components/PreviewSection'
 import PricingSection from './components/PricingSection'
 import AdminDashboard from './components/AdminDashboard'
 import Privacy from './components/Privacy'
+import TermsOfService from './components/TermsOfService'
 import { SessionProvider } from './contexts/SessionContext'
 import { cn } from './lib/utils'
 
@@ -175,6 +176,7 @@ function App() {
             <Route path="/" element={<MainApp />} />
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/privacy" element={<Privacy />} />
+            <Route path="/terms" element={<TermsOfService />} />
           </Routes>
         </Router>
       </SessionProvider>
