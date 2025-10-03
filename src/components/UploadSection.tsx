@@ -604,7 +604,7 @@ export default function UploadSection({
 
   return (
     <div className="space-y-6">
-      <div className="text-center px-4">
+      <div className="text-center px-4 animate-slide-in-bottom">
         <h2 className="section-title">Upload Your Files</h2>
         <p className="section-subtitle max-w-2xl mx-auto">
           Start by uploading a photo and an audio file. We'll create a beautiful poster combining
@@ -634,7 +634,7 @@ export default function UploadSection({
 
       <div className="grid sm:grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
         {/* Photo Upload */}
-        <div className="card">
+        <div className="card animate-slide-in-left">
           <div className="flex items-center space-x-2 mb-4">
             <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary-100">
               <Image className="w-5 h-5 text-primary-600" />
@@ -682,7 +682,7 @@ export default function UploadSection({
             ) : photoUploaded ? (
               <div className="space-y-3">
                 {previewImages.photo && (
-                  <div className="w-24 h-24 mx-auto rounded-lg overflow-hidden border-2 border-green-300">
+                  <div className="w-24 h-24 mx-auto rounded-lg overflow-hidden border-2 border-green-300 animate-scale-in">
                     <img
                       src={previewImages.photo}
                       alt="Uploaded photo"
@@ -690,7 +690,7 @@ export default function UploadSection({
                     />
                   </div>
                 )}
-                <CheckCircle className="w-6 h-6 text-green-600 mx-auto" />
+                <CheckCircle className="w-6 h-6 text-green-600 mx-auto animate-success-pop" />
                 <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
@@ -765,7 +765,7 @@ export default function UploadSection({
         </div>
 
         {/* Audio Upload */}
-        <div className="card">
+        <div className="card animate-slide-in-right">
           <div className="flex items-center space-x-2 mb-4">
             <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary-100">
               <Music className="w-5 h-5 text-primary-600" />
@@ -809,10 +809,10 @@ export default function UploadSection({
               </div>
             ) : audioUploaded ? (
               <div className="space-y-3">
-                <div className="w-24 h-24 mx-auto rounded-lg overflow-hidden border-2 border-green-300 bg-green-50 flex items-center justify-center">
+                <div className="w-24 h-24 mx-auto rounded-lg overflow-hidden border-2 border-green-300 bg-green-50 flex items-center justify-center animate-scale-in">
                   <Music className="w-12 h-12 text-green-600" />
                 </div>
-                <CheckCircle className="w-6 h-6 text-green-600 mx-auto" />
+                <CheckCircle className="w-6 h-6 text-green-600 mx-auto animate-success-pop" />
                 <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2 min-w-0 flex-1">
@@ -895,7 +895,7 @@ export default function UploadSection({
 
       {/* Continue Button */}
       {canProceed && (
-        <div className="flex justify-center pt-4 sm:pt-6">
+        <div className="flex justify-center pt-4 sm:pt-6 animate-slide-in-bottom">
           <button
             onClick={onNext}
             className="btn-primary w-full sm:w-auto px-8 py-4 text-base sm:text-lg font-semibold"

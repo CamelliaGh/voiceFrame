@@ -352,7 +352,7 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
 
   return (
     <div className="space-y-6">
-      <div className="text-center px-4">
+      <div className="text-center px-4 animate-slide-in-bottom">
         <h2 className="section-title">Customize Your Poster</h2>
         <p className="section-subtitle">
           Personalize your audio poster with custom text, size, and background options.
@@ -373,9 +373,9 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
 
       <div className="grid lg:grid-cols-2 gap-6 sm:gap-8 max-w-6xl mx-auto">
         {/* Customization Options */}
-        <div className={`space-y-4 sm:space-y-6 ${processingStatus && !processingStatus.waveform_ready ? 'opacity-50 pointer-events-none' : ''}`}>
+        <div className={`space-y-4 sm:space-y-6 stagger-children ${processingStatus && !processingStatus.waveform_ready ? 'opacity-50 pointer-events-none' : ''}`}>
           {/* Custom Text */}
-          <div className="card">
+          <div className="card animate-slide-in-left">
             <div className="flex items-center space-x-2 mb-4">
               <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary-100">
                 <Type className="w-5 h-5 text-primary-600" />
@@ -446,7 +446,7 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
         </div>
 
         {/* Manual Preview Section */}
-        <div className="lg:sticky lg:top-8 lg:h-fit">
+        <div className="lg:sticky lg:top-8 lg:h-fit animate-slide-in-right">
           <div className="card">
             <div className="flex items-center justify-between mb-4">
               <div>

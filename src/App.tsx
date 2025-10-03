@@ -93,8 +93,8 @@ function MainApp() {
         </div>
 
         {/* Mobile Progress Stepper */}
-        <div className="md:hidden mb-6">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+        <div className="md:hidden mb-8">
+          <div className="bg-white rounded-xl shadow-md border border-gray-200 p-5">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm font-semibold text-gray-900">
                 Step {steps.findIndex(s => s.id === currentStep) + 1} of {steps.length}
