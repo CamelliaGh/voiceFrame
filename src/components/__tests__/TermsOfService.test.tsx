@@ -44,7 +44,7 @@ describe('TermsOfService', () => {
 
     // Check for navigation links - use getAllByText since there are multiple instances
     expect(screen.getAllByText('Privacy Policy')).toHaveLength(2)
-    expect(screen.getByText('← Back to VoiceFrame')).toBeInTheDocument()
+    expect(screen.getByText('← Back to VocaFrame')).toBeInTheDocument()
   })
 
   it('displays contact information', () => {

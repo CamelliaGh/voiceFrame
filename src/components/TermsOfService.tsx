@@ -35,7 +35,7 @@ export default function TermsOfService() {
               </div>
               <div className="prose prose-gray max-w-none">
                 <p className="text-gray-700 leading-relaxed">
-                  Welcome to VoiceFrame (also referred to as "AudioPoster", "we", "us", or "our"). These Terms of Service
+                  Welcome to VocaFrame (also referred to as "AudioPoster", "we", "us", or "our"). These Terms of Service
                   ("Terms") govern your use of our audio poster generation service, including our website, mobile applications,
                   and related services (collectively, the "Service").
                 </p>
@@ -217,7 +217,7 @@ export default function TermsOfService() {
                 <div className="border border-gray-200 rounded-lg p-4">
                   <h3 className="font-semibold text-gray-900 mb-2">Our Service</h3>
                   <p className="text-gray-700 text-sm">
-                    The VoiceFrame service, including our software, algorithms, templates, and website design,
+                    The VocaFrame service, including our software, algorithms, templates, and website design,
                     are protected by copyright, trademark, and other intellectual property laws. You may not
                     copy, modify, or reverse engineer any part of our service.
                   </p>
@@ -250,7 +250,7 @@ export default function TermsOfService() {
                   <div>
                     <h3 className="font-semibold text-yellow-900 mb-2">Limitation of Liability</h3>
                     <p className="text-yellow-800 text-sm">
-                      To the maximum extent permitted by law, VoiceFrame shall not be liable for any indirect,
+                      To the maximum extent permitted by law, VocaFrame shall not be liable for any indirect,
                       incidental, special, or consequential damages arising from your use of the service.
                     </p>
                   </div>
@@ -318,7 +318,7 @@ export default function TermsOfService() {
               <div className="bg-gray-50 rounded-lg p-4">
                 <p className="text-gray-700 text-sm mb-3">
                   These Terms shall be governed by and construed in accordance with the laws of the jurisdiction
-                  where VoiceFrame is incorporated, without regard to its conflict of law provisions.
+                  where VocaFrame is incorporated, without regard to its conflict of law provisions.
                 </p>
                 <p className="text-gray-700 text-sm">
                   Any disputes arising from these Terms or your use of the service shall be resolved through
@@ -378,7 +378,7 @@ export default function TermsOfService() {
                 </div>
                 <div className="mt-6 pt-6 border-t border-gray-200">
                   <p className="text-gray-600 text-sm">
-                    By using VoiceFrame, you acknowledge that you have read, understood, and agree to be bound by these Terms of Service.
+                    By using VocaFrame, you acknowledge that you have read, understood, and agree to be bound by these Terms of Service.
                   </p>
                 </div>
               </div>
@@ -399,7 +399,7 @@ export default function TermsOfService() {
             href="/"
             className="inline-flex items-center space-x-2 text-purple-600 hover:text-purple-700 font-medium"
           >
-            <span>← Back to VoiceFrame</span>
+            <span>← Back to VocaFrame</span>
           </a>
         </div>
       </div>

@@ -378,7 +378,7 @@ class PDFGenerator:
         canvas_obj.rotate(45)
 
         # Draw watermark text
-        text = "PREVIEW - AudioPoster.com"
+        text = "PREVIEW - VocaFrame.com"
         text_width = canvas_obj.stringWidth(text, "Helvetica", 24)
         canvas_obj.drawString(-text_width / 2, 0, text)
 

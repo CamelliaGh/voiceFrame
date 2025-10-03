@@ -59,7 +59,7 @@ describe('Privacy Component', () => {
     render(<PrivacyWithRouter />)
 
     // Check for back to home link
-    const backLink = screen.getByText('← Back to AudioPoster')
+    const backLink = screen.getByText('← Back to VocaFrame')
     expect(backLink).toBeInTheDocument()
     expect(backLink.closest('a')).toHaveAttribute('href', '/')
   })

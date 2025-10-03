@@ -37,7 +37,7 @@ class EmailService:
             True if email sent successfully
         """
         try:
-            subject = "Your AudioPoster is Ready! 🎵"
+            subject = "Your VocaFrame is Ready! 🎵"
 
             # Format expiration time
             expires_str = expires_at.strftime("%B %d, %Y at %I:%M %p UTC")
@@ -71,7 +71,7 @@ class EmailService:
             True if email sent successfully
         """
         try:
-            subject = "Welcome to AudioPoster! 🎨"
+            subject = "Welcome to VocaFrame! 🎨"
 
             # Generate unsubscribe URL for this email
             unsubscribe_url = self.privacy_service.create_unsubscribe_url(email)
@@ -165,7 +165,7 @@ class EmailService:
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Your AudioPoster is Ready!</title>
+            <title>Your VocaFrame is Ready!</title>
             <style>
                 body {{ font-family: 'Arial', sans-serif; line-height: 1.6; color: #333; }}
                 .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}

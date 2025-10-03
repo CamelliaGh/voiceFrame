@@ -1,4 +1,4 @@
-# AudioPoster - Create Beautiful Audio Memory Posters
+# VocaFrame - Create Beautiful Audio Memory Posters
 
 Transform your favorite songs and voice messages into beautiful, personalized poster PDFs with custom photos and audio waveforms.
 
@@ -143,7 +143,7 @@ docker-compose -f docker-compose.yml --profile production up -d
 ## Project Structure
 
 ```
-voiceFrame/
+vocaframe/
 ├── src/                    # React frontend
 │   ├── components/         # React components
 │   ├── contexts/          # React contexts
@@ -198,7 +198,7 @@ voiceFrame/
 
 ### Templates
 - **Classic**: Clean, timeless design
-- **Modern**: Contemporary minimalist style  
+- **Modern**: Contemporary minimalist style
 - **Vintage**: Retro-inspired aesthetic
 - **Elegant**: Sophisticated and refined
 

@@ -17,7 +17,7 @@ export default function Header() {
                 <AudioLines className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
               </div>
               <div>
-                <h1 className="text-xl sm:text-2xl font-bold text-gray-900 leading-tight tracking-tight">VoiceFrame</h1>
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900 leading-tight tracking-tight">VocaFrame</h1>
                 <p className="hidden sm:block text-sm text-gray-600 leading-tight font-medium">Create beautiful audio memory posters</p>
               </div>
             </div>

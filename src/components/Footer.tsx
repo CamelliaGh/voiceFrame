@@ -10,7 +10,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Brand Section */}
           <div className="space-y-4">
-            <h3 className="text-lg font-bold text-gray-900">VoiceFrame</h3>
+            <h3 className="text-lg font-bold text-gray-900">VocaFrame</h3>
             <p className="text-sm text-gray-600 leading-relaxed">
               Transform your precious audio memories into beautiful, tangible posters that you can cherish forever.
             </p>
@@ -39,11 +39,11 @@ export default function Footer() {
           <div className="space-y-4">
             <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">Contact Us</h4>
             <a
-              href="mailto:contact@voiceframe.com"
+              href="mailto:contact@vocaframe.com"
               className="flex items-center space-x-2 text-sm text-gray-600 hover:text-primary-600 transition-colors group"
             >
               <Mail className="w-4 h-4 group-hover:scale-110 transition-transform" />
-              <span>contact@voiceframe.com</span>
+              <span>contact@vocaframe.com</span>
             </a>
             <p className="text-xs text-gray-500 leading-relaxed">
               We'd love to hear from you! Send us your questions, feedback, or just say hello.
@@ -56,7 +56,7 @@ export default function Footer() {
           <div className="flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0">
             {/* Copyright */}
             <p className="text-sm text-gray-600 text-center sm:text-left">
-              © {currentYear} VoiceFrame. All rights reserved.
+              © {currentYear} VocaFrame. All rights reserved.
             </p>
 
             {/* Made with love */}

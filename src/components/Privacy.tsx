@@ -35,7 +35,7 @@ export default function Privacy() {
               </div>
               <div className="prose prose-gray max-w-none">
                 <p className="text-gray-700 leading-relaxed">
-                  At AudioPoster, we are committed to protecting your privacy and ensuring the security of your personal information.
+                  At VocaFrame, we are committed to protecting your privacy and ensuring the security of your personal information.
                   This Privacy Policy explains how we collect, use, store, and protect your data when you use our service to create
                   beautiful audio memory posters.
                 </p>
@@ -251,8 +251,8 @@ export default function Privacy() {
               <div className="mt-6 p-4 bg-purple-50 rounded-lg">
                 <p className="text-purple-800 text-sm">
                   <strong>To exercise your rights:</strong> Contact us at{' '}
-                  <a href="mailto:privacy@audioposter.com" className="underline hover:no-underline">
-                    privacy@audioposter.com
+                  <a href="mailto:privacy@vocaframe.com" className="underline hover:no-underline">
+                    privacy@vocaframe.com
                   </a>{' '}
                   with your request. We will respond within 30 days.
                 </p>
@@ -349,10 +349,10 @@ export default function Privacy() {
                       For any privacy-related questions or to exercise your rights:
                     </p>
                     <a
-                      href="mailto:privacy@audioposter.com"
+                      href="mailto:privacy@vocaframe.com"
                       className="text-purple-600 hover:underline font-medium"
                     >
-                      privacy@audioposter.com
+                      privacy@vocaframe.com
                     </a>
                   </div>
                   <div>
@@ -361,10 +361,10 @@ export default function Privacy() {
                       For technical support or general inquiries:
                     </p>
                     <a
-                      href="mailto:support@audioposter.com"
+                      href="mailto:support@vocaframe.com"
                       className="text-purple-600 hover:underline font-medium"
                     >
-                      support@audioposter.com
+                      support@vocaframe.com
                     </a>
                   </div>
                 </div>
@@ -406,7 +406,7 @@ export default function Privacy() {
             href="/"
             className="inline-flex items-center space-x-2 text-purple-600 hover:text-purple-700 font-medium"
           >
-            <span>← Back to VoiceFrame</span>
+            <span>← Back to VocaFrame</span>
           </a>
         </div>
       </div>

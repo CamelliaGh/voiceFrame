@@ -1057,7 +1057,7 @@ async def listen_to_audio(identifier: str, db: Session = Depends(get_db)):
 
                 <div class="footer">
                     <p>This memory was preserved for you by</p>
-                    <a href="https://audioposter.com" class="brand">AudioPoster</a>
+                    <a href="https://vocaframe.com" class="brand">VocaFrame</a>
                     <p style="margin-top: 1rem; font-size: 0.8rem;">
                         💡 Tip: Bookmark this page to keep this memory accessible
                     </p>
