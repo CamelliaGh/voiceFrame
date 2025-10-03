@@ -809,6 +809,9 @@ export default function UploadSection({
               </div>
             ) : audioUploaded ? (
               <div className="space-y-3">
+                <div className="w-24 h-24 mx-auto rounded-lg overflow-hidden border-2 border-green-300 bg-green-50 flex items-center justify-center">
+                  <Music className="w-12 h-12 text-green-600" />
+                </div>
                 <CheckCircle className="w-6 h-6 text-green-600 mx-auto" />
                 <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                   <div className="flex items-center justify-between">
