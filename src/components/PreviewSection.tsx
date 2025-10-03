@@ -276,10 +276,10 @@ export default function PreviewSection({ onNext, onBack }: PreviewSectionProps) 
       </div>
 
       {/* Navigation */}
-      <div className="flex justify-between pt-6">
+      <div className="flex flex-col sm:flex-row gap-4 sm:justify-between pt-6 px-4 sm:px-0">
         <button
           onClick={onBack}
-          className="btn-secondary flex items-center space-x-2"
+          className="btn-secondary flex items-center justify-center space-x-2 w-full sm:w-auto"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back to Customize</span>
@@ -287,7 +287,7 @@ export default function PreviewSection({ onNext, onBack }: PreviewSectionProps) 
 
         <button
           onClick={onNext}
-          className="btn-primary flex items-center space-x-2"
+          className="btn-primary flex items-center justify-center space-x-2 w-full sm:w-auto"
         >
           <span>Purchase & Download</span>
           <ArrowRight className="w-4 h-4" />
