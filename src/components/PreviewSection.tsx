@@ -293,6 +293,31 @@ export default function PreviewSection({ onNext, onBack }: PreviewSectionProps) 
           <ArrowRight className="w-4 h-4" />
         </button>
       </div>
+
+      {/* Terms and Privacy Notice */}
+      <div className="text-center pt-4 pb-2 px-4">
+        <p className="text-sm text-gray-600">
+          By continuing, you agree to our{' '}
+          <a
+            href="/terms"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary-600 hover:text-primary-700 underline font-medium"
+          >
+            Terms of Service
+          </a>
+          {' '}and{' '}
+          <a
+            href="/privacy"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary-600 hover:text-primary-700 underline font-medium"
+          >
+            Privacy Policy
+          </a>
+          .
+        </p>
+      </div>
     </div>
   )
 }
