@@ -111,7 +111,7 @@ services:
   nginx:
     image: nginx:alpine
     ports:
-      - "80:80"
+      - "8080:80"
     volumes:
       - ./nginx.mvp.conf:/etc/nginx/nginx.conf:ro
       - ./dist:/var/www/html:ro
