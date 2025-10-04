@@ -12,7 +12,7 @@ import AdminDashboard from './components/AdminDashboard'
 import Privacy from './components/Privacy'
 import TermsOfService from './components/TermsOfService'
 import { SessionProvider } from './contexts/SessionContext'
-import { cn } from './lib/utils'
+import { cn } from '@/lib/utils'
 
 // Initialize Stripe - replace with your publishable key
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_...')

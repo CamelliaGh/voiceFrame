@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useStripe, useElements, CardElement } from '@stripe/react-stripe-js'
 import { Check, ArrowLeft, CreditCard, Lock, Download, Star } from 'lucide-react'
 import { useSession } from '../contexts/SessionContext'
-import { createPaymentIntent, completeOrder } from '../lib/api'
+import { createPaymentIntent, completeOrder } from '@/lib/api'
 // import { cn } from '../lib/utils'
 
 interface PricingSectionProps {

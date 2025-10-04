@@ -13,7 +13,7 @@ import {
   Plus,
   Cog
 } from 'lucide-react'
-import { cn } from '../lib/utils'
+import { cn } from '@/lib/utils'
 import AdminLogin from './AdminLogin'
 
 interface AdminStats {

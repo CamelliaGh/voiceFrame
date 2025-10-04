@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { Upload, Image, Music, CheckCircle, AlertCircle, RotateCcw, X } from 'lucide-react'
 import { useSession } from '../contexts/SessionContext'
-import { uploadPhoto, uploadAudio, removePhoto, removeAudio } from '../lib/api'
+import { uploadPhoto, uploadAudio, removePhoto, removeAudio } from '@/lib/api'
 // Utility function to format file size
 const formatFileSize = (bytes: number): string => {
   if (bytes === 0) return '0 Bytes'
@@ -11,7 +11,7 @@ const formatFileSize = (bytes: number): string => {
   const i = Math.floor(Math.log(bytes) / Math.log(k))
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
-import { cn, isChrome, hasPotentialUploadIssues } from '../lib/utils'
+import { cn, isChrome, hasPotentialUploadIssues } from '@/lib/utils'
 import { parse as parseExif } from 'exifr'
 
 interface UploadSectionProps {

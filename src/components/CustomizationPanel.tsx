@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Type, ArrowLeft, ArrowRight, Image, FileText, RefreshCw, Eye } from 'lucide-react'
 import { useSession } from '../contexts/SessionContext'
 // import { cn } from '../lib/utils' // Not used
-import { SessionData, getProcessingStatus, getPreviewUrl } from '../lib/api'
+import { SessionData, getProcessingStatus, getPreviewUrl } from '@/lib/api'
 // import RealTimePreview from './RealTimePreview' // Disabled to prevent excessive API calls
 import TextCustomization from './TextCustomization'
 import BackgroundSelection from './BackgroundSelection'

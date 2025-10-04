@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import { Image, Eye, Check } from 'lucide-react'
-import { cn } from '../lib/utils'
+import { cn } from '@/lib/utils'
 
 interface BackgroundOption {
   id: string

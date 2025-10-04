@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react'
 import { Square, Circle, Image } from 'lucide-react'
-import { cn } from '../lib/utils'
+import { cn } from '@/lib/utils'
 
 interface PhotoShapeOption {
   id: 'square' | 'circle'

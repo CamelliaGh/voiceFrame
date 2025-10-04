@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react'
 import { FileText, Maximize2, RotateCcw, Monitor, Info } from 'lucide-react'
-import { cn } from '../lib/utils'
+import { cn } from '@/lib/utils'
 
 interface PDFSizeOption {
   value: 'A4' | 'A4_Landscape' | 'Letter' | 'Letter_Landscape' | 'A3' | 'A3_Landscape'

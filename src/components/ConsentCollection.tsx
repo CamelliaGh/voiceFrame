@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Shield, CheckCircle, AlertCircle, Info } from 'lucide-react'
-import { cn } from '../lib/utils'
+import { cn } from '@/lib/utils'
 
 interface ConsentCollectionProps {
   onConsentGiven: (consent: ConsentData) => void

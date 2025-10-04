@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
-import { SessionData, SessionUpdateData, createSession, getSession, updateSession } from '../lib/api'
+import { SessionData, SessionUpdateData, createSession, getSession, updateSession } from '@/lib/api'
 // import { generateSessionToken } from '../lib/utils'
 
 interface SessionContextType {
