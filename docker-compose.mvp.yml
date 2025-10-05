@@ -78,7 +78,7 @@ services:
   # Celery Worker (simplified for MVP)
   celery-worker:
     build: .
-    command: celery -A backend.tasks worker --loglevel=info --concurrency=1
+    command: celery -A backend.tasks worker --loglevel=info --concurrency=1 --uid=1000 --gid=1000
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - REDIS_URL=${REDIS_URL}
