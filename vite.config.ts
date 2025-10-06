@@ -53,5 +53,15 @@ export default defineConfig({
         changeOrigin: true,
       }
     }
+  },
+  preview: {
+    port: 3000,
+    host: true,
+    allowedHosts: [
+      'localhost',
+      '127.0.0.1',
+      'vocaframe.com',
+      'www.vocaframe.com'
+    ]
   }
 })
