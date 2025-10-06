@@ -12,6 +12,13 @@ export default defineConfig({
   },
   server: {
     port: 3000,
+    host: true,
+    allowedHosts: [
+      'localhost',
+      '127.0.0.1',
+      'vocaframe.com',
+      'www.vocaframe.com'
+    ],
     proxy: {
       '/api': {
         target: 'http://localhost:8000',
