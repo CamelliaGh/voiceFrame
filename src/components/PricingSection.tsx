@@ -3,6 +3,7 @@ import { useStripe, useElements, CardElement } from '@stripe/react-stripe-js'
 import { Check, ArrowLeft, CreditCard, Lock, Download, Star } from 'lucide-react'
 import { useSession } from '../contexts/SessionContext'
 import { createPaymentIntent, completeOrder } from '@/lib/api'
+import PaymentRequestButton from './PaymentRequestButton'
 // import { cn } from '../lib/utils'
 
 interface PricingSectionProps {
@@ -66,6 +67,8 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null)
+  const [clientSecret, setClientSecret] = useState<string | null>(null)
+  const [orderId, setOrderId] = useState<string | null>(null)
 
   // Fetch current price from API
   useEffect(() => {
@@ -92,6 +95,77 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
 
   const selectedPrice = pricingTiers.find(tier => tier.id === selectedTier)
 
+  // Create payment intent when email is provided (for wallet payments)
+  useEffect(() => {
+    const createIntent = async () => {
+      if (!stripe || !session || !email || email.length < 5) {
+        setClientSecret(null)
+        setOrderId(null)
+        return
+      }
+
+      try {
+        const { client_secret, order_id } = await createPaymentIntent(
+          session.session_token,
+          email,
+          'standard'
+        )
+        setClientSecret(client_secret)
+        setOrderId(order_id)
+      } catch (err) {
+        console.error('Failed to create payment intent:', err)
+      }
+    }
+
+    // Debounce the payment intent creation
+    const timer = setTimeout(() => {
+      createIntent()
+    }, 500)
+
+    return () => clearTimeout(timer)
+  }, [stripe, session, email])
+
+  // Handle wallet payment (Apple Pay / Google Pay)
+  const handleWalletPayment = async (paymentMethodId: string) => {
+    if (!stripe || !session || !clientSecret || !orderId) {
+      setError('Payment setup incomplete')
+      return
+    }
+
+    setProcessing(true)
+    setError(null)
+
+    try {
+      // Confirm the payment with the payment method from wallet
+      const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(
+        clientSecret,
+        {
+          payment_method: paymentMethodId,
+        }
+      )
+
+      if (stripeError) {
+        throw new Error(stripeError.message)
+      }
+
+      if (paymentIntent?.status === 'succeeded') {
+        // Complete the order
+        const orderResult = await completeOrder(orderId, paymentIntent.id, session.session_token)
+        setDownloadUrl(orderResult.download_url)
+        setSuccess(true)
+      }
+    } catch (err) {
+      console.error('Wallet payment failed:', err)
+      setError(err instanceof Error ? err.message : 'Payment failed. Please try again.')
+    } finally {
+      setProcessing(false)
+    }
+  }
+
+  const handleWalletPaymentError = (errorMessage: string) => {
+    setError(errorMessage)
+  }
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
 
@@ -103,21 +177,28 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
     setError(null)
 
     try {
-      // Create payment intent
-      const { client_secret, order_id } = await createPaymentIntent(
-        session.session_token,
-        email,
-        'standard'
-      )
+      // Use existing payment intent if available, otherwise create new one
+      let paymentClientSecret = clientSecret
+      let paymentOrderId = orderId
 
-      // Confirm payment
+      if (!paymentClientSecret || !paymentOrderId) {
+        const { client_secret, order_id } = await createPaymentIntent(
+          session.session_token,
+          email,
+          'standard'
+        )
+        paymentClientSecret = client_secret
+        paymentOrderId = order_id
+      }
+
+      // Confirm payment with card
       const cardElement = elements.getElement(CardElement)
       if (!cardElement) {
         throw new Error('Card element not found')
       }
 
       const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(
-        client_secret,
+        paymentClientSecret,
         {
           payment_method: {
             card: cardElement,
@@ -137,7 +218,7 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
 
       if (paymentIntent?.status === 'succeeded') {
         // Complete the order
-        const orderResult = await completeOrder(order_id, paymentIntent.id, session.session_token)
+        const orderResult = await completeOrder(paymentOrderId, paymentIntent.id, session.session_token)
         setDownloadUrl(orderResult.download_url)
         setSuccess(true)
       }
@@ -273,6 +354,31 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
                 Required for PDF delivery and download link
               </p>
             </div>
+
+            {/* Apple Pay / Google Pay Button */}
+            {email && email.length > 5 && selectedPrice && (
+              <div className="space-y-3">
+                <PaymentRequestButton
+                  amount={selectedPrice.price}
+                  currency="USD"
+                  country="US"
+                  email={email}
+                  onPaymentSuccess={handleWalletPayment}
+                  onPaymentError={handleWalletPaymentError}
+                  disabled={processing}
+                />
+
+                {/* Show separator only if wallet button is visible */}
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-200"></div>
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="px-2 bg-white text-gray-500">Or pay with card</span>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div>
               <label htmlFor="zipCode" className="block text-sm font-medium text-gray-700 mb-1">
