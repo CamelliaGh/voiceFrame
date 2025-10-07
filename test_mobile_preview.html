@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile Preview Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .debug-info {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 3px;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .force-mode {
+            background: #28a745;
+        }
+        .force-mode:hover {
+            background: #1e7e34;
+        }
+    </style>
+</head>
+<body>
+    <h1>Mobile Preview Test</h1>
+
+    <div class="test-section">
+        <h2>Device Detection</h2>
+        <div id="device-info" class="debug-info"></div>
+        <button onclick="testMobileDetection()">Test Mobile Detection</button>
+    </div>
+
+    <div class="test-section">
+        <h2>Force Image Preview Mode</h2>
+        <p>Add <code>?forceImagePreview=true</code> to the URL to force image preview mode</p>
+        <button onclick="toggleForceMode()" class="force-mode">Toggle Force Mode</button>
+        <div id="force-mode-info" class="debug-info"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Preview Test</h2>
+        <p>Test the preview functionality with a sample session</p>
+        <button onclick="testPreview()">Test Preview</button>
+        <div id="preview-info" class="debug-info"></div>
+    </div>
+
+    <script>
+        // Mobile detection functions (copied from mobile.ts)
+        function isMobileDevice() {
+            const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+            const mobileRegex = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini|mobile|tablet/i;
+            const isMobileUserAgent = mobileRegex.test(userAgent);
+            const isMobileScreen = window.innerWidth <= 768;
+            const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+            const hasMobileFeatures = 'orientation' in window || 'devicePixelRatio' in window;
+            return isMobileUserAgent || (isMobileScreen && isTouchDevice) || (isMobileScreen && hasMobileFeatures);
+        }
+
+        function isMobileSafari() {
+            const userAgent = navigator.userAgent;
+            return /iPad|iPhone|iPod/.test(userAgent) && /Safari/.test(userAgent) && !/Chrome/.test(userAgent);
+        }
+
+        function isAndroidChrome() {
+            const userAgent = navigator.userAgent;
+            return /Android/.test(userAgent) && /Chrome/.test(userAgent);
+        }
+
+        function shouldUseImagePreview() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const forceImagePreview = urlParams.get('forceImagePreview') === 'true';
+
+            if (forceImagePreview) {
+                return true;
+            }
+
+            const isMobile = isMobileDevice();
+            const isSafari = isMobileSafari();
+            const isAndroid = isAndroidChrome();
+            return isMobile || isSafari || isAndroid;
+        }
+
+        function testMobileDetection() {
+            const deviceInfo = {
+                userAgent: navigator.userAgent,
+                screenWidth: window.innerWidth,
+                screenHeight: window.innerHeight,
+                hasTouch: 'ontouchstart' in window,
+                maxTouchPoints: navigator.maxTouchPoints,
+                isMobileDevice: isMobileDevice(),
+                isMobileSafari: isMobileSafari(),
+                isAndroidChrome: isAndroidChrome(),
+                shouldUseImagePreview: shouldUseImagePreview(),
+                hasOrientation: 'orientation' in window,
+                devicePixelRatio: window.devicePixelRatio
+            };
+
+            document.getElementById('device-info').textContent = JSON.stringify(deviceInfo, null, 2);
+        }
+
+        function toggleForceMode() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const currentForce = urlParams.get('forceImagePreview') === 'true';
+
+            if (currentForce) {
+                urlParams.delete('forceImagePreview');
+            } else {
+                urlParams.set('forceImagePreview', 'true');
+            }
+
+            const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
+            window.history.pushState({}, '', newUrl);
+
+            document.getElementById('force-mode-info').textContent =
+                `Force mode: ${!currentForce}\nURL: ${window.location.href}`;
+        }
+
+        function testPreview() {
+            const previewInfo = {
+                currentUrl: window.location.href,
+                shouldUseImagePreview: shouldUseImagePreview(),
+                forceImagePreview: new URLSearchParams(window.location.search).get('forceImagePreview') === 'true',
+                timestamp: new Date().toISOString()
+            };
+
+            document.getElementById('preview-info').textContent = JSON.stringify(previewInfo, null, 2);
+        }
+
+        // Run initial tests
+        window.onload = function() {
+            testMobileDetection();
+            testPreview();
+        };
+    </script>
+</body>
+</html>

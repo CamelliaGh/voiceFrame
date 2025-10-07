@@ -48,12 +48,14 @@ export default function PreviewSection({ onNext, onBack }: PreviewSectionProps) 
     try {
       console.log('🎯 PreviewSection: Making preview request...')
       console.log('🎯 PreviewSection: Using image preview for mobile:', useImagePreview)
+      console.log('🎯 PreviewSection: Mobile detection result:', shouldUseImagePreview())
 
       const response = useImagePreview
         ? await getPreviewImageUrl(session.session_token)
         : await getPreviewUrl(session.session_token)
 
       console.log('🎯 PreviewSection: Preview response received:', response)
+      console.log('🎯 PreviewSection: API endpoint used:', useImagePreview ? 'image' : 'pdf')
       // Extract the actual URL from the response object
       const previewUrl = response.preview_url
       // Add cache-busting parameter to prevent browser caching

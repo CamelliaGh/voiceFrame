@@ -585,5 +585,7 @@ class PDFGenerator:
             return pdf_url
         except Exception as e:
             print(f"Error converting PDF to image: {e}")
+            import traceback
+            print(f"Full error traceback: {traceback.format_exc()}")
             # Fallback to original PDF URL
             return pdf_url

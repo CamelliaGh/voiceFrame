@@ -174,6 +174,12 @@ class ImageProcessor:
                 local_path = os.path.join(self.file_uploader.local_storage_path, image_path)
                 image = Image.open(local_path)
 
+            # CRITICAL: Fix orientation based on EXIF data
+            # This is essential because images from mobile devices often have EXIF orientation data
+            # that needs to be applied to display correctly
+            image = ImageOps.exif_transpose(image)
+            print(f"DEBUG: Applied EXIF orientation fix to image, new size: {image.size}")
+
             print(f"DEBUG: create_shaped_image called with shape='{shape}', size={size}")
             if shape == 'circle':
                 print(f"DEBUG: Using circular image processing")
