@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Download, Eye, ArrowLeft, ArrowRight, RefreshCw } from 'lucide-react'
 import { useSession } from '../contexts/SessionContext'
-import { getPreviewUrl } from '@/lib/api'
+import { getPreviewUrl, getPreviewImageUrl } from '@/lib/api'
+import { shouldUseImagePreview } from '@/lib/mobile'
 
 interface PreviewSectionProps {
   onNext: () => void
@@ -13,6 +14,7 @@ export default function PreviewSection({ onNext, onBack }: PreviewSectionProps) 
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [useImagePreview, setUseImagePreview] = useState(shouldUseImagePreview())
 
   // Calculate aspect ratio based on PDF size (adjusted for better viewport fit)
   const getAspectRatio = (pdfSize: string) => {
@@ -45,7 +47,12 @@ export default function PreviewSection({ onNext, onBack }: PreviewSectionProps) 
 
     try {
       console.log('🎯 PreviewSection: Making preview request...')
-      const response = await getPreviewUrl(session.session_token)
+      console.log('🎯 PreviewSection: Using image preview for mobile:', useImagePreview)
+
+      const response = useImagePreview
+        ? await getPreviewImageUrl(session.session_token)
+        : await getPreviewUrl(session.session_token)
+
       console.log('🎯 PreviewSection: Preview response received:', response)
       // Extract the actual URL from the response object
       const previewUrl = response.preview_url
@@ -54,6 +61,21 @@ export default function PreviewSection({ onNext, onBack }: PreviewSectionProps) 
       console.log('🎯 PreviewSection: Using cache-busting URL:', cacheBustingUrl)
       setPreviewUrl(cacheBustingUrl)
     } catch (err: any) {
+      // If image preview fails on mobile, try falling back to PDF preview
+      if (useImagePreview && shouldUseImagePreview()) {
+        console.log('🎯 PreviewSection: Image preview failed, falling back to PDF preview')
+        try {
+          setUseImagePreview(false)
+          const response = await getPreviewUrl(session.session_token)
+          const previewUrl = response.preview_url
+          const cacheBustingUrl = `${previewUrl}?t=${Date.now()}`
+          setPreviewUrl(cacheBustingUrl)
+          return
+        } catch (fallbackErr: any) {
+          console.error('Fallback PDF preview also failed:', fallbackErr)
+          // Continue with original error handling
+        }
+      }
       console.error('Failed to generate preview:', err)
 
       // Extract specific error message from the response
@@ -111,7 +133,7 @@ export default function PreviewSection({ onNext, onBack }: PreviewSectionProps) 
 
       <div className="grid lg:grid-cols-3 gap-8">
         {/* Preview */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 order-1 lg:order-1">
           <div className="card">
             <div className="flex items-center justify-between mb-4">
               <div>
@@ -122,14 +144,27 @@ export default function PreviewSection({ onNext, onBack }: PreviewSectionProps) 
                   </p>
                 )}
               </div>
-              <button
-                onClick={generatePreview}
-                disabled={loading}
-                className="btn-secondary flex items-center space-x-2 text-sm"
-              >
-                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                <span>Refresh</span>
-              </button>
+              <div className="flex items-center space-x-2">
+                {shouldUseImagePreview() && (
+                  <button
+                    onClick={() => {
+                      setUseImagePreview(!useImagePreview)
+                      setPreviewUrl(null) // Clear current preview to force regeneration
+                    }}
+                    className="btn-secondary text-xs px-3 py-2"
+                  >
+                    {useImagePreview ? 'PDF View' : 'Image View'}
+                  </button>
+                )}
+                <button
+                  onClick={generatePreview}
+                  disabled={loading}
+                  className="btn-secondary flex items-center space-x-2 text-sm"
+                >
+                  <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                  <span>Refresh</span>
+                </button>
+              </div>
             </div>
 
             <div className="border border-gray-200 rounded-lg overflow-hidden">
@@ -153,11 +188,21 @@ export default function PreviewSection({ onNext, onBack }: PreviewSectionProps) 
                   </div>
                 </div>
               ) : previewUrl ? (
-                <iframe
-                  src={previewUrl}
-                  className={`w-full ${aspectRatio}`}
-                  title="Poster Preview"
-                />
+                useImagePreview ? (
+                  <div className="mobile-preview-container">
+                    <img
+                      src={previewUrl}
+                      alt="Poster Preview"
+                      className={`mobile-preview-image ${aspectRatio}`}
+                    />
+                  </div>
+                ) : (
+                  <iframe
+                    src={previewUrl}
+                    className={`preview-iframe ${aspectRatio}`}
+                    title="Poster Preview"
+                  />
+                )
               ) : (
                 <div className={`${aspectRatio} bg-gray-100 flex items-center justify-center`}>
                   <div className="text-center text-gray-500">
@@ -183,7 +228,7 @@ export default function PreviewSection({ onNext, onBack }: PreviewSectionProps) 
         </div>
 
         {/* Summary & Details */}
-        <div className="space-y-6">
+        <div className="space-y-6 order-2 lg:order-2">
           {/* Poster Details */}
           <div className="card">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Poster Details</h3>

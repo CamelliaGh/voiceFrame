@@ -148,4 +148,26 @@
   .subsection-subtitle {
     @apply text-sm sm:text-base text-gray-600 mb-4;
   }
+
+  /* Mobile-specific preview styles */
+  .mobile-preview-container {
+    @apply w-full max-w-full overflow-hidden;
+  }
+
+  .mobile-preview-image {
+    @apply w-full h-auto object-contain;
+    max-height: 70vh;
+  }
+
+  /* Ensure iframes work properly on mobile */
+  .preview-iframe {
+    @apply w-full border-0;
+    min-height: 400px;
+  }
+
+  @media (max-width: 768px) {
+    .preview-iframe {
+      min-height: 300px;
+    }
+  }
 }

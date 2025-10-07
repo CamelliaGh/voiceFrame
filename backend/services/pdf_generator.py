@@ -491,3 +491,99 @@ class PDFGenerator:
     def _has_visual_template(self, template_id: str) -> bool:
         """Legacy method - no longer used"""
         return True
+
+    async def convert_pdf_to_image(self, pdf_url: str, session_token: str) -> str:
+        """Convert PDF to image for mobile preview"""
+        try:
+            import fitz  # PyMuPDF
+            import requests
+            from PIL import Image as PILImage
+            import io
+
+            print(f"DEBUG: Converting PDF to image for session {session_token}")
+
+            # Download PDF content
+            response = requests.get(pdf_url)
+            response.raise_for_status()
+            pdf_data = response.content
+
+            # Open PDF with PyMuPDF
+            pdf_document = fitz.open(stream=pdf_data, filetype="pdf")
+            page = pdf_document[0]  # Get first page
+
+            # Convert to image with high DPI for quality
+            mat = fitz.Matrix(2.0, 2.0)  # 2x zoom for better quality
+            pix = page.get_pixmap(matrix=mat)
+
+            # Convert to PIL Image
+            img_data = pix.tobytes("png")
+            pil_image = PILImage.open(io.BytesIO(img_data))
+
+            # Optimize for mobile display (max width 800px, maintain aspect ratio)
+            max_width = 800
+            if pil_image.width > max_width:
+                ratio = max_width / pil_image.width
+                new_height = int(pil_image.height * ratio)
+                pil_image = pil_image.resize((max_width, new_height), PILImage.Resampling.LANCZOS)
+
+            # Convert back to bytes
+            img_buffer = io.BytesIO()
+            pil_image.save(img_buffer, format='PNG', optimize=True, quality=85)
+            img_buffer.seek(0)
+
+            # Upload to S3
+            import time
+            timestamp = int(time.time())
+            image_key = f"preview_images/{session_token}_{timestamp}.png"
+
+            if self.file_uploader.s3_client:
+                # Upload to S3
+                extra_args = {
+                    "ContentType": "image/png",
+                    "ServerSideEncryption": "AES256",
+                }
+
+                # Try to make preview images publicly readable
+                try:
+                    extra_args["ACL"] = "public-read"
+                except Exception:
+                    # If ACL is not supported, we'll rely on bucket policy
+                    pass
+
+                try:
+                    self.file_uploader.s3_client.upload_fileobj(
+                        img_buffer, settings.s3_bucket, image_key, ExtraArgs=extra_args
+                    )
+                except ClientError as e:
+                    if "AccessControlListNotSupported" in str(e):
+                        # Retry without ACL if bucket doesn't support it
+                        extra_args.pop("ACL", None)
+                        self.file_uploader.s3_client.upload_fileobj(
+                            img_buffer, settings.s3_bucket, image_key, ExtraArgs=extra_args
+                        )
+                    else:
+                        raise e
+
+                # Return presigned URL for download
+                return self.file_uploader.generate_presigned_url(
+                    image_key, expiration=3600
+                )
+            else:
+                # Store locally for development
+                local_path = os.path.join(
+                    self.file_uploader.local_storage_path, image_key
+                )
+                os.makedirs(os.path.dirname(local_path), exist_ok=True)
+
+                with open(local_path, 'wb') as f:
+                    f.write(img_buffer.getvalue())
+
+                return f"{settings.base_url}/static/{image_key}"
+
+        except ImportError:
+            print("WARNING: PyMuPDF not installed, falling back to PDF URL")
+            return pdf_url
+        except Exception as e:
+            print(f"Error converting PDF to image: {e}")
+            # Fallback to original PDF URL
+            return pdf_url

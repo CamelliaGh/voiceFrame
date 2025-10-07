@@ -685,6 +685,70 @@ async def get_preview(token: str, db: Session = Depends(get_db)):
         )
 
 
+@app.get("/api/session/{token}/preview/image")
+async def get_preview_image(token: str, db: Session = Depends(get_db)):
+    """Generate watermarked preview as image for mobile devices"""
+    print("=" * 100)
+    print("🚨🚨🚨 MOBILE PREVIEW IMAGE REQUEST RECEIVED! 🚨🚨🚨")
+    print(f"Token: {token}")
+    print("=" * 100)
+
+    session = session_manager.get_session(db, token)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    # Refresh session to ensure we have the latest data from database
+    db.refresh(session)
+
+    # Validate that required files are uploaded
+    if not session.photo_s3_key:
+        raise HTTPException(
+            status_code=400,
+            detail="Photo file is missing. Please upload a photo first.",
+            headers={"X-Missing-Component": "photo_file"},
+        )
+
+    if not session.audio_s3_key:
+        raise HTTPException(
+            status_code=400,
+            detail="Audio file is missing. Please upload an audio file first.",
+            headers={"X-Missing-Component": "audio_file"},
+        )
+
+    # Check waveform file existence (waveforms are always in S3)
+    file_uploader = FileUploader()
+    if not file_uploader.file_exists(session.waveform_s3_key):
+        raise HTTPException(
+            status_code=400,
+            detail="Waveform file is missing. Please wait for audio processing to complete.",
+            headers={"X-Missing-Component": "waveform_file"},
+        )
+
+    try:
+        print(f"DEBUG: Starting mobile preview image generation for session {token}")
+
+        # Generate preview PDF with watermark first
+        pdf_url = await pdf_generator.generate_pdf(session, add_watermark=True)
+        print(f"DEBUG: PDF generation successful, URL: {pdf_url}")
+
+        # Convert PDF to image for mobile preview
+        image_url = await pdf_generator.convert_pdf_to_image(pdf_url, session.session_token)
+        print(f"DEBUG: Image conversion successful, URL: {image_url}")
+
+        expires_at = (datetime.utcnow() + timedelta(hours=1)).isoformat()
+
+        return {"preview_url": image_url, "expires_at": expires_at, "type": "image"}
+
+    except Exception as e:
+        import traceback
+
+        error_trace = traceback.format_exc()
+        print(f"Mobile preview image generation error for session {token}: {error_trace}")
+        raise HTTPException(
+            status_code=500, detail=f"Mobile preview generation failed: {str(e)}"
+        )
+
+
 # Payment & Orders
 @app.post("/api/session/{token}/payment", response_model=PaymentIntentResponse)
 async def create_payment_intent(

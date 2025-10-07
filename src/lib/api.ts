@@ -182,6 +182,11 @@ export const getPreviewUrl = async (token: string): Promise<{ preview_url: strin
   return response.data
 }
 
+export const getPreviewImageUrl = async (token: string): Promise<{ preview_url: string; expires_at: string; type: string }> => {
+  const response = await api.get(`/session/${token}/preview/image`)
+  return response.data
+}
+
 // Payment
 export const createPaymentIntent = async (
   token: string,
