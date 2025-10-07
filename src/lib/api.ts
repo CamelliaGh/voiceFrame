@@ -194,10 +194,12 @@ export const createPaymentIntent = async (
 
 export const completeOrder = async (
   orderId: string,
-  paymentIntentId: string
+  paymentIntentId: string,
+  sessionToken: string
 ): Promise<DownloadResponse> => {
   const response = await api.post(`/orders/${orderId}/complete`, {
-    payment_intent_id: paymentIntentId
+    payment_intent_id: paymentIntentId,
+    session_token: sessionToken
   })
   return response.data
 }

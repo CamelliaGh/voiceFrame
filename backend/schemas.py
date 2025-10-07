@@ -142,7 +142,7 @@ class ProcessingStatus(BaseModel):
 
 class PaymentIntentRequest(BaseModel):
     email: EmailStr
-    tier: Literal["download"] = "download"
+    tier: Literal["download", "standard", "premium"] = "download"  # Accept legacy tier names
 
 
 class PaymentIntentResponse(BaseModel):

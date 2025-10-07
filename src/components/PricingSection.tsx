@@ -50,10 +50,6 @@ const cardStyle = {
     },
   },
   hidePostalCode: true, // We collect postal code separately for better international support
-  wallets: {
-    applePay: 'auto',
-    googlePay: 'auto',
-  },
 }
 
 export default function PricingSection({ onBack }: PricingSectionProps) {
@@ -141,7 +137,7 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
 
       if (paymentIntent?.status === 'succeeded') {
         // Complete the order
-        const orderResult = await completeOrder(order_id, paymentIntent.id)
+        const orderResult = await completeOrder(order_id, paymentIntent.id, session.session_token)
         setDownloadUrl(orderResult.download_url)
         setSuccess(true)
       }
