@@ -874,14 +874,10 @@ async def complete_order(
         if not subscriber:
             subscriber = EmailSubscriber(
                 email=order.email,
-                first_purchase_date=datetime.utcnow(),
-                total_purchases=1,
-                total_spent_cents=order.amount_cents,
+                source="checkout",  # Track where the email came from
+                data_processing_consent=True,  # Implicit consent through purchase
             )
             db.add(subscriber)
-        else:
-            subscriber.total_purchases += 1
-            subscriber.total_spent_cents += order.amount_cents
 
         db.commit()
 
