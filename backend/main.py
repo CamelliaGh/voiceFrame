@@ -902,6 +902,149 @@ async def complete_order(
         )
 
 
+@app.post("/api/stripe/webhook")
+async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
+    """
+    Handle Stripe webhook events for payment processing
+
+    This endpoint receives notifications from Stripe about payment events
+    and updates order status accordingly. Must be configured in Stripe Dashboard.
+
+    Webhook URL: https://vocaframe.com/api/stripe/webhook
+    """
+    payload = await request.body()
+    sig_header = request.headers.get("stripe-signature")
+
+    if not sig_header:
+        logger.error("Stripe webhook: Missing stripe-signature header")
+        raise HTTPException(status_code=400, detail="Missing stripe-signature header")
+
+    try:
+        # Verify webhook signature and construct event
+        event = stripe_service.handle_webhook(payload, sig_header)
+
+        logger.info(f"Stripe webhook received: {event['type']} - ID: {event['id']}")
+
+        # Handle different event types
+        event_type = event["type"]
+        event_data = event["data"]["object"]
+
+        if event_type == "payment_intent.succeeded":
+            # Payment was successful
+            payment_intent_id = event_data["id"]
+            logger.info(f"Payment succeeded: {payment_intent_id}")
+
+            # Find and update the order
+            order = db.query(Order).filter(
+                Order.stripe_payment_intent_id == payment_intent_id
+            ).first()
+
+            if order:
+                # Only update if not already completed (idempotency)
+                if order.status != "completed":
+                    order.status = "completed"
+                    order.updated_at = datetime.utcnow()
+                    db.commit()
+                    logger.info(f"Order {order.id} marked as completed via webhook")
+
+                    # Optional: Send confirmation email (if not already sent)
+                    try:
+                        if order.email and order.download_token:
+                            session = db.query(SessionModel).filter(
+                                SessionModel.session_token == order.session_token
+                            ).first()
+
+                            if session and order.pdf_s3_key:
+                                download_url = f"{request.url_for('download_pdf', download_token=order.download_token)}"
+                                email_service.send_download_email(
+                                    order.email,
+                                    download_url,
+                                    order.download_expires_at
+                                )
+                                logger.info(f"Sent download email to {order.email}")
+                    except Exception as email_error:
+                        # Don't fail webhook if email fails
+                        logger.error(f"Failed to send email in webhook: {email_error}")
+                else:
+                    logger.info(f"Order {order.id} already completed, skipping update")
+            else:
+                logger.warning(f"No order found for payment_intent: {payment_intent_id}")
+
+        elif event_type == "payment_intent.payment_failed":
+            # Payment failed
+            payment_intent_id = event_data["id"]
+            failure_message = event_data.get("last_payment_error", {}).get("message", "Unknown error")
+            logger.warning(f"Payment failed: {payment_intent_id} - {failure_message}")
+
+            # Find and update the order
+            order = db.query(Order).filter(
+                Order.stripe_payment_intent_id == payment_intent_id
+            ).first()
+
+            if order and order.status != "failed":
+                order.status = "failed"
+                order.updated_at = datetime.utcnow()
+                db.commit()
+                logger.info(f"Order {order.id} marked as failed via webhook")
+
+        elif event_type == "charge.refunded":
+            # Payment was refunded
+            charge = event_data
+            payment_intent_id = charge.get("payment_intent")
+            logger.info(f"Charge refunded for payment_intent: {payment_intent_id}")
+
+            if payment_intent_id:
+                order = db.query(Order).filter(
+                    Order.stripe_payment_intent_id == payment_intent_id
+                ).first()
+
+                if order:
+                    order.status = "refunded"
+                    order.updated_at = datetime.utcnow()
+                    db.commit()
+                    logger.info(f"Order {order.id} marked as refunded via webhook")
+
+        elif event_type == "payment_intent.canceled":
+            # Payment was canceled
+            payment_intent_id = event_data["id"]
+            logger.info(f"Payment canceled: {payment_intent_id}")
+
+            order = db.query(Order).filter(
+                Order.stripe_payment_intent_id == payment_intent_id
+            ).first()
+
+            if order and order.status == "pending":
+                order.status = "canceled"
+                order.updated_at = datetime.utcnow()
+                db.commit()
+                logger.info(f"Order {order.id} marked as canceled via webhook")
+
+        elif event_type in [
+            "payment_intent.created",
+            "payment_intent.processing",
+            "charge.succeeded",
+            "payment_method.attached"
+        ]:
+            # Informational events - log but don't act on
+            logger.info(f"Informational event: {event_type}")
+
+        else:
+            # Unknown/unhandled event type
+            logger.info(f"Unhandled webhook event type: {event_type}")
+
+        # Return success response to Stripe
+        return {"status": "success", "event_type": event_type}
+
+    except HTTPException:
+        # Re-raise HTTP exceptions (signature verification failures)
+        raise
+    except Exception as e:
+        # Log error but return 200 to prevent Stripe from retrying
+        logger.error(f"Error processing webhook: {str(e)}", exc_info=True)
+        # Return 200 to acknowledge receipt (prevents Stripe retry storms)
+        return {"status": "error", "message": str(e)}
+
+
 @app.get("/api/download/{download_token}")
 async def download_pdf(download_token: str, db: Session = Depends(get_db)):
     """Download PDF using secure token"""
