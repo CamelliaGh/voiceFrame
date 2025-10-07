@@ -49,7 +49,11 @@ const cardStyle = {
       color: '#9e2146',
     },
   },
-  hidePostalCode: true, // This disables the postal code field
+  hidePostalCode: true, // We collect postal code separately for better international support
+  wallets: {
+    applePay: 'auto',
+    googlePay: 'auto',
+  },
 }
 
 export default function PricingSection({ onBack }: PricingSectionProps) {
@@ -276,21 +280,22 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
 
             <div>
               <label htmlFor="zipCode" className="block text-sm font-medium text-gray-700 mb-1">
-                ZIP Code
+                Postal Code
               </label>
               <input
                 type="text"
                 id="zipCode"
                 value={zipCode}
-                onChange={(e) => setZipCode(e.target.value)}
-                maxLength={10}
-                pattern="^\d{5}(-\d{4})?$"
-                title="Enter a 5-digit ZIP code or ZIP+4 code (e.g., 12345 or 12345-6789)"
+                onChange={(e) => setZipCode(e.target.value.toUpperCase())}
+                minLength={3}
+                maxLength={12}
+                pattern="^[A-Z0-9][A-Z0-9\s\-]{1,10}[A-Z0-9]$"
+                title="Enter your postal/ZIP code (e.g., 12345, V6K 2Y5, SW1A 1AA, 75008)"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                placeholder="12345 or 12345-6789"
+                placeholder="Enter postal code"
               />
               <p className="text-xs text-gray-500 mt-1">
-                5-digit ZIP code or ZIP+4 format
+                Any country postal/ZIP code accepted
               </p>
             </div>
 
