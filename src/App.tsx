@@ -11,6 +11,7 @@ import PricingSection from './components/PricingSection'
 import AdminDashboard from './components/AdminDashboard'
 import Privacy from './components/Privacy'
 import TermsOfService from './components/TermsOfService'
+import LandingPage from './components/LandingPage'
 import { SessionProvider } from './contexts/SessionContext'
 import { cn } from '@/lib/utils'
 
@@ -176,6 +177,7 @@ function App() {
         <Router>
           <Routes>
             <Route path="/" element={<MainApp />} />
+            <Route path="/landing" element={<LandingPage />} />
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/terms" element={<TermsOfService />} />
