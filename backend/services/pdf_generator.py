@@ -511,29 +511,29 @@ class PDFGenerator:
             pdf_document = fitz.open(stream=pdf_data, filetype="pdf")
             page = pdf_document[0]  # Get first page
 
-                # Convert to image with appropriate DPI for mobile
-                # Use 1.5x zoom for good quality without being too large
-                mat = fitz.Matrix(1.5, 1.5)
-                pix = page.get_pixmap(matrix=mat)
+            # Convert to image with appropriate DPI for mobile
+            # Use 1.5x zoom for good quality without being too large
+            mat = fitz.Matrix(1.5, 1.5)
+            pix = page.get_pixmap(matrix=mat)
 
-                # Convert to PIL Image
-                img_data = pix.tobytes("png")
-                pil_image = PILImage.open(io.BytesIO(img_data))
+            # Convert to PIL Image
+            img_data = pix.tobytes("png")
+            pil_image = PILImage.open(io.BytesIO(img_data))
 
-                # Optimize for mobile display with better sizing
-                # Target width based on common mobile screen widths
-                target_width = 600  # Reduced from 800 for better mobile fit
-                if pil_image.width > target_width:
-                    ratio = target_width / pil_image.width
-                    new_height = int(pil_image.height * ratio)
-                    pil_image = pil_image.resize((target_width, new_height), PILImage.Resampling.LANCZOS)
+            # Optimize for mobile display with better sizing
+            # Target width based on common mobile screen widths
+            target_width = 600  # Reduced from 800 for better mobile fit
+            if pil_image.width > target_width:
+                ratio = target_width / pil_image.width
+                new_height = int(pil_image.height * ratio)
+                pil_image = pil_image.resize((target_width, new_height), PILImage.Resampling.LANCZOS)
 
-                # Ensure the image isn't too tall for mobile screens
-                max_height = 800  # Max height for mobile screens
-                if pil_image.height > max_height:
-                    ratio = max_height / pil_image.height
-                    new_width = int(pil_image.width * ratio)
-                    pil_image = pil_image.resize((new_width, max_height), PILImage.Resampling.LANCZOS)
+            # Ensure the image isn't too tall for mobile screens
+            max_height = 800  # Max height for mobile screens
+            if pil_image.height > max_height:
+                ratio = max_height / pil_image.height
+                new_width = int(pil_image.width * ratio)
+                pil_image = pil_image.resize((new_width, max_height), PILImage.Resampling.LANCZOS)
 
             # Convert back to bytes
             img_buffer = io.BytesIO()
