@@ -598,7 +598,12 @@ export default function UploadSection({
 
   const audioDropzone = useDropzone({
     accept: {
-      'audio/*': ['.mp3', '.wav', '.m4a', '.aac']
+      'audio/mpeg': ['.mp3'],
+      'audio/wav': ['.wav'],
+      'audio/mp4': ['.m4a'],
+      'audio/aac': ['.aac'],
+      'audio/ogg': ['.ogg'],
+      'audio/flac': ['.flac']
     },
     maxFiles: 1,
     maxSize: 100 * 1024 * 1024, // 100MB
@@ -785,7 +790,10 @@ export default function UploadSection({
               audioUploaded && 'border-green-300 bg-green-50'
             )}
           >
-            <input {...audioDropzone.getInputProps()} />
+            <input
+              {...audioDropzone.getInputProps()}
+              accept=".mp3,.wav,.m4a,.aac,.ogg,.flac,audio/mpeg,audio/wav,audio/mp4,audio/aac,audio/ogg,audio/flac"
+            />
 
             {audioUploading ? (
               <div className="space-y-3">
@@ -860,7 +868,7 @@ export default function UploadSection({
                   Drop your audio here or <span className="text-primary-600 font-medium">browse</span>
                 </p>
                 <p className="text-xs text-gray-500">
-                  Supports MP3, WAV, M4A up to 100MB
+                  Supports MP3, WAV, M4A, AAC, OGG, FLAC up to 100MB
                 </p>
               </div>
             )}
