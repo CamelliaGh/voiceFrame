@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Download, Eye, ArrowLeft, ArrowRight, RefreshCw } from 'lucide-react'
+import { Download, Eye, ArrowLeft, ArrowRight, RefreshCw, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react'
 import { useSession } from '../contexts/SessionContext'
 import { getPreviewUrl, getPreviewImageUrl } from '@/lib/api'
 import { shouldUseImagePreview } from '@/lib/mobile'
@@ -15,6 +15,8 @@ export default function PreviewSection({ onNext, onBack }: PreviewSectionProps) 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [useImagePreview, setUseImagePreview] = useState(shouldUseImagePreview())
+  const [zoomLevel, setZoomLevel] = useState(1)
+  const [lastTouchDistance, setLastTouchDistance] = useState(0)
 
   // Calculate aspect ratio based on PDF size (adjusted for better viewport fit)
   const getAspectRatio = (pdfSize: string) => {
@@ -37,6 +39,31 @@ export default function PreviewSection({ onNext, onBack }: PreviewSectionProps) 
   }
 
   const aspectRatio = session?.pdf_size ? getAspectRatio(session.pdf_size) : 'aspect-[3/4]'
+
+  // Touch event handlers for pinch-to-zoom
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      const distance = Math.sqrt(
+        Math.pow(e.touches[0].clientX - e.touches[1].clientX, 2) +
+        Math.pow(e.touches[0].clientY - e.touches[1].clientY, 2)
+      )
+      setLastTouchDistance(distance)
+    }
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 2 && lastTouchDistance > 0) {
+      e.preventDefault()
+      const distance = Math.sqrt(
+        Math.pow(e.touches[0].clientX - e.touches[1].clientX, 2) +
+        Math.pow(e.touches[0].clientY - e.touches[1].clientY, 2)
+      )
+      const scale = distance / lastTouchDistance
+      const newZoom = Math.max(0.5, Math.min(2, zoomLevel * scale))
+      setZoomLevel(newZoom)
+      setLastTouchDistance(distance)
+    }
+  }
 
   const generatePreview = async () => {
     if (!session) return
@@ -146,7 +173,7 @@ export default function PreviewSection({ onNext, onBack }: PreviewSectionProps) 
                   </p>
                 )}
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 flex-wrap">
                 {shouldUseImagePreview() && (
                   <button
                     onClick={() => {
@@ -158,6 +185,37 @@ export default function PreviewSection({ onNext, onBack }: PreviewSectionProps) 
                     {useImagePreview ? 'PDF View' : 'Image View'}
                   </button>
                 )}
+
+                {/* Zoom controls for mobile */}
+                {shouldUseImagePreview() && (
+                  <div className="flex items-center space-x-1">
+                    <button
+                      onClick={() => setZoomLevel(Math.max(0.5, zoomLevel - 0.2))}
+                      className="btn-secondary text-xs px-2 py-2"
+                      title="Zoom Out"
+                    >
+                      <ZoomOut className="w-3 h-3" />
+                    </button>
+                    <span className="text-xs text-gray-600 px-2">
+                      {Math.round(zoomLevel * 100)}%
+                    </span>
+                    <button
+                      onClick={() => setZoomLevel(Math.min(2, zoomLevel + 0.2))}
+                      className="btn-secondary text-xs px-2 py-2"
+                      title="Zoom In"
+                    >
+                      <ZoomIn className="w-3 h-3" />
+                    </button>
+                    <button
+                      onClick={() => setZoomLevel(1)}
+                      className="btn-secondary text-xs px-2 py-2"
+                      title="Reset Zoom"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+
                 <button
                   onClick={generatePreview}
                   disabled={loading}
@@ -196,6 +254,13 @@ export default function PreviewSection({ onNext, onBack }: PreviewSectionProps) 
                       src={previewUrl}
                       alt="Poster Preview"
                       className={`mobile-preview-image ${aspectRatio}`}
+                      style={{
+                        transform: `scale(${zoomLevel})`,
+                        transformOrigin: 'center center',
+                        transition: 'transform 0.2s ease-in-out'
+                      }}
+                      onTouchStart={handleTouchStart}
+                      onTouchMove={handleTouchMove}
                     />
                   </div>
                 ) : (
