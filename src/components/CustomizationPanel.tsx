@@ -1,13 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Type, ArrowLeft, ArrowRight, Image, FileText, RefreshCw, Eye } from 'lucide-react'
+import { Type, ArrowLeft, ArrowRight, Image, FileText, RefreshCw, Eye, Maximize2 } from 'lucide-react'
 import { useSession } from '../contexts/SessionContext'
-// import { cn } from '../lib/utils' // Not used
-import { SessionData, getProcessingStatus, getPreviewUrl } from '@/lib/api'
-// import RealTimePreview from './RealTimePreview' // Disabled to prevent excessive API calls
+import { SessionData, getProcessingStatus, getPreviewUrl, getPreviewImageUrl } from '@/lib/api'
+import { shouldUseImagePreview } from '@/lib/mobile'
 import TextCustomization from './TextCustomization'
 import BackgroundSelection from './BackgroundSelection'
 import PhotoShapeCustomization from './PhotoShapeCustomization'
 import PDFSizeSelection from './PDFSizeSelection'
+import MobilePreviewModal from './MobilePreviewModal'
 
 interface CustomizationPanelProps {
   onNext: () => void
@@ -56,6 +56,8 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [previewLoading, setPreviewLoading] = useState(false)
   const [previewError, setPreviewError] = useState<string | null>(null)
+  const [showMobileModal, setShowMobileModal] = useState(false)
+  const [useImagePreview, setUseImagePreview] = useState(shouldUseImagePreview())
 
 
   // Check processing status when component mounts and periodically
@@ -299,7 +301,6 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
     // Wait a moment to ensure any pending session updates have completed
     if (isUpdating) {
       console.log('⏳ Waiting for session update to complete before generating preview...')
-      // Wait for the update to complete
       await new Promise(resolve => {
         const checkUpdate = () => {
           if (!isUpdating) {
@@ -313,16 +314,28 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
     }
 
     try {
-      const response = await getPreviewUrl(session.session_token)
-      // Extract the actual URL from the response object
+      const response = useImagePreview
+        ? await getPreviewImageUrl(session.session_token)
+        : await getPreviewUrl(session.session_token)
+
       const previewUrl = response.preview_url
-      // Add cache-busting parameter to prevent browser caching
       const cacheBustingUrl = `${previewUrl}?t=${Date.now()}`
       setPreviewUrl(cacheBustingUrl)
     } catch (err: any) {
+      if (useImagePreview && shouldUseImagePreview()) {
+        try {
+          setUseImagePreview(false)
+          const response = await getPreviewUrl(session.session_token)
+          const previewUrl = response.preview_url
+          const cacheBustingUrl = `${previewUrl}?t=${Date.now()}`
+          setPreviewUrl(cacheBustingUrl)
+          return
+        } catch (fallbackErr: any) {
+          console.error('Fallback PDF preview also failed:', fallbackErr)
+        }
+      }
       console.error('Failed to generate preview:', err)
 
-      // Extract specific error message from the response
       let errorMessage = 'Failed to generate preview. Please try again.'
 
       if (err.response?.data?.detail) {
@@ -458,14 +471,25 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
                   </p>
                 )}
               </div>
-              <button
-                onClick={generatePreview}
-                disabled={previewLoading || !session}
-                className="btn-secondary flex items-center space-x-2 text-sm"
-              >
-                <RefreshCw className={`w-4 h-4 ${previewLoading ? 'animate-spin' : ''}`} />
-                <span>Refresh</span>
-              </button>
+              <div className="flex items-center space-x-2">
+                {shouldUseImagePreview() && previewUrl && !previewLoading && !previewError && (
+                  <button
+                    onClick={() => setShowMobileModal(true)}
+                    className="btn-secondary flex items-center space-x-2 text-sm px-3 py-2"
+                    title="View fullscreen"
+                  >
+                    <Maximize2 className="w-4 h-4" />
+                  </button>
+                )}
+                <button
+                  onClick={generatePreview}
+                  disabled={previewLoading || !session}
+                  className="btn-secondary flex items-center space-x-2 text-sm"
+                >
+                  <RefreshCw className={`w-4 h-4 ${previewLoading ? 'animate-spin' : ''}`} />
+                  <span className="hidden sm:inline">Refresh</span>
+                </button>
+              </div>
             </div>
 
             <div className="border border-gray-200 rounded-lg overflow-hidden">
@@ -477,9 +501,9 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
                   </div>
                 </div>
               ) : previewError ? (
-                <div className={`${aspectRatio} bg-red-50 flex items-center justify-center`}>
+                <div className={`${aspectRatio} bg-red-50 flex items-center justify-center p-4`}>
                   <div className="text-center text-red-600">
-                    <p className="font-medium">{previewError}</p>
+                    <p className="font-medium text-sm">{previewError}</p>
                     <button
                       onClick={generatePreview}
                       className="mt-2 text-sm underline hover:no-underline"
@@ -489,11 +513,31 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
                   </div>
                 </div>
               ) : previewUrl ? (
-                <iframe
-                  src={previewUrl}
-                  className={`w-full ${aspectRatio}`}
-                  title="Poster Preview"
-                />
+                useImagePreview ? (
+                  <div className="relative">
+                    <img
+                      src={previewUrl}
+                      alt="Poster Preview"
+                      className={`w-full ${aspectRatio} object-contain`}
+                    />
+                    {shouldUseImagePreview() && (
+                      <button
+                        onClick={() => setShowMobileModal(true)}
+                        className="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/10 transition-colors group"
+                      >
+                        <div className="bg-white/90 backdrop-blur-sm rounded-full p-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Maximize2 className="w-6 h-6 text-gray-900" />
+                        </div>
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <iframe
+                    src={previewUrl}
+                    className={`w-full ${aspectRatio}`}
+                    title="Poster Preview"
+                  />
+                )
               ) : (
                 <div className={`${aspectRatio} bg-gray-100 flex items-center justify-center`}>
                   <div className="text-center text-gray-500">
@@ -539,6 +583,14 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
           <ArrowRight className="w-4 h-4" />
         </button>
       </div>
+
+      {showMobileModal && previewUrl && (
+        <MobilePreviewModal
+          imageUrl={previewUrl}
+          onClose={() => setShowMobileModal(false)}
+          pdfSize={pdfSize}
+        />
+      )}
     </div>
   )
 }
