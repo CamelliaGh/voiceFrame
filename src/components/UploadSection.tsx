@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useDropzone } from 'react-dropzone'
-import { Upload, Image, Music, CheckCircle, AlertCircle, RotateCcw, X } from 'lucide-react'
+import { Upload, Image, Music, CheckCircle, AlertCircle, RotateCcw, X, Mic, Cloud, FileAudio } from 'lucide-react'
 import { useSession } from '../contexts/SessionContext'
 import { uploadPhoto, uploadAudio, removePhoto, removeAudio } from '@/lib/api'
 // Utility function to format file size
@@ -40,6 +40,9 @@ export default function UploadSection({
   const [retryCount, setRetryCount] = useState<{ photo?: number; audio?: number }>({})
   const [lastUploadAttempt, setLastUploadAttempt] = useState<{ photo?: File; audio?: File }>({})
   const [removing, setRemoving] = useState<{ photo?: boolean; audio?: boolean }>({})
+  const [isRecording, setIsRecording] = useState(false)
+  const [recordingTime, setRecordingTime] = useState(0)
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null)
 
   // Check if files are already uploaded when session loads
   useEffect(() => {
@@ -586,6 +589,86 @@ export default function UploadSection({
     }
   }
 
+  // Recording functionality
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const recorder = new MediaRecorder(stream)
+      const chunks: Blob[] = []
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          chunks.push(event.data)
+        }
+      }
+
+      recorder.onstop = () => {
+        const audioBlob = new Blob(chunks, { type: 'audio/wav' })
+        const audioFile = new File([audioBlob], `recording-${Date.now()}.wav`, {
+          type: 'audio/wav'
+        })
+
+        // Upload the recorded audio
+        handleAudioUpload([audioFile])
+
+        // Clean up
+        stream.getTracks().forEach(track => track.stop())
+        setMediaRecorder(null)
+      }
+
+      recorder.start()
+      setMediaRecorder(recorder)
+      setIsRecording(true)
+      setRecordingTime(0)
+
+    } catch (error) {
+      console.error('Error starting recording:', error)
+      setUploadErrors(prev => ({
+        ...prev,
+        audio: 'Unable to access microphone. Please check permissions and try again.'
+      }))
+    }
+  }
+
+  const stopRecording = () => {
+    if (mediaRecorder && isRecording) {
+      mediaRecorder.stop()
+      setIsRecording(false)
+    }
+  }
+
+  // Timer effect for recording
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null
+
+    if (isRecording) {
+      interval = setInterval(() => {
+        setRecordingTime(prev => prev + 1)
+      }, 1000)
+    }
+
+    return () => {
+      if (interval) {
+        clearInterval(interval)
+      }
+    }
+  }, [isRecording])
+
+  const formatRecordingTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins}:${secs.toString().padStart(2, '0')}`
+  }
+
+  const handleGoogleDriveUpload = () => {
+    // For now, we'll show a message that this feature is coming soon
+    // In a full implementation, you'd integrate with Google Drive API
+    setUploadErrors(prev => ({
+      ...prev,
+      audio: 'Google Drive integration coming soon! Please use the file browser or recording option for now.'
+    }))
+  }
+
   const photoDropzone = useDropzone({
     accept: {
       'image/*': ['.jpg', '.jpeg', '.png', '.heic']
@@ -862,12 +945,55 @@ export default function UploadSection({
                 </div>
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-4">
                 <Upload className="w-8 h-8 text-gray-400 mx-auto" />
                 <p className="text-sm text-gray-600">
-                  Drop your audio here or <span className="text-primary-600 font-medium">browse</span>
+                  Drop your audio here or choose an option below
                 </p>
-                <p className="text-xs text-gray-500">
+
+                {/* Upload Options */}
+                <div className="space-y-2">
+                  <button
+                    onClick={() => audioDropzone.inputRef.current?.click()}
+                    disabled={audioUploading}
+                    className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <FileAudio className="w-4 h-4 text-gray-600" />
+                    <span className="text-sm font-medium text-gray-700">Choose Files</span>
+                  </button>
+
+                  <button
+                    onClick={startRecording}
+                    disabled={audioUploading || isRecording}
+                    className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Mic className="w-4 h-4 text-red-600" />
+                    <span className="text-sm font-medium text-red-700">
+                      {isRecording ? `Recording ${formatRecordingTime(recordingTime)}` : 'Record Voice'}
+                    </span>
+                  </button>
+
+                  {isRecording && (
+                    <button
+                      onClick={stopRecording}
+                      className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                    >
+                      <div className="w-4 h-4 bg-white rounded-full" />
+                      <span className="text-sm font-medium">Stop Recording</span>
+                    </button>
+                  )}
+
+                  <button
+                    onClick={handleGoogleDriveUpload}
+                    disabled={audioUploading}
+                    className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Cloud className="w-4 h-4 text-blue-600" />
+                    <span className="text-sm font-medium text-blue-700">Google Drive</span>
+                  </button>
+                </div>
+
+                <p className="text-xs text-gray-500 text-center">
                   Supports MP3, WAV, M4A, AAC, OGG, FLAC up to 100MB
                 </p>
               </div>
