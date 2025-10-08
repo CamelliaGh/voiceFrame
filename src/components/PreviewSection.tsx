@@ -192,11 +192,11 @@ export default function PreviewSection({ onNext, onBack }: PreviewSectionProps) 
                 </div>
               ) : previewUrl ? (
                 useImagePreview ? (
-                  <div className="relative">
+                  <div className={`relative w-full ${aspectRatio}`}>
                     <img
                       src={previewUrl}
                       alt="Poster Preview"
-                      className={`w-full ${aspectRatio} object-contain`}
+                      className="absolute inset-0 w-full h-full object-contain"
                     />
                     {shouldUseImagePreview() && (
                       <button
