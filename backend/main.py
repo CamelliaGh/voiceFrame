@@ -457,7 +457,7 @@ async def upload_audio(
             raise HTTPException(status_code=400, detail=f"Audio file too large (max {settings.max_audio_size // (1024*1024)}MB)")
 
         # Validate file extension
-        allowed_extensions = {".mp3", ".wav", ".m4a", ".aac", ".ogg", ".flac"}
+        allowed_extensions = {".mp3", ".wav", ".m4a", ".aac", ".ogg", ".flac", ".webm"}
         file_extension = os.path.splitext(audio.filename.lower())[1]
         if file_extension not in allowed_extensions:
             raise HTTPException(

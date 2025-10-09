@@ -118,6 +118,18 @@ class ContentFilter:
         """Validate that the file is actually an audio file"""
         true_mime, description = self._detect_true_file_type(file_content)
 
+        # Handle MIME types with codecs (e.g., 'audio/webm;codecs=opus' -> 'audio/webm')
+        base_declared_mime = declared_mime.split(';')[0] if ';' in declared_mime else declared_mime
+
+        logger.info(f"Audio file validation - declared: {declared_mime} (base: {base_declared_mime}), detected: {true_mime}")
+
+        # Special handling for WebM files - python-magic might not recognize them properly
+        if base_declared_mime == "audio/webm":
+            # For WebM files, be more lenient if python-magic doesn't recognize them
+            if not true_mime.startswith("audio/"):
+                logger.warning(f"WebM file not recognized by python-magic: {true_mime}, but allowing based on declared type")
+                return True
+
         # Check if true MIME type matches declared type
         if not true_mime.startswith("audio/"):
             logger.warning(f"File declared as {declared_mime} but detected as {true_mime}")
@@ -126,7 +138,7 @@ class ContentFilter:
         # Additional validation for common audio formats
         valid_audio_types = {
             "audio/mpeg", "audio/wav", "audio/x-wav", "audio/mp4",
-            "audio/aac", "audio/ogg", "audio/flac", "audio/x-flac"
+            "audio/aac", "audio/ogg", "audio/flac", "audio/x-flac", "audio/webm"
         }
 
         if true_mime not in valid_audio_types:

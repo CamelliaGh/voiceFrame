@@ -52,6 +52,7 @@ SUPPORTED_AUDIO_FORMATS = {
     "audio/ogg": [".ogg"],
     "audio/flac": [".flac"],
     "audio/x-flac": [".flac"],
+    "audio/webm": [".webm"],
 }
 
 # Maximum file size in bytes (100MB)

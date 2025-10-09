@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useDropzone } from 'react-dropzone'
-import { Upload, Image, Music, CheckCircle, AlertCircle, RotateCcw, X, Mic, Cloud, FileAudio } from 'lucide-react'
+import { Upload, Image, Music, CheckCircle, AlertCircle, RotateCcw, X, Mic, FileAudio, Camera } from 'lucide-react'
 import { useSession } from '../contexts/SessionContext'
 import { uploadPhoto, uploadAudio, removePhoto, removeAudio } from '@/lib/api'
 // Utility function to format file size
@@ -43,6 +43,9 @@ export default function UploadSection({
   const [isRecording, setIsRecording] = useState(false)
   const [recordingTime, setRecordingTime] = useState(0)
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null)
+  const [isCameraOpen, setIsCameraOpen] = useState(false)
+  const [videoStream, setVideoStream] = useState<MediaStream | null>(null)
+  const [videoElement, setVideoElement] = useState<HTMLVideoElement | null>(null)
 
   // Check if files are already uploaded when session loads
   useEffect(() => {
@@ -470,16 +473,27 @@ export default function UploadSection({
     }
 
     // Client-side validation
-    const allowedTypes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/m4a', 'audio/aac', 'audio/ogg', 'audio/flac']
-    const allowedExtensions = ['.mp3', '.wav', '.m4a', '.aac', '.ogg', '.flac']
+    const allowedBaseTypes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/m4a', 'audio/aac', 'audio/ogg', 'audio/flac', 'audio/webm']
+    const allowedExtensions = ['.mp3', '.wav', '.m4a', '.aac', '.ogg', '.flac', '.webm']
     const maxSize = 100 * 1024 * 1024 // 100MB
     const minSize = 1024 // 1KB
 
-    // Validate file type
-    if (!allowedTypes.includes(file.type)) {
+    // Validate file type (handle MIME types with codecs)
+    const baseMimeType = file.type.split(';')[0] // Remove codecs part (e.g., 'audio/webm;codecs=opus' -> 'audio/webm')
+
+    console.log('Validating file:', {
+      name: file.name,
+      type: file.type,
+      baseType: baseMimeType,
+      size: file.size,
+      allowedTypes: allowedBaseTypes
+    })
+
+    if (!allowedBaseTypes.includes(baseMimeType)) {
+      console.error('File type validation failed:', baseMimeType, 'not in', allowedBaseTypes)
       setUploadErrors(prev => ({
         ...prev,
-        audio: 'Invalid file type. Please upload an MP3, WAV, M4A, AAC, OGG, or FLAC audio file.'
+        audio: `Invalid file type: ${file.type}. Please upload an MP3, WAV, M4A, AAC, OGG, FLAC, or WebM audio file.`
       }))
       return
     }
@@ -593,7 +607,23 @@ export default function UploadSection({
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const recorder = new MediaRecorder(stream)
+
+      // Check what MIME types are supported, preferring more standard formats
+      const supportedTypes = [
+        'audio/ogg;codecs=opus',  // Prefer OGG as it's more standard
+        'audio/webm;codecs=opus',
+        'audio/webm',
+        'audio/wav',
+        'audio/mp4'
+      ].filter(type => MediaRecorder.isTypeSupported(type))
+
+      console.log('Supported MIME types:', supportedTypes)
+
+      // Use the best supported type
+      const mimeType = supportedTypes[0] || 'audio/webm'
+      console.log('Using MIME type:', mimeType)
+
+      const recorder = new MediaRecorder(stream, { mimeType })
       const chunks: Blob[] = []
 
       recorder.ondataavailable = (event) => {
@@ -603,9 +633,29 @@ export default function UploadSection({
       }
 
       recorder.onstop = () => {
-        const audioBlob = new Blob(chunks, { type: 'audio/wav' })
-        const audioFile = new File([audioBlob], `recording-${Date.now()}.wav`, {
-          type: 'audio/wav'
+        // Get the MIME type from the recorder
+        const mimeType = recorder.mimeType || 'audio/webm'
+        let fileName = `recording-${Date.now()}.webm`
+
+        // Map MIME types to file extensions
+        if (mimeType.includes('webm')) {
+          fileName = `recording-${Date.now()}.webm`
+        } else if (mimeType.includes('ogg')) {
+          fileName = `recording-${Date.now()}.ogg`
+        } else if (mimeType.includes('wav')) {
+          fileName = `recording-${Date.now()}.wav`
+        }
+
+        const audioBlob = new Blob(chunks, { type: mimeType })
+        const audioFile = new File([audioBlob], fileName, {
+          type: mimeType
+        })
+
+        console.log('Created audio file:', {
+          name: audioFile.name,
+          type: audioFile.type,
+          size: audioFile.size,
+          mimeType: mimeType
         })
 
         // Upload the recorded audio
@@ -660,14 +710,95 @@ export default function UploadSection({
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
-  const handleGoogleDriveUpload = () => {
-    // For now, we'll show a message that this feature is coming soon
-    // In a full implementation, you'd integrate with Google Drive API
-    setUploadErrors(prev => ({
-      ...prev,
-      audio: 'Google Drive integration coming soon! Please use the file browser or recording option for now.'
-    }))
+  // Camera functionality
+  const openCamera = async () => {
+    try {
+      // Check if camera is available
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setUploadErrors(prev => ({
+          ...prev,
+          photo: 'Camera not supported on this device or browser. Please use the "Choose Files" option instead.'
+        }))
+        return
+      }
+
+      // Request camera access
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: 'environment' // Prefer rear camera on mobile
+        }
+      })
+
+      setVideoStream(stream)
+      setIsCameraOpen(true)
+    } catch (error: any) {
+      console.error('Error accessing camera:', error)
+
+      if (error.name === 'NotAllowedError') {
+        setUploadErrors(prev => ({
+          ...prev,
+          photo: 'Camera access denied. Please grant camera permissions in your browser settings.'
+        }))
+      } else if (error.name === 'NotFoundError') {
+        setUploadErrors(prev => ({
+          ...prev,
+          photo: 'No camera found on this device. Please use the "Choose Files" option instead.'
+        }))
+      } else {
+        setUploadErrors(prev => ({
+          ...prev,
+          photo: 'Unable to access camera. Please check permissions or use the "Choose Files" option.'
+        }))
+      }
+    }
   }
+
+  const closeCamera = () => {
+    if (videoStream) {
+      videoStream.getTracks().forEach(track => track.stop())
+      setVideoStream(null)
+    }
+    setIsCameraOpen(false)
+    setVideoElement(null)
+  }
+
+  const capturePhoto = () => {
+    if (!videoElement) return
+
+    // Create a canvas to capture the current video frame
+    const canvas = document.createElement('canvas')
+    canvas.width = videoElement.videoWidth
+    canvas.height = videoElement.videoHeight
+
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    // Draw the video frame to the canvas
+    ctx.drawImage(videoElement, 0, 0)
+
+    // Convert canvas to blob
+    canvas.toBlob((blob) => {
+      if (!blob) return
+
+      // Create a file from the blob
+      const file = new File([blob], `camera-photo-${Date.now()}.jpg`, {
+        type: 'image/jpeg'
+      })
+
+      // Close camera and upload the photo
+      closeCamera()
+      handlePhotoUpload([file])
+    }, 'image/jpeg', 0.9)
+  }
+
+  // Cleanup camera on unmount
+  useEffect(() => {
+    return () => {
+      if (videoStream) {
+        videoStream.getTracks().forEach(track => track.stop())
+      }
+    }
+  }, [videoStream])
 
   const photoDropzone = useDropzone({
     accept: {
@@ -686,7 +817,10 @@ export default function UploadSection({
       'audio/mp4': ['.m4a'],
       'audio/aac': ['.aac'],
       'audio/ogg': ['.ogg'],
-      'audio/flac': ['.flac']
+      'audio/flac': ['.flac'],
+      'audio/webm': ['.webm'],
+      'audio/webm;codecs=opus': ['.webm'],
+      'audio/ogg;codecs=opus': ['.ogg']
     },
     maxFiles: 1,
     maxSize: 100 * 1024 * 1024, // 100MB
@@ -817,14 +951,37 @@ export default function UploadSection({
               <div className="space-y-2">
                 <Upload className="w-8 h-8 text-gray-400 mx-auto" />
                 <p className="text-sm text-gray-600">
-                  Drop your photo here or <span className="text-primary-600 font-medium">browse</span>
+                  Drop your photo here or choose an option below
                 </p>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-gray-500 text-center">
                   Supports JPG, PNG, HEIC up to 50MB
                 </p>
               </div>
             )}
           </div>
+
+          {/* Photo Upload Options - Outside dropzone to prevent file picker trigger */}
+          {!photoUploading && !photoUploaded && (
+            <div className="mt-4 space-y-2">
+              <button
+                onClick={() => photoDropzone.inputRef.current?.click()}
+                disabled={photoUploading}
+                className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Image className="w-4 h-4 text-gray-600" />
+                <span className="text-sm font-medium text-gray-700">Choose Files</span>
+              </button>
+
+              <button
+                onClick={openCamera}
+                disabled={photoUploading}
+                className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Camera className="w-4 h-4 text-blue-600" />
+                <span className="text-sm font-medium text-blue-700">Take Photo</span>
+              </button>
+            </div>
+          )}
 
           {uploadErrors.photo && (
             <div className="mt-2 space-y-2">
@@ -875,7 +1032,7 @@ export default function UploadSection({
           >
             <input
               {...audioDropzone.getInputProps()}
-              accept=".mp3,.wav,.m4a,.aac,.ogg,.flac,audio/mpeg,audio/wav,audio/mp4,audio/aac,audio/ogg,audio/flac"
+              accept=".mp3,.wav,.m4a,.aac,.ogg,.flac,.webm,audio/mpeg,audio/wav,audio/mp4,audio/aac,audio/ogg,audio/flac,audio/webm,audio/webm;codecs=opus,audio/ogg;codecs=opus"
             />
 
             {audioUploading ? (
@@ -945,60 +1102,53 @@ export default function UploadSection({
                 </div>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-2">
                 <Upload className="w-8 h-8 text-gray-400 mx-auto" />
                 <p className="text-sm text-gray-600">
                   Drop your audio here or choose an option below
                 </p>
-
-                {/* Upload Options */}
-                <div className="space-y-2">
-                  <button
-                    onClick={() => audioDropzone.inputRef.current?.click()}
-                    disabled={audioUploading}
-                    className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <FileAudio className="w-4 h-4 text-gray-600" />
-                    <span className="text-sm font-medium text-gray-700">Choose Files</span>
-                  </button>
-
-                  <button
-                    onClick={startRecording}
-                    disabled={audioUploading || isRecording}
-                    className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Mic className="w-4 h-4 text-red-600" />
-                    <span className="text-sm font-medium text-red-700">
-                      {isRecording ? `Recording ${formatRecordingTime(recordingTime)}` : 'Record Voice'}
-                    </span>
-                  </button>
-
-                  {isRecording && (
-                    <button
-                      onClick={stopRecording}
-                      className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
-                    >
-                      <div className="w-4 h-4 bg-white rounded-full" />
-                      <span className="text-sm font-medium">Stop Recording</span>
-                    </button>
-                  )}
-
-                  <button
-                    onClick={handleGoogleDriveUpload}
-                    disabled={audioUploading}
-                    className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Cloud className="w-4 h-4 text-blue-600" />
-                    <span className="text-sm font-medium text-blue-700">Google Drive</span>
-                  </button>
-                </div>
-
-                <p className="text-xs text-gray-500 text-center">
-                  Supports MP3, WAV, M4A, AAC, OGG, FLAC up to 100MB
+                <p className="text-xs text-gray-500">
+                  Supports MP3, WAV, M4A, AAC, OGG, FLAC, WebM up to 100MB
                 </p>
               </div>
             )}
           </div>
+
+          {/* Audio Upload Options - Outside dropzone to prevent file picker trigger */}
+          {!audioUploading && !audioUploaded && (
+            <div className="mt-4 space-y-2">
+              <button
+                onClick={() => audioDropzone.inputRef.current?.click()}
+                disabled={audioUploading}
+                className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <FileAudio className="w-4 h-4 text-gray-600" />
+                <span className="text-sm font-medium text-gray-700">Choose Files</span>
+              </button>
+
+              <button
+                onClick={startRecording}
+                disabled={audioUploading || isRecording}
+                className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Mic className="w-4 h-4 text-red-600" />
+                <span className="text-sm font-medium text-red-700">
+                  {isRecording ? `Recording ${formatRecordingTime(recordingTime)}` : 'Record Voice'}
+                </span>
+              </button>
+
+              {isRecording && (
+                <button
+                  onClick={stopRecording}
+                  className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                >
+                  <div className="w-4 h-4 bg-white rounded-full" />
+                  <span className="text-sm font-medium">Stop Recording</span>
+                </button>
+              )}
+
+            </div>
+          )}
 
           {uploadErrors.audio && (
             <div className="mt-2 space-y-2">
@@ -1040,6 +1190,57 @@ export default function UploadSection({
           >
             Continue to Customize →
           </button>
+        </div>
+      )}
+
+      {/* Camera Modal */}
+      {isCameraOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4">
+          <div className="relative w-full max-w-2xl">
+            {/* Close Button */}
+            <button
+              onClick={closeCamera}
+              className="absolute top-4 right-4 z-10 flex items-center justify-center w-10 h-10 bg-red-600 hover:bg-red-700 text-white rounded-full transition-colors"
+              title="Close camera"
+            >
+              <X className="w-6 h-6" />
+            </button>
+
+            {/* Video Feed */}
+            <div className="bg-black rounded-lg overflow-hidden">
+              <video
+                ref={(ref) => {
+                  if (ref && videoStream && !videoElement) {
+                    ref.srcObject = videoStream
+                    ref.play()
+                    setVideoElement(ref)
+                  }
+                }}
+                className="w-full h-auto"
+                autoPlay
+                playsInline
+                muted
+              />
+            </div>
+
+            {/* Capture Button */}
+            <div className="mt-4 flex justify-center space-x-4">
+              <button
+                onClick={capturePhoto}
+                className="flex items-center justify-center space-x-2 px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-semibold"
+              >
+                <Camera className="w-5 h-5" />
+                <span>Capture Photo</span>
+              </button>
+              <button
+                onClick={closeCamera}
+                className="flex items-center justify-center space-x-2 px-8 py-4 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors font-semibold"
+              >
+                <X className="w-5 h-5" />
+                <span>Cancel</span>
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

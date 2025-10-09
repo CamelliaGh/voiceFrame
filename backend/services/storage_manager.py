@@ -321,7 +321,8 @@ class StorageManager:
             'm4a': 'audio/mp4',
             'aac': 'audio/aac',
             'ogg': 'audio/ogg',
-            'flac': 'audio/flac'
+            'flac': 'audio/flac',
+            'webm': 'audio/webm'
         }
         return content_types.get(extension.lower(), 'audio/mpeg')
 
