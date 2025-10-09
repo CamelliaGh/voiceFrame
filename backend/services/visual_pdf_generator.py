@@ -806,42 +806,44 @@ class VisualPDFGenerator:
     def _generate_qr_url(
         self, session: SessionModel, order: Optional[Order] = None
     ) -> str:
-        """Generate direct audio file URL for QR code"""
+        """Generate permanent URL for QR code that uses /listen/ endpoint
+
+        This generates URLs like: https://yoursite.com/listen/{identifier}
+        The /listen/ endpoint generates fresh presigned URLs on-demand, avoiding
+        AWS S3's 7-day maximum expiration limit for presigned URLs with SigV4.
+
+        This approach ensures QR codes work for years as long as:
+        - The domain remains active
+        - The backend is running
+        - The audio file exists in storage
+        """
         try:
             print(
                 f"DEBUG: Visual PDF _generate_qr_url called with session.audio_s3_key: {session.audio_s3_key if session else 'None'}"
             )
             print(f"DEBUG: order: {order}")
 
-            if order and order.permanent_audio_s3_key:
-                # Paid version - use permanent audio URL
-                print(
-                    f"DEBUG: Using permanent audio key: {order.permanent_audio_s3_key}"
-                )
-                # First check if the file exists
-                if self.file_uploader.file_exists(order.permanent_audio_s3_key):
-                    return self.file_uploader.generate_presigned_url(
-                        order.permanent_audio_s3_key,
-                        expiration=settings.qr_code_permanent_expiration
-                    )
+            if order:
+                # Paid version - use order ID for permanent access
+                print(f"DEBUG: Using order ID for permanent access: {order.id}")
+
+                # Verify the audio file exists before generating URL
+                if order.permanent_audio_s3_key and self.file_uploader.file_exists(order.permanent_audio_s3_key):
+                    return f"{settings.base_url}/listen/{order.id}"
                 else:
                     raise Exception(
-                        f"Permanent audio file missing: {order.permanent_audio_s3_key}"
+                        f"Permanent audio file missing: {order.permanent_audio_s3_key if order.permanent_audio_s3_key else 'No key set'}"
                     )
             elif session and session.audio_s3_key:
-                # Preview version - use session audio URL
-                print(f"DEBUG: Using session audio key: {session.audio_s3_key}")
-                print(f"DEBUG: Checking if file exists...")
+                # Preview version - use session token for temporary access
+                print(f"DEBUG: Using session token for preview access: {session.session_token}")
 
-                # All audio files are now in S3, so check S3 directly
+                # Verify the audio file exists before generating URL
                 file_exists = self.file_uploader.file_exists(session.audio_s3_key)
                 print(f"DEBUG: S3 file exists check result: {file_exists}")
 
                 if file_exists:
-                    print(f"DEBUG: Generating presigned URL for session audio")
-                    return self.file_uploader.generate_presigned_url(
-                        session.audio_s3_key, expiration=settings.qr_code_preview_expiration
-                    )
+                    return f"{settings.base_url}/listen/{session.session_token}"
                 else:
                     raise Exception(
                         f"Session audio file missing: {session.audio_s3_key}"

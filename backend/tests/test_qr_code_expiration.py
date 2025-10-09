@@ -1,5 +1,9 @@
 """
-Tests for QR code expiration updates
+Tests for QR code URL generation
+
+Tests verify that QR codes use permanent /listen/ endpoint URLs
+instead of expiring presigned S3 URLs. This ensures QR codes work
+for years as long as the backend is running.
 """
 from unittest.mock import MagicMock, patch
 
@@ -8,6 +12,7 @@ import pytest
 from ..models import Order, SessionModel
 from ..services.pdf_generator import PDFGenerator
 from ..services.visual_pdf_generator import VisualPDFGenerator
+from ..config import settings
 
 
 class TestQRCodeExpiration:
@@ -45,54 +50,50 @@ class TestQRCodeExpiration:
         )
 
     @patch("backend.services.pdf_generator.FileUploader")
-    def test_qr_url_paid_version_5_years(
+    def test_qr_url_paid_version_uses_listen_endpoint(
         self, mock_file_uploader_class, pdf_generator, mock_paid_order
     ):
-        """Test QR URL for paid version has 5-year expiration"""
+        """Test QR URL for paid version uses permanent /listen/ endpoint"""
         # Mock the FileUploader class and its instance
         mock_file_uploader_instance = mock_file_uploader_class.return_value
         mock_file_uploader_instance.file_exists.return_value = True
-        mock_file_uploader_instance.generate_presigned_url.return_value = (
-            "https://example.com/audio.mp3"
-        )
 
         # Replace the pdf_generator's file_uploader with our mock
         pdf_generator.file_uploader = mock_file_uploader_instance
 
         qr_url = pdf_generator._generate_qr_url(None, mock_paid_order)
 
-        # Verify presigned URL was generated
-        mock_file_uploader_instance.generate_presigned_url.assert_called_once()
-        call_args = mock_file_uploader_instance.generate_presigned_url.call_args
+        # Verify it uses /listen/ endpoint with order ID
+        assert qr_url == f"{settings.base_url}/listen/{mock_paid_order.id}"
 
-        # Check expiration is 5 years (86400 * 365 * 5 seconds)
-        assert call_args[1]["expiration"] == 86400 * 365 * 5
-        assert call_args[0][0] == "permanent/audio/test.mp3"
+        # Verify file existence was checked
+        mock_file_uploader_instance.file_exists.assert_called_once_with("permanent/audio/test.mp3")
+
+        # Verify no presigned URL was generated (we use /listen/ endpoint now)
+        mock_file_uploader_instance.generate_presigned_url.assert_not_called()
 
     @patch("backend.services.pdf_generator.FileUploader")
-    def test_qr_url_preview_version_7_days(
+    def test_qr_url_preview_version_uses_listen_endpoint(
         self, mock_file_uploader_class, pdf_generator, mock_session
     ):
-        """Test QR URL for preview version has 7-day expiration"""
+        """Test QR URL for preview version uses /listen/ endpoint with session token"""
         # Mock the FileUploader class and its instance
         mock_file_uploader_instance = mock_file_uploader_class.return_value
         mock_file_uploader_instance.file_exists.return_value = True
-        mock_file_uploader_instance.generate_presigned_url.return_value = (
-            "https://example.com/audio.mp3"
-        )
 
         # Replace the pdf_generator's file_uploader with our mock
         pdf_generator.file_uploader = mock_file_uploader_instance
 
         qr_url = pdf_generator._generate_qr_url(mock_session, None)
 
-        # Verify presigned URL was generated
-        mock_file_uploader_instance.generate_presigned_url.assert_called_once()
-        call_args = mock_file_uploader_instance.generate_presigned_url.call_args
+        # Verify it uses /listen/ endpoint with session token
+        assert qr_url == f"{settings.base_url}/listen/{mock_session.session_token}"
 
-        # Check expiration is 7 days (86400 * 7 seconds)
-        assert call_args[1]["expiration"] == 86400 * 7
-        assert call_args[0][0] == "temp_audio/test.mp3"
+        # Verify file existence was checked
+        mock_file_uploader_instance.file_exists.assert_called_once_with("temp_audio/test.mp3")
+
+        # Verify no presigned URL was generated (we use /listen/ endpoint now)
+        mock_file_uploader_instance.generate_presigned_url.assert_not_called()
 
     @patch("backend.services.pdf_generator.FileUploader")
     def test_qr_url_missing_file_error(
@@ -115,51 +116,47 @@ class TestQRCodeExpiration:
             pdf_generator._generate_qr_url(None, None)
 
     @patch("backend.services.visual_pdf_generator.FileUploader")
-    def test_visual_qr_url_paid_version_5_years(
+    def test_visual_qr_url_paid_version_uses_listen_endpoint(
         self, mock_file_uploader_class, visual_generator, mock_paid_order
     ):
-        """Test visual QR URL for paid version has 5-year expiration"""
+        """Test visual QR URL for paid version uses permanent /listen/ endpoint"""
         # Mock the FileUploader class and its instance
         mock_file_uploader_instance = mock_file_uploader_class.return_value
         mock_file_uploader_instance.file_exists.return_value = True
-        mock_file_uploader_instance.generate_presigned_url.return_value = (
-            "https://example.com/audio.mp3"
-        )
 
         # Replace the visual_generator's file_uploader with our mock
         visual_generator.file_uploader = mock_file_uploader_instance
 
         qr_url = visual_generator._generate_qr_url(None, mock_paid_order)
 
-        # Verify presigned URL was generated
-        mock_file_uploader_instance.generate_presigned_url.assert_called_once()
-        call_args = mock_file_uploader_instance.generate_presigned_url.call_args
+        # Verify it uses /listen/ endpoint with order ID
+        assert qr_url == f"{settings.base_url}/listen/{mock_paid_order.id}"
 
-        # Check expiration is 5 years (86400 * 365 * 5 seconds)
-        assert call_args[1]["expiration"] == 86400 * 365 * 5
-        assert call_args[0][0] == "permanent/audio/test.mp3"
+        # Verify file existence was checked
+        mock_file_uploader_instance.file_exists.assert_called_once_with("permanent/audio/test.mp3")
+
+        # Verify no presigned URL was generated (we use /listen/ endpoint now)
+        mock_file_uploader_instance.generate_presigned_url.assert_not_called()
 
     @patch("backend.services.visual_pdf_generator.FileUploader")
-    def test_visual_qr_url_preview_version_7_days(
+    def test_visual_qr_url_preview_version_uses_listen_endpoint(
         self, mock_file_uploader_class, visual_generator, mock_session
     ):
-        """Test visual QR URL for preview version has 7-day expiration"""
+        """Test visual QR URL for preview version uses /listen/ endpoint with session token"""
         # Mock the FileUploader class and its instance
         mock_file_uploader_instance = mock_file_uploader_class.return_value
         mock_file_uploader_instance.file_exists.return_value = True
-        mock_file_uploader_instance.generate_presigned_url.return_value = (
-            "https://example.com/audio.mp3"
-        )
 
         # Replace the visual_generator's file_uploader with our mock
         visual_generator.file_uploader = mock_file_uploader_instance
 
         qr_url = visual_generator._generate_qr_url(mock_session, None)
 
-        # Verify presigned URL was generated
-        mock_file_uploader_instance.generate_presigned_url.assert_called_once()
-        call_args = mock_file_uploader_instance.generate_presigned_url.call_args
+        # Verify it uses /listen/ endpoint with session token
+        assert qr_url == f"{settings.base_url}/listen/{mock_session.session_token}"
 
-        # Check expiration is 7 days (86400 * 7 seconds)
-        assert call_args[1]["expiration"] == 86400 * 7
-        assert call_args[0][0] == "temp_audio/test.mp3"
+        # Verify file existence was checked
+        mock_file_uploader_instance.file_exists.assert_called_once_with("temp_audio/test.mp3")
+
+        # Verify no presigned URL was generated (we use /listen/ endpoint now)
+        mock_file_uploader_instance.generate_presigned_url.assert_not_called()
