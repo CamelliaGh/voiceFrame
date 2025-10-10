@@ -47,10 +47,10 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
                 "usb=(), wake-lock=(), xr-spatial-tracking=()"
             ),
 
-            # Cross-Origin policies
-            "Cross-Origin-Embedder-Policy": "require-corp",
+            # Cross-Origin policies - relaxed to allow S3 audio/media
+            "Cross-Origin-Embedder-Policy": "unsafe-none",
             "Cross-Origin-Opener-Policy": "same-origin",
-            "Cross-Origin-Resource-Policy": "same-origin",
+            "Cross-Origin-Resource-Policy": "cross-origin",
         }
 
         # Add stricter headers for production
