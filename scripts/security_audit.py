@@ -66,7 +66,7 @@ class SecurityAuditor:
             'your_aws_access_key',
             'your_aws_secret_key',
             'sk_test_your_stripe_secret_key',
-            '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',
+            'sendgrid_api_key',
             'audioposter_password',
             'password',
             '123456',

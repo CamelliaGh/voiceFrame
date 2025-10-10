@@ -144,7 +144,7 @@ class Settings(BaseSettings):
     @validator('sendgrid_api_key')
     def validate_sendgrid_api_key(cls, v):
         """Validate SendGrid API key"""
-        if v and v == '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':
+        if v and v == 'sendgrid_api_key':
             logger.warning("Using default/example SENDGRID_API_KEY")
             if os.getenv('ENVIRONMENT') == 'production':
                 raise ValueError("Default SendGrid credentials cannot be used in production")

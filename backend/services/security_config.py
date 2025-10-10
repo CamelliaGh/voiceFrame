@@ -73,7 +73,7 @@ class SecurityConfig:
             'AWS_ACCESS_KEY_ID': ['your_aws_access_key', 'AKIAIOSFODNN7EXAMPLE'],
             'AWS_SECRET_ACCESS_KEY': ['your_aws_secret_key', 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY'],
             'STRIPE_SECRET_KEY': ['sk_test_your_stripe_secret_key'],
-            'SENDGRID_API_KEY': ['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']
+            'SENDGRID_API_KEY': ['sendgrid_api_key']
         }
 
         for var, defaults in default_values.items():
