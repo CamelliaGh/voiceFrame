@@ -95,6 +95,7 @@ class VisualPDFGenerator:
 
             # Add QR code
             qr_url = self._generate_qr_url(session, order)
+            print(f"🔴🔴🔴 CRITICAL DEBUG: QR URL GENERATED: {qr_url} 🔴🔴🔴")
             await self._add_qr_to_template(base_image, qr_url, template)
 
             # Add text
@@ -829,7 +830,9 @@ class VisualPDFGenerator:
 
                 # Verify the audio file exists before generating URL
                 if order.permanent_audio_s3_key and self.file_uploader.file_exists(order.permanent_audio_s3_key):
-                    return f"{settings.base_url}/listen/{order.id}"
+                    generated_url = f"{settings.base_url}/listen/{order.id}"
+                    print(f"🔴🔴🔴 RETURNING QR URL (PAID): {generated_url} 🔴🔴🔴")
+                    return generated_url
                 else:
                     raise Exception(
                         f"Permanent audio file missing: {order.permanent_audio_s3_key if order.permanent_audio_s3_key else 'No key set'}"
@@ -843,7 +846,9 @@ class VisualPDFGenerator:
                 print(f"DEBUG: S3 file exists check result: {file_exists}")
 
                 if file_exists:
-                    return f"{settings.base_url}/listen/{session.session_token}"
+                    generated_url = f"{settings.base_url}/listen/{session.session_token}"
+                    print(f"🔴🔴🔴 RETURNING QR URL: {generated_url} 🔴🔴🔴")
+                    return generated_url
                 else:
                     raise Exception(
                         f"Session audio file missing: {session.audio_s3_key}"
