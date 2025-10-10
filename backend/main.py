@@ -1121,6 +1121,9 @@ async def download_pdf(download_token: str, db: Session = Depends(get_db)):
 @app.get("/listen/{identifier}", response_class=HTMLResponse)
 async def listen_to_audio(identifier: str, db: Session = Depends(get_db)):
     """Permanent audio playback for QR codes - works forever"""
+    print("🎵🎵🎵 LISTEN ENDPOINT CALLED! 🎵🎵🎵")
+    print(f"🎵 Identifier: {identifier}")
+    print("🎵🎵🎵 LISTEN ENDPOINT CALLED! 🎵🎵🎵")
 
     try:
         # Validate audio access using file access validator
