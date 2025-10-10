@@ -162,6 +162,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         # Import here to avoid circular imports
         from ..config import settings
 
+        # Skip rate limiting for health check endpoint
+        if request.url.path == "/health":
+            return await call_next(request)
+
         # Skip rate limiting in development environment
         if not settings.is_rate_limit_enabled():
             return await call_next(request)
