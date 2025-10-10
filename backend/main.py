@@ -690,6 +690,7 @@ async def get_preview_image(token: str, db: Session = Depends(get_db)):
     """Generate watermarked preview as image for mobile devices"""
     print("=" * 100)
     print("🚨🚨🚨 MOBILE PREVIEW IMAGE REQUEST RECEIVED! 🚨🚨🚨")
+    print("🚨🚨🚨 THIS IS STEP 2 - CUSTOMIZATION PREVIEW! 🚨🚨🚨")
     print(f"Token: {token}")
     print("=" * 100)
 

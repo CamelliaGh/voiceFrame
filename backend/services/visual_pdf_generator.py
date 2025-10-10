@@ -299,6 +299,7 @@ class VisualPDFGenerator:
 
         try:
             # Generate QR code
+            print(f"🟡🟡🟡 ABOUT TO ADD TO QR CODE: '{qr_url}' (length: {len(qr_url)}) 🟡🟡🟡")
             qr = qrcode.QRCode(
                 version=1,
                 error_correction=qrcode.constants.ERROR_CORRECT_M,
@@ -307,6 +308,7 @@ class VisualPDFGenerator:
             )
             qr.add_data(qr_url)
             qr.make(fit=True)
+            print(f"🟡🟡🟡 QR CODE DATA ADDED SUCCESSFULLY 🟡🟡🟡")
 
             # Create QR code with white background first
             qr_image = qr.make_image(fill_color="black", back_color="white")
