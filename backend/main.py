@@ -105,15 +105,16 @@ static_dir = "/tmp/audioposter"
 os.makedirs(static_dir, exist_ok=True)
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
-# Mount backgrounds directory for serving admin-uploaded background images
-backgrounds_dir = "backgrounds"
-os.makedirs(backgrounds_dir, exist_ok=True)
-app.mount("/backgrounds", StaticFiles(directory=backgrounds_dir), name="backgrounds")
-
-# Mount admin backgrounds directory for serving admin-managed background images
+# Mount admin backgrounds directory FIRST for serving admin-managed background images
+# More specific routes must be mounted before general ones in FastAPI
 admin_backgrounds_dir = "backgrounds/admin"
 os.makedirs(admin_backgrounds_dir, exist_ok=True)
 app.mount("/backgrounds/admin", StaticFiles(directory=admin_backgrounds_dir), name="admin_backgrounds")
+
+# Mount backgrounds directory for serving default background images
+backgrounds_dir = "backgrounds"
+os.makedirs(backgrounds_dir, exist_ok=True)
+app.mount("/backgrounds", StaticFiles(directory=backgrounds_dir), name="backgrounds")
 
 # Include routers
 app.include_router(admin.router)
