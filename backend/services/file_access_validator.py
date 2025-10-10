@@ -168,11 +168,19 @@ class FileAccessValidator:
         """
         from fastapi import HTTPException
 
-        # First try as order ID (paid posters)
-        order = db.query(Order).filter(
-            Order.id == identifier,
-            Order.status == "completed"
-        ).first()
+        # First try as order ID (paid posters) - only if identifier looks like a UUID
+        import uuid
+        order = None
+        try:
+            # Validate that identifier is a valid UUID before querying
+            uuid.UUID(identifier)
+            order = db.query(Order).filter(
+                Order.id == identifier,
+                Order.status == "completed"
+            ).first()
+        except ValueError:
+            # Not a valid UUID, skip order lookup
+            pass
 
         if order and order.permanent_audio_s3_key:
             return {
