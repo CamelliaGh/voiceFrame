@@ -62,11 +62,12 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
                 # Content Security Policy (CSP)
                 "Content-Security-Policy": (
                     "default-src 'self'; "
-                    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com; "
+                    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://static.cloudflareinsights.com; "
                     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
                     "font-src 'self' https://fonts.gstatic.com; "
                     "img-src 'self' data: https: blob:; "
-                    "connect-src 'self' https://api.stripe.com https://api.sendgrid.com; "
+                    "media-src 'self' https://*.s3.amazonaws.com https://*.s3.us-east-2.amazonaws.com; "
+                    "connect-src 'self' https://api.stripe.com https://api.sendgrid.com https://cloudflareinsights.com; "
                     "frame-src https://js.stripe.com; "
                     "object-src 'none'; "
                     "base-uri 'self'; "
@@ -83,8 +84,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             self.security_headers.update({
                 "Content-Security-Policy": (
                     "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; "
-                    "connect-src 'self' http://localhost:* https://api.stripe.com; "
+                    "connect-src 'self' http://localhost:* https://api.stripe.com https://cloudflareinsights.com; "
                     "img-src 'self' data: https: blob:; "
+                    "media-src 'self' https://*.s3.amazonaws.com https://*.s3.us-east-2.amazonaws.com; "
                     "font-src 'self' data:; "
                     "object-src 'none'; "
                     "base-uri 'self'"
