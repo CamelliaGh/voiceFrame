@@ -58,6 +58,8 @@ class AdminResourceService:
 
     def get_active_backgrounds(self, db: Session, category: Optional[str] = None, orientation: Optional[str] = None) -> List[Dict[str, Any]]:
         """Get active backgrounds, optionally filtered by category and orientation"""
+        import os
+
         query = db.query(AdminBackground).filter(AdminBackground.is_active == True)
 
         if category:
@@ -74,17 +76,19 @@ class AdminResourceService:
 
         result = []
         for background in backgrounds:
-            result.append({
-                'id': background.name,  # Use name as ID for compatibility
-                'name': background.name,
-                'display_name': background.display_name,
-                'file_path': background.file_path,
-                'is_premium': background.is_premium,
-                'description': background.description,
-                'category': background.category,
-                'orientation': background.orientation,
-                'usage_count': background.usage_count
-            })
+            # Only include backgrounds where the file actually exists
+            if os.path.exists(background.file_path):
+                result.append({
+                    'id': background.name,  # Use name as ID for compatibility
+                    'name': background.name,
+                    'display_name': background.display_name,
+                    'file_path': background.file_path,
+                    'is_premium': background.is_premium,
+                    'description': background.description,
+                    'category': background.category,
+                    'orientation': background.orientation,
+                    'usage_count': background.usage_count
+                })
 
         return result
 

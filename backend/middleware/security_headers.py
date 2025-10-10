@@ -32,14 +32,14 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             # Referrer policy
             "Referrer-Policy": "strict-origin-when-cross-origin",
 
-            # Permissions policy (formerly Feature Policy)
+            # Permissions policy (formerly Feature Policy) - allow fullscreen for media playback
             "Permissions-Policy": (
                 "camera=(), microphone=(), geolocation=(), "
                 "payment=(), usb=(), magnetometer=(), gyroscope=(), "
                 "accelerometer=(), ambient-light-sensor=(), autoplay=(), "
                 "battery=(), display-capture=(), document-domain=(), "
                 "encrypted-media=(), execution-while-not-rendered=(), "
-                "execution-while-out-of-viewport=(), fullscreen=(), "
+                "execution-while-out-of-viewport=(), fullscreen=(self), "
                 "gamepad=(), layout-animations=(), legacy-image-formats=(), "
                 "magnetometer=(), midi=(), oversized-images=(), "
                 "picture-in-picture=(), publickey-credentials-get=(), "
@@ -64,9 +64,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
                     "default-src 'self'; "
                     "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://static.cloudflareinsights.com; "
                     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-                    "font-src 'self' https://fonts.gstatic.com; "
+                    "font-src 'self' https://fonts.gstatic.com data:; "
                     "img-src 'self' data: https: blob:; "
-                    "media-src 'self' https://*.s3.amazonaws.com https://*.s3.us-east-2.amazonaws.com; "
+                    "media-src 'self' https://*.s3.amazonaws.com https://*.s3.us-east-2.amazonaws.com blob:; "
                     "connect-src 'self' https://api.stripe.com https://api.sendgrid.com https://cloudflareinsights.com; "
                     "frame-src https://js.stripe.com https://*.s3.amazonaws.com https://*.s3.us-east-2.amazonaws.com; "
                     "object-src 'none'; "
@@ -89,7 +89,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
                     "font-src 'self' data: https://fonts.gstatic.com; "
                     "connect-src 'self' http://localhost:* https://api.stripe.com https://cloudflareinsights.com; "
                     "img-src 'self' data: https: blob:; "
-                    "media-src 'self' https://*.s3.amazonaws.com https://*.s3.us-east-2.amazonaws.com; "
+                    "media-src 'self' https://*.s3.amazonaws.com https://*.s3.us-east-2.amazonaws.com blob:; "
                     "frame-src https://js.stripe.com https://*.s3.amazonaws.com https://*.s3.us-east-2.amazonaws.com; "
                     "object-src 'none'; "
                     "base-uri 'self'"

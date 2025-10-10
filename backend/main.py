@@ -262,6 +262,7 @@ async def update_session(
     print(f"DEBUG: is_photo_shape_only_update: {is_photo_shape_only_update}")
 
     if not session.waveform_s3_key and not is_photo_shape_only_update:
+        print(f"DEBUG: Waveform not ready, rejecting update. waveform_s3_key: {session.waveform_s3_key}")
         raise HTTPException(
             status_code=400,
             detail="Audio processing not complete. Please wait and try again.",
@@ -278,11 +279,15 @@ async def update_session(
         print(f"DEBUG: Session after update - photo_shape: '{session.photo_shape}'")
         return {"status": "updated"}
     except ValueError as e:
-        print(f"DEBUG: ValueError in update_session: {e}")
-        raise HTTPException(status_code=400, detail=str(e))
+        error_msg = str(e)
+        print(f"DEBUG: ValueError in update_session: {error_msg}")
+        raise HTTPException(status_code=400, detail=error_msg)
     except Exception as e:
-        print(f"DEBUG: Unexpected error in update_session: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        error_msg = str(e)
+        print(f"DEBUG: Unexpected error in update_session: {error_msg}")
+        import traceback
+        print(f"DEBUG: Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {error_msg}")
 
 
 @app.post("/api/session/{token}/validate")
@@ -727,12 +732,15 @@ async def get_preview_image(token: str, db: Session = Depends(get_db)):
 
     try:
         print(f"DEBUG: Starting mobile preview image generation for session {token}")
+        print(f"DEBUG: Session keys - photo: {session.photo_s3_key}, audio: {session.audio_s3_key}, waveform: {session.waveform_s3_key}")
 
         # Generate preview PDF with watermark first
+        print(f"DEBUG: Calling pdf_generator.generate_pdf with watermark")
         pdf_url = await pdf_generator.generate_pdf(session, add_watermark=True)
         print(f"DEBUG: PDF generation successful, URL: {pdf_url}")
 
         # Convert PDF to image for mobile preview
+        print(f"DEBUG: Converting PDF to image")
         image_url = await pdf_generator.convert_pdf_to_image(pdf_url, session.session_token)
         print(f"DEBUG: Image conversion successful, URL: {image_url}")
 
@@ -744,7 +752,10 @@ async def get_preview_image(token: str, db: Session = Depends(get_db)):
         import traceback
 
         error_trace = traceback.format_exc()
-        print(f"Mobile preview image generation error for session {token}: {error_trace}")
+        print(f"❌ Mobile preview image generation error for session {token}:")
+        print(f"❌ Error type: {type(e).__name__}")
+        print(f"❌ Error message: {str(e)}")
+        print(f"❌ Full traceback:\n{error_trace}")
         raise HTTPException(
             status_code=500, detail=f"Mobile preview generation failed: {str(e)}"
         )
