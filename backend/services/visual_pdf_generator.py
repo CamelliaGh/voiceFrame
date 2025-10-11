@@ -721,44 +721,28 @@ class VisualPDFGenerator:
     def _apply_background(
         self, base_image: Image.Image, background_id: str
     ) -> Image.Image:
-        """Apply background image to the base template"""
+        """Apply background image to the base template - all backgrounds are managed through admin panel"""
         try:
-            # Map background IDs to file paths (default backgrounds)
-            background_mapping = {
-                "abstract-blurred": "237.jpg",
-                "roses-wooden": "beautiful-roses-great-white-wooden-background-with-space-right.jpg",
-                "cute-hearts": "copy-space-with-cute-hearts.jpg",
-                "flat-lay-hearts": "flat-lay-small-cute-hearts.jpg",
-            }
-
             background_path = None
 
-            # Check if it's a default background
-            if background_id in background_mapping:
-                background_path = (
-                    Path(settings.project_root)
-                    / "backgrounds"
-                    / background_mapping[background_id]
-                )
-            else:
-                # Check if it's an admin-managed background
-                try:
-                    from ..database import get_db
-                    db = next(get_db())
-                    background_data = self.admin_resource_service.get_background_by_name(db, background_id)
-                    if background_data and background_data.get('file_path'):
-                        background_path = Path(background_data['file_path'])
-                        print(f"Using admin-managed background: {background_path}")
-                    db.close()
-                except Exception as e:
-                    print(f"Error getting admin background {background_id}: {e}")
+            # Get background from admin resource service (all backgrounds are now admin-managed)
+            try:
+                from ..database import get_db
+                db = next(get_db())
+                background_data = self.admin_resource_service.get_background_by_name(db, background_id)
+                if background_data and background_data.get('file_path'):
+                    background_path = Path(background_data['file_path'])
+                    print(f"Using admin-managed background: {background_path}")
+                db.close()
+            except Exception as e:
+                print(f"Error getting admin background {background_id}: {e}")
 
             if not background_path:
-                print(f"Unknown background ID: {background_id}")
+                print(f"Unknown background ID: {background_id} - Please add it through the admin panel")
                 return base_image
 
             if not background_path.exists():
-                print(f"Background file not found: {background_path}")
+                print(f"Background file not found: {background_path} - File may have been deleted")
                 return base_image
 
             background = Image.open(background_path)

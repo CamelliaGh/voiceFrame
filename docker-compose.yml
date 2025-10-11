@@ -78,6 +78,8 @@ services:
       - ./backend:/app/backend
       - ./templates:/app/templates
       - ./fonts:/app/fonts
+      - ./scripts:/app/scripts
+      - ./backgrounds:/app/backgrounds
       - file_storage:/tmp/audioposter
     depends_on:
       db:

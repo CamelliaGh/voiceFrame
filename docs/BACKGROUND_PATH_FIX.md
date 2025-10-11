@@ -58,9 +58,33 @@ app.mount("/backgrounds", StaticFiles(directory=backgrounds_dir), name="backgrou
 - **Default backgrounds**: Continue to work (mounted at `/backgrounds`, served from `backgrounds/` directory)
 - **Admin-uploaded backgrounds**: Now work (mounted at `/backgrounds/admin`, served from `backgrounds/admin/` directory)
 
+## Additional Enhancement: Removed Hardcoded Backgrounds
+
+After fixing the path issue, hardcoded background mappings were also removed to make ALL backgrounds dynamically managed through the admin panel:
+
+### Backend Changes
+- **Removed hardcoded mapping** in `visual_pdf_generator.py`
+- All backgrounds now fetched from admin resource service
+- Better error messages when backgrounds are missing
+
+### Frontend Changes
+- **Removed hardcoded fallback backgrounds** in `BackgroundSelection.tsx`
+- Only "none" (no background) remains hardcoded as it's a special case
+- All actual backgrounds come from admin panel API
+
+### Migration Required
+Existing hardcoded backgrounds need to be added to the admin panel database. See [BACKGROUND_MIGRATION_GUIDE.md](./BACKGROUND_MIGRATION_GUIDE.md) for:
+- Manual migration steps through admin UI
+- Automated migration script (`scripts/migrate_backgrounds_to_admin.py`)
+- New workflow for adding backgrounds
+
 ## Files Modified
 
 - `backend/main.py` - Fixed static mount order (lines 108-117)
+- `backend/services/visual_pdf_generator.py` - Removed hardcoded background mapping (lines 721-742)
+- `src/components/BackgroundSelection.tsx` - Removed hardcoded fallback backgrounds (lines 22-35)
+- `scripts/migrate_backgrounds_to_admin.py` - Created migration script
+- `docs/BACKGROUND_MIGRATION_GUIDE.md` - Created migration guide
 
 ## Testing
 

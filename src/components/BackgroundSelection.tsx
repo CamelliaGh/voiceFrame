@@ -19,7 +19,8 @@ interface BackgroundSelectionProps {
   pdfSize?: 'A4' | 'A4_Landscape' | 'Letter' | 'Letter_Landscape' | 'A3' | 'A3_Landscape'
 }
 
-// Default fallback data in case API fails
+// Default fallback option - only "none" is hardcoded as it's a special case
+// All actual backgrounds come from the admin panel
 const defaultBackgroundOptions: BackgroundOption[] = [
   {
     id: 'none',
@@ -28,42 +29,10 @@ const defaultBackgroundOptions: BackgroundOption[] = [
     preview: null,
     category: 'Minimal',
     tags: ['clean', 'minimal', 'white']
-  },
-  {
-    id: 'abstract-blurred',
-    name: 'Abstract Blurred',
-    description: 'Soft abstract background',
-    preview: '/backgrounds/237.jpg',
-    category: 'Abstract',
-    tags: ['abstract', 'soft', 'blurred']
-  },
-  {
-    id: 'roses-wooden',
-    name: 'Roses & Wood',
-    description: 'Beautiful roses on wooden background',
-    preview: '/backgrounds/beautiful-roses-great-white-wooden-background-with-space-right.jpg',
-    category: 'Romantic',
-    tags: ['roses', 'wood', 'romantic', 'nature']
-  },
-  {
-    id: 'cute-hearts',
-    name: 'Cute Hearts',
-    description: 'Romantic hearts background',
-    preview: '/backgrounds/copy-space-with-cute-hearts.jpg',
-    category: 'Romantic',
-    tags: ['hearts', 'romantic', 'cute', 'love']
-  },
-  {
-    id: 'flat-lay-hearts',
-    name: 'Flat Lay Hearts',
-    description: 'Elegant flat lay hearts',
-    preview: '/backgrounds/flat-lay-small-cute-hearts.jpg',
-    category: 'Romantic',
-    tags: ['hearts', 'flat-lay', 'elegant', 'romantic']
   }
 ]
 
-const defaultCategories = ['All', 'Minimal', 'Abstract', 'Romantic']
+const defaultCategories = ['All']
 
 // Helper function to determine orientation from PDF size
 const getOrientationFromPdfSize = (pdfSize: string): 'portrait' | 'landscape' => {
