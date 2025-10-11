@@ -82,6 +82,7 @@ services:
       # Only mount essential directories, not the entire backend
       - ./templates:/app/templates:ro
       - ./fonts:/app/fonts:ro
+      - ./backgrounds:/app/backgrounds  # WRITABLE: admin uploads backgrounds here
       # Use a smaller, managed volume for temporary files
       - temp_files:/tmp/audioposter
     depends_on:
@@ -132,6 +133,7 @@ services:
     volumes:
       - ./templates:/app/templates:ro
       - ./fonts:/app/fonts:ro
+      - ./backgrounds:/app/backgrounds  # WRITABLE: admin uploads backgrounds here
       - temp_files:/tmp/audioposter
     depends_on:
       db:
@@ -193,6 +195,7 @@ services:
     volumes:
       - ./nginx.prod.conf:/etc/nginx/nginx.conf:ro
       - ./dist:/var/www/html:ro
+      - ./backgrounds:/var/www/backgrounds:ro  # Serve background images
       - temp_files:/var/www/static:ro
       - ./ssl:/etc/nginx/ssl:ro  # For SSL certificates
     depends_on:
