@@ -107,19 +107,6 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  # Nginx for serving static files and reverse proxy
-  nginx:
-    image: nginx:alpine
-    ports:
-      - "8080:80"
-    volumes:
-      - ./nginx.mvp.conf:/etc/nginx/nginx.conf:ro
-      - ./dist:/var/www/html:ro
-      - temp_files:/var/www/static:ro
-    depends_on:
-      - api
-    restart: unless-stopped
-
 volumes:
   postgres_data:
   redis_data:

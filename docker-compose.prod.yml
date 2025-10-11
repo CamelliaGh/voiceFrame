@@ -186,29 +186,6 @@ services:
         reservations:
           memory: 128M
 
-  # Nginx for serving static files and reverse proxy
-  nginx:
-    image: nginx:alpine
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx.prod.conf:/etc/nginx/nginx.conf:ro
-      - ./dist:/var/www/html:ro
-      - ./backgrounds:/var/www/backgrounds:ro  # Serve background images
-      - temp_files:/var/www/static:ro
-      - ./ssl:/etc/nginx/ssl:ro  # For SSL certificates
-    depends_on:
-      - api
-    restart: unless-stopped
-    # Resource limits
-    deploy:
-      resources:
-        limits:
-          memory: 256M
-        reservations:
-          memory: 128M
-
 volumes:
   postgres_data:
     driver: local
