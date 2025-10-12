@@ -76,8 +76,26 @@ class AdminResourceService:
 
         result = []
         for background in backgrounds:
+            # Check if file exists - handle both absolute and relative paths
+            file_path = background.file_path
+            file_exists = False
+
+            if file_path:
+                # Try the path as-is first
+                if os.path.exists(file_path):
+                    file_exists = True
+                # If not found and it's a relative path, try from current working directory
+                elif not os.path.isabs(file_path):
+                    # For Docker containers, files are typically at /app/backgrounds/admin/
+                    abs_path = os.path.join(os.getcwd(), file_path)
+                    if os.path.exists(abs_path):
+                        file_exists = True
+                    # Also try without current working directory for cases where file_path is already correct
+                    elif file_path.startswith('backgrounds/') and os.path.exists(f"/{file_path}"):
+                        file_exists = True
+
             # Only include backgrounds where the file actually exists
-            if os.path.exists(background.file_path):
+            if file_exists:
                 result.append({
                     'id': background.name,  # Use name as ID for compatibility
                     'name': background.name,
@@ -156,9 +174,20 @@ class AdminResourceService:
         if not font or not font.file_path:
             return None
 
-        # Check if file exists
-        if os.path.exists(font.file_path):
-            return font.file_path
+        file_path = font.file_path
+
+        # Check if file exists - handle both absolute and relative paths
+        if os.path.exists(file_path):
+            return file_path
+        # If not found and it's a relative path, try from current working directory
+        elif not os.path.isabs(file_path):
+            # For Docker containers, files are typically at /app/fonts/admin/
+            abs_path = os.path.join(os.getcwd(), file_path)
+            if os.path.exists(abs_path):
+                return abs_path
+            # Also try without current working directory for cases where file_path is already correct
+            elif file_path.startswith('fonts/') and os.path.exists(f"/{file_path}"):
+                return f"/{file_path}"
 
         return None
 
@@ -172,9 +201,20 @@ class AdminResourceService:
         if not background or not background.file_path:
             return None
 
-        # Check if file exists
-        if os.path.exists(background.file_path):
-            return background.file_path
+        file_path = background.file_path
+
+        # Check if file exists - handle both absolute and relative paths
+        if os.path.exists(file_path):
+            return file_path
+        # If not found and it's a relative path, try from current working directory
+        elif not os.path.isabs(file_path):
+            # For Docker containers, files are typically at /app/backgrounds/admin/
+            abs_path = os.path.join(os.getcwd(), file_path)
+            if os.path.exists(abs_path):
+                return abs_path
+            # Also try without current working directory for cases where file_path is already correct
+            elif file_path.startswith('backgrounds/') and os.path.exists(f"/{file_path}"):
+                return f"/{file_path}"
 
         return None
 
