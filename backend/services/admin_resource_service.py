@@ -108,6 +108,11 @@ class AdminResourceService:
                     'usage_count': background.usage_count
                 })
 
+        # If no backgrounds found in database, add fallback hardcoded backgrounds
+        if not result:
+            fallback_backgrounds = self._get_fallback_backgrounds(orientation)
+            result.extend(fallback_backgrounds)
+
         return result
 
     def get_font_by_name(self, db: Session, font_name: str) -> Optional[Dict[str, Any]]:
@@ -234,6 +239,88 @@ class AdminResourceService:
             return [cat[0] for cat in categories if cat[0]]
 
         return []
+
+    def _get_fallback_backgrounds(self, orientation: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Get fallback hardcoded backgrounds when database is empty"""
+        import os
+
+        # Hardcoded background metadata matching the seed script
+        fallback_backgrounds = [
+            {
+                'id': 'abstract-blurred',
+                'name': 'abstract-blurred',
+                'display_name': 'Abstract Blurred',
+                'file_path': 'backgrounds/237.jpg',
+                'is_premium': False,
+                'description': 'Abstract blurred background for modern designs',
+                'category': 'abstract',
+                'orientation': 'both',
+                'usage_count': 0
+            },
+            {
+                'id': 'roses-wooden',
+                'name': 'roses-wooden',
+                'display_name': 'Roses on Wood',
+                'file_path': 'backgrounds/beautiful-roses-great-white-wooden-background-with-space-right.jpg',
+                'is_premium': False,
+                'description': 'Beautiful roses on white wooden background',
+                'category': 'romantic',
+                'orientation': 'both',
+                'usage_count': 0
+            },
+            {
+                'id': 'cute-hearts',
+                'name': 'cute-hearts',
+                'display_name': 'Cute Hearts',
+                'file_path': 'backgrounds/copy-space-with-cute-hearts.jpg',
+                'is_premium': False,
+                'description': 'Copy space with cute hearts design',
+                'category': 'romantic',
+                'orientation': 'both',
+                'usage_count': 0
+            },
+            {
+                'id': 'flat-lay-hearts',
+                'name': 'flat-lay-hearts',
+                'display_name': 'Flat Lay Hearts',
+                'file_path': 'backgrounds/flat-lay-small-cute-hearts.jpg',
+                'is_premium': False,
+                'description': 'Flat lay design with small cute hearts',
+                'category': 'romantic',
+                'orientation': 'both',
+                'usage_count': 0
+            }
+        ]
+
+        result = []
+        for bg in fallback_backgrounds:
+            # Check if file exists
+            file_exists = False
+            file_path = bg['file_path']
+
+            if file_path:
+                # Try the path as-is first
+                if os.path.exists(file_path):
+                    file_exists = True
+                # If not found and it's a relative path, try from current working directory
+                elif not os.path.isabs(file_path):
+                    # For Docker containers, files are typically at /app/backgrounds/
+                    abs_path = os.path.join(os.getcwd(), file_path)
+                    if os.path.exists(abs_path):
+                        file_exists = True
+                    # Also try without current working directory for cases where file_path is already correct
+                    elif file_path.startswith('backgrounds/') and os.path.exists(f"/{file_path}"):
+                        file_exists = True
+
+            # Only include backgrounds where the file actually exists
+            if file_exists:
+                # Filter by orientation if specified
+                if orientation and bg['orientation'] != 'both' and bg['orientation'] != orientation:
+                    continue
+
+                result.append(bg)
+
+        return result
 
 
 # Global instance
