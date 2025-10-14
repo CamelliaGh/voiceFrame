@@ -14,16 +14,22 @@ interface PricingTier {
   id: string
   name: string
   price: number
+  originalPrice?: number
+  discountPercentage?: number
+  hasDiscount?: boolean
   description: string
   features: string[]
   popular: boolean
 }
 
-const createPricingTiers = (price: number): PricingTier[] => [
+const createPricingTiers = (priceData: any): PricingTier[] => [
   {
     id: 'standard',
     name: 'Download Your Poster',
-    price: price,
+    price: priceData.price_cents || 299,
+    originalPrice: priceData.has_discount ? priceData.original_price_cents : undefined,
+    discountPercentage: priceData.has_discount ? priceData.discount_percentage : undefined,
+    hasDiscount: priceData.has_discount || false,
     description: 'Get your high-quality audio poster PDF',
     features: [
       'Remove watermark',
@@ -59,7 +65,7 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
   const elements = useElements()
 
   const [selectedTier, setSelectedTier] = useState<'standard' | 'premium'>('standard')
-  const [pricingTiers, setPricingTiers] = useState<PricingTier[]>(createPricingTiers(299))
+  const [pricingTiers, setPricingTiers] = useState<PricingTier[]>(createPricingTiers({ price_cents: 299, has_discount: false }))
   const [priceLoading, setPriceLoading] = useState<boolean>(true)
   const [email, setEmail] = useState('')
   const [zipCode, setZipCode] = useState('')
@@ -78,7 +84,7 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
         const response = await fetch('/api/price')
         if (response.ok) {
           const priceData = await response.json()
-          setPricingTiers(createPricingTiers(priceData.price_cents))
+          setPricingTiers(createPricingTiers(priceData))
         } else {
           console.error('Failed to fetch price, using default')
         }
@@ -317,7 +323,16 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
                     `$${(tier.price / 100).toFixed(2)}`
                   )}
                 </span>
-                {/* Original price removed for simplicity */}
+                {!priceLoading && tier.hasDiscount && tier.originalPrice && (
+                  <div className="flex flex-col">
+                    <span className="text-lg text-gray-500 line-through">
+                      ${(tier.originalPrice / 100).toFixed(2)}
+                    </span>
+                    <span className="text-sm text-green-600 font-medium">
+                      {tier.discountPercentage}% off
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -431,6 +446,11 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
                   <CreditCard className="w-4 h-4" />
                   <span>
                     Pay {priceLoading ? '...' : `$${selectedPrice ? (selectedPrice.price / 100).toFixed(2) : '0.00'}`}
+                    {!priceLoading && selectedPrice?.hasDiscount && (
+                      <span className="ml-1 text-xs opacity-75">
+                        (was ${selectedPrice.originalPrice ? (selectedPrice.originalPrice / 100).toFixed(2) : '0.00'})
+                      </span>
+                    )}
                   </span>
                 </>
               )}

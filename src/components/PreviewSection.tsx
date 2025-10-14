@@ -228,13 +228,16 @@ export default function PreviewSection({ onNext, onBack }: PreviewSectionProps) 
 
             {previewUrl && (
               <div className="mt-4 flex justify-center">
-                <button
-                  onClick={handleDownloadPreview}
+                <a
+                  href={previewUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="btn-secondary flex items-center space-x-2"
+                  download
                 >
                   <Download className="w-4 h-4" />
                   <span>Download Watermarked Preview</span>
-                </button>
+                </a>
               </div>
             )}
           </div>

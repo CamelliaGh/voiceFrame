@@ -120,6 +120,113 @@ class ConfigService:
         """
         return self.get_config_as_int(db, "price_cents", default=299)
 
+    def get_discount_percentage(self, db: Session) -> int:
+        """
+        Get the current discount percentage
+
+        Args:
+            db: Database session
+
+        Returns:
+            Discount percentage (default: 0 for no discount)
+        """
+        return self.get_config_as_int(db, "discount_percentage", default=0)
+
+    def get_discount_enabled(self, db: Session) -> bool:
+        """
+        Check if discount is currently enabled
+
+        Args:
+            db: Database session
+
+        Returns:
+            True if discount is enabled, False otherwise
+        """
+        return self.get_config_as_bool(db, "discount_enabled", default=False)
+
+    def get_discounted_price_cents(self, db: Session) -> dict:
+        """
+        Get pricing information including discount
+
+        Args:
+            db: Database session
+
+        Returns:
+            Dictionary with original_price, discount_percentage, discounted_price, and discount_enabled
+        """
+        original_price = self.get_price_cents(db)
+        discount_percentage = self.get_discount_percentage(db)
+        discount_enabled = self.get_discount_enabled(db)
+
+        # Validate discount percentage
+        if discount_percentage < 0:
+            discount_percentage = 0
+        elif discount_percentage > 100:
+            discount_percentage = 100
+
+        # Validate original price
+        if original_price <= 0:
+            original_price = 299  # Default fallback price
+
+        if discount_enabled and discount_percentage > 0:
+            discount_amount = int(original_price * discount_percentage / 100)
+            discounted_price = original_price - discount_amount
+
+            # Ensure discounted price is never negative or zero
+            if discounted_price <= 0:
+                discounted_price = 1  # Minimum price of 1 cent
+                discount_amount = original_price - discounted_price
+        else:
+            discount_amount = 0
+            discounted_price = original_price
+
+        return {
+            "original_price": original_price,
+            "discount_percentage": discount_percentage,
+            "discount_amount": discount_amount,
+            "discounted_price": discounted_price,
+            "discount_enabled": discount_enabled
+        }
+
+    def validate_discount_config(self, db: Session, discount_percentage: int, discount_enabled: bool) -> dict:
+        """
+        Validate discount configuration before saving
+
+        Args:
+            db: Database session
+            discount_percentage: Proposed discount percentage
+            discount_enabled: Whether discount should be enabled
+
+        Returns:
+            Dictionary with validation results and any errors
+        """
+        errors = []
+        warnings = []
+
+        # Validate discount percentage
+        if discount_percentage < 0:
+            errors.append("Discount percentage cannot be negative")
+        elif discount_percentage > 100:
+            errors.append("Discount percentage cannot exceed 100%")
+        elif discount_percentage > 90:
+            warnings.append("Discount percentage over 90% may result in very low prices")
+
+        # Check if discount would result in unreasonably low prices
+        if discount_enabled and discount_percentage > 0:
+            original_price = self.get_price_cents(db)
+            discounted_price = original_price - int(original_price * discount_percentage / 100)
+
+            if discounted_price <= 0:
+                errors.append(f"Discount of {discount_percentage}% would result in zero or negative price")
+            elif discounted_price < 50:  # Less than $0.50
+                warnings.append(f"Discount would result in very low price: ${discounted_price / 100:.2f}")
+
+        return {
+            "valid": len(errors) == 0,
+            "errors": errors,
+            "warnings": warnings
+        }
+
     def clear_cache(self):
         """Clear the configuration cache"""
         self._cache.clear()

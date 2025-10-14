@@ -1072,25 +1072,67 @@ const AdminDashboard: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Configuration Key *
                     </label>
-                    <input
-                      type="text"
+                    <select
                       value={addFormData.name}
-                      onChange={(e) => setAddFormData({...addFormData, name: e.target.value})}
+                      onChange={(e) => {
+                        const key = e.target.value
+                        setAddFormData({
+                          ...addFormData,
+                          name: key,
+                          category: key === 'price_cents' ? 'integer' :
+                                   key === 'discount_percentage' ? 'integer' :
+                                   key === 'discount_enabled' ? 'boolean' : 'string',
+                          description: key === 'price_cents' ? 'Price in cents (e.g., 299 for $2.99)' :
+                                      key === 'discount_percentage' ? 'Discount percentage (e.g., 20 for 20% off)' :
+                                      key === 'discount_enabled' ? 'Enable or disable discount' : ''
+                        })
+                      }}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-                      placeholder="e.g., price_cents"
-                    />
+                    >
+                      <option value="">Select a configuration key</option>
+                      <option value="price_cents">price_cents</option>
+                      <option value="discount_percentage">discount_percentage</option>
+                      <option value="discount_enabled">discount_enabled</option>
+                      <option value="custom">Custom Key</option>
+                    </select>
+                    {addFormData.name === 'custom' && (
+                      <input
+                        type="text"
+                        value={addFormData.display_name}
+                        onChange={(e) => setAddFormData({...addFormData, name: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500 mt-2"
+                        placeholder="Enter custom key name"
+                      />
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Value *
                     </label>
-                    <input
-                      type="text"
-                      value={addFormData.display_name}
-                      onChange={(e) => setAddFormData({...addFormData, display_name: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-                      placeholder="e.g., 299"
-                    />
+                    {addFormData.name === 'discount_enabled' ? (
+                      <select
+                        value={addFormData.display_name}
+                        onChange={(e) => setAddFormData({...addFormData, display_name: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                      >
+                        <option value="false">Disabled</option>
+                        <option value="true">Enabled</option>
+                      </select>
+                    ) : (
+                      <input
+                        type={addFormData.name === 'price_cents' || addFormData.name === 'discount_percentage' ? 'number' : 'text'}
+                        value={addFormData.display_name}
+                        onChange={(e) => setAddFormData({...addFormData, display_name: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                        placeholder={
+                          addFormData.name === 'price_cents' ? 'e.g., 299' :
+                          addFormData.name === 'discount_percentage' ? 'e.g., 20' :
+                          'Enter value'
+                        }
+                        min={addFormData.name === 'discount_percentage' ? '0' : undefined}
+                        max={addFormData.name === 'discount_percentage' ? '100' : undefined}
+                      />
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1100,6 +1142,7 @@ const AdminDashboard: React.FC = () => {
                       value={addFormData.category}
                       onChange={(e) => setAddFormData({...addFormData, category: e.target.value})}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                      disabled={!!(addFormData.name && addFormData.name !== 'custom')}
                     >
                       <option value="string">String</option>
                       <option value="integer">Integer</option>
@@ -1337,12 +1380,31 @@ const AdminDashboard: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Value *
                     </label>
-                    <input
-                      type="text"
-                      value={editFormData.display_name}
-                      onChange={(e) => setEditFormData({...editFormData, display_name: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-                    />
+                    {editingItem.key === 'discount_enabled' ? (
+                      <select
+                        value={editFormData.display_name}
+                        onChange={(e) => setEditFormData({...editFormData, display_name: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                      >
+                        <option value="false">Disabled</option>
+                        <option value="true">Enabled</option>
+                      </select>
+                    ) : (
+                      <input
+                        type={editingItem.key === 'price_cents' || editingItem.key === 'discount_percentage' ? 'number' : 'text'}
+                        value={editFormData.display_name}
+                        onChange={(e) => setEditFormData({...editFormData, display_name: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                        min={editingItem.key === 'discount_percentage' ? '0' : undefined}
+                        max={editingItem.key === 'discount_percentage' ? '100' : undefined}
+                      />
+                    )}
+                    {editingItem.key === 'price_cents' && (
+                      <p className="text-xs text-gray-500 mt-1">Price in cents (e.g., 299 for $2.99)</p>
+                    )}
+                    {editingItem.key === 'discount_percentage' && (
+                      <p className="text-xs text-gray-500 mt-1">Percentage from 0-100 (e.g., 20 for 20% off)</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">

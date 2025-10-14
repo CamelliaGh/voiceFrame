@@ -154,21 +154,36 @@ async def metrics():
 
 @app.get("/api/price")
 async def get_current_price(db: Session = Depends(get_db)):
-    """Get the current price in cents for the audio poster"""
+    """Get the current price in cents for the audio poster with discount information"""
     try:
-        price_cents = config_service.get_price_cents(db)
+        pricing_info = config_service.get_discounted_price_cents(db)
+
         return {
-            "price_cents": price_cents,
-            "price_dollars": price_cents / 100,
-            "formatted_price": f"${price_cents / 100:.2f}"
+            "price_cents": pricing_info["discounted_price"],
+            "original_price_cents": pricing_info["original_price"],
+            "price_dollars": pricing_info["discounted_price"] / 100,
+            "original_price_dollars": pricing_info["original_price"] / 100,
+            "formatted_price": f"${pricing_info['discounted_price'] / 100:.2f}",
+            "formatted_original_price": f"${pricing_info['original_price'] / 100:.2f}",
+            "discount_percentage": pricing_info["discount_percentage"],
+            "discount_amount": pricing_info["discount_amount"],
+            "discount_enabled": pricing_info["discount_enabled"],
+            "has_discount": pricing_info["discount_enabled"] and pricing_info["discount_percentage"] > 0
         }
     except Exception as e:
         logger.error(f"Error getting current price: {str(e)}")
         # Return default price if there's an error
         return {
             "price_cents": 299,
+            "original_price_cents": 299,
             "price_dollars": 2.99,
-            "formatted_price": "$2.99"
+            "original_price_dollars": 2.99,
+            "formatted_price": "$2.99",
+            "formatted_original_price": "$2.99",
+            "discount_percentage": 0,
+            "discount_amount": 0,
+            "discount_enabled": False,
+            "has_discount": False
         }
 
 
@@ -773,9 +788,10 @@ async def create_payment_intent(
         raise HTTPException(status_code=404, detail="Session not found")
 
     try:
-        # Create order record with configurable price
+        # Create order record with configurable price (including discount)
         order_id = str(uuid.uuid4())
-        amount = config_service.get_price_cents(db)  # Get price from database configuration
+        pricing_info = config_service.get_discounted_price_cents(db)
+        amount = pricing_info["discounted_price"]  # Use discounted price
 
         order = Order(
             id=order_id,
