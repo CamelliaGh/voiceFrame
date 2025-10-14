@@ -75,7 +75,9 @@ export default function PreviewSection({ onNext, onBack }: PreviewSectionProps) 
           setUseImagePreview(false)
           const response = await getPreviewUrl(session.session_token)
           const previewUrl = response.preview_url
-          const cacheBustingUrl = `${previewUrl}?t=${Date.now()}`
+          const cacheBustingUrl = previewUrl.includes('?')
+            ? `${previewUrl}&t=${Date.now()}`  // Use & for additional parameters
+            : `${previewUrl}?t=${Date.now()}`   // Use ? for first parameter
           setPreviewUrl(cacheBustingUrl)
           return
         } catch (fallbackErr: any) {
