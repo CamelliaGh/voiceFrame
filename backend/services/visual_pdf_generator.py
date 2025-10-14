@@ -80,18 +80,31 @@ class VisualPDFGenerator:
                 base_image = self._apply_background(base_image, session.background_id)
                 print(f"Background applied: {session.background_id}")
 
+            # Determine which file keys to use based on whether this is final PDF or preview
+            photo_key = session.photo_s3_key
+            waveform_key = session.waveform_s3_key
+
+            # For final PDFs (no watermark), use permanent keys if available
+            if not add_watermark and order:
+                if order.permanent_photo_s3_key:
+                    photo_key = order.permanent_photo_s3_key
+                    print(f"🔵 DEBUG: Using permanent photo key for final PDF: {photo_key}")
+                if order.permanent_waveform_s3_key:
+                    waveform_key = order.permanent_waveform_s3_key
+                    print(f"🔵 DEBUG: Using permanent waveform key for final PDF: {waveform_key}")
+
             # Add photo
-            print(f"🔵 DEBUG: About to check photo condition - session.photo_s3_key: {session.photo_s3_key}")
+            print(f"🔵 DEBUG: About to check photo condition - photo_key: {photo_key}")
             print(f"🔵 DEBUG: About to check photo condition - session.custom_text: '{session.custom_text}'")
-            if session.photo_s3_key:
+            if photo_key:
                 print(f"🔵 DEBUG: Photo condition passed, calling _add_photo_to_template")
-                await self._add_photo_to_template(base_image, session, template)
+                await self._add_photo_to_template(base_image, session, template, photo_key)
             else:
-                print(f"🔵 DEBUG: Photo condition failed - no photo_s3_key")
+                print(f"🔵 DEBUG: Photo condition failed - no photo_key")
 
             # Add waveform
-            if session.waveform_s3_key:
-                await self._add_waveform_to_template(base_image, session, template)
+            if waveform_key:
+                await self._add_waveform_to_template(base_image, session, template, waveform_key)
 
             # Add QR code
             qr_url = self._generate_qr_url(session, order)
@@ -186,10 +199,13 @@ class VisualPDFGenerator:
             raise
 
     async def _add_photo_to_template(
-        self, base_image: Image.Image, session: SessionModel, template: Dict
+        self, base_image: Image.Image, session: SessionModel, template: Dict, photo_s3_key: str = None
     ):
         """Add photo to template at specified coordinates"""
-        print(f"🟢 DEBUG: _add_photo_to_template ENTRY - session.photo_s3_key: {session.photo_s3_key}")
+        # Use provided photo key or fall back to session key
+        photo_key = photo_s3_key or session.photo_s3_key
+
+        print(f"🟢 DEBUG: _add_photo_to_template ENTRY - photo_key: {photo_key}")
         print(f"🟢 DEBUG: _add_photo_to_template ENTRY - session.photo_shape: {session.photo_shape}")
         print(f"🟢 DEBUG: _add_photo_to_template ENTRY - session.custom_text: '{session.custom_text}'")
         placeholder = template["placeholders"]["photo"]
@@ -219,7 +235,7 @@ class VisualPDFGenerator:
                 print(f"🔴 DEBUG: Created red circle image with size {photo_size}")
             else:
                 photo = self.image_processor.create_shaped_image(
-                    session.photo_s3_key,
+                    photo_key,
                     session.photo_shape,  # Use the session's photo shape preference
                     photo_size,
                 )
@@ -250,14 +266,18 @@ class VisualPDFGenerator:
             print(f"Error adding photo: {e}")
 
     async def _add_waveform_to_template(
-        self, base_image: Image.Image, session: SessionModel, template: Dict
+        self, base_image: Image.Image, session: SessionModel, template: Dict, waveform_s3_key: str = None
     ):
         """Add waveform to template at specified coordinates"""
+        # Use provided waveform key or fall back to session key
+        waveform_key = waveform_s3_key or session.waveform_s3_key
+
+        print(f"🟢 DEBUG: _add_waveform_to_template ENTRY - waveform_key: {waveform_key}")
         placeholder = template["placeholders"]["waveform"]
 
         try:
             # Get waveform image
-            waveform = self.image_processor.get_image_from_s3(session.waveform_s3_key)
+            waveform = self.image_processor.get_image_from_s3(waveform_key)
             waveform = waveform.resize((placeholder["width"], placeholder["height"]))
 
             # Handle waveform with transparency
