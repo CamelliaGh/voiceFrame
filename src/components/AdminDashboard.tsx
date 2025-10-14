@@ -985,9 +985,9 @@ const AdminDashboard: React.FC = () => {
                       <option value="romantic">Romantic</option>
                       <option value="birthday">Birthday</option>
                       <option value="anniversary">Anniversary</option>
-                      <option value="holiday">Holiday</option>
+                      <option value="memorial">Memorial</option>
                       <option value="abstract">Abstract</option>
-                      <option value="nature">Nature</option>
+                      <option value="baby">Baby</option>
                     </select>
                   </div>
                   <div>
