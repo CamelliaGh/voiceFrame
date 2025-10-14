@@ -94,18 +94,18 @@ class Settings(BaseSettings):
         if self.environment == "development":
             return 120  # Very lenient for development
         elif self.environment == "staging":
-            return 60   # Moderate for staging
+            return 120   # Moderate for staging
         else:  # production
-            return 10   # Strict for production
+            return 120   # Reasonable limit for production (2 requests per second)
 
     def get_rate_limit_burst_size(self) -> int:
         """Get burst size based on environment"""
         if self.environment == "development":
             return 50   # Very lenient for development
         elif self.environment == "staging":
-            return 20   # Moderate for staging
+            return 30   # Moderate for staging
         else:  # production
-            return 5    # Strict for production
+            return 30    # Allow burst of requests for initial page loads
 
     def is_rate_limit_enabled(self) -> bool:
         """Check if rate limiting should be enabled based on environment"""
