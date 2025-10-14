@@ -144,6 +144,59 @@ export default function LandingPage() {
               Perfect for gifts, décor, and preserving precious moments.
             </p>
 
+            {/* Pricing Display */}
+            <div className="mb-10">
+              {pricingLoading ? (
+                <div className="inline-flex items-center space-x-2 bg-gray-100 px-6 py-3 rounded-2xl animate-pulse">
+                  <div className="bg-gray-300 h-6 w-6 rounded-full"></div>
+                  <div className="bg-gray-300 h-6 w-20 rounded"></div>
+                </div>
+              ) : pricingData ? (
+                <div className="inline-flex items-center space-x-3 bg-gradient-to-r from-purple-100 via-purple-50 to-purple-100 border-2 border-purple-200 px-8 py-5 rounded-3xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 backdrop-blur-sm">
+                  <div className="flex items-center justify-center w-10 h-10 bg-purple-600 rounded-full shadow-md">
+                    <DollarSign className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    {pricingData.has_discount ? (
+                      <>
+                        <div className="flex flex-col items-start">
+                          <span className="text-3xl font-bold text-purple-700 leading-none">
+                            {pricingData.formatted_price}
+                          </span>
+                          <span className="text-sm text-purple-600 font-medium">per poster</span>
+                        </div>
+                        <div className="flex flex-col items-center">
+                          <span className="text-lg text-gray-500 line-through leading-none">
+                            {pricingData.formatted_original_price}
+                          </span>
+                          <span className="bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-md mt-1">
+                            SAVE {pricingData.discount_percentage}%
+                          </span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex flex-col items-start">
+                        <span className="text-3xl font-bold text-purple-700 leading-none">
+                          {pricingData.formatted_price}
+                        </span>
+                        <span className="text-sm text-purple-600 font-medium">per poster</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="inline-flex items-center space-x-3 bg-gradient-to-r from-purple-100 via-purple-50 to-purple-100 border-2 border-purple-200 px-8 py-5 rounded-3xl shadow-lg">
+                  <div className="flex items-center justify-center w-10 h-10 bg-purple-600 rounded-full shadow-md">
+                    <DollarSign className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="flex flex-col items-start">
+                    <span className="text-3xl font-bold text-purple-700 leading-none">$2.99</span>
+                    <span className="text-sm text-purple-600 font-medium">per poster</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <button
                 onClick={() => navigate('/')}
