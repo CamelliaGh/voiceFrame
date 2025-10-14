@@ -61,12 +61,10 @@ export default function PreviewSection({ onNext, onBack }: PreviewSectionProps) 
       console.log('🎯 PreviewSection: API endpoint used:', useImagePreview ? 'image' : 'pdf')
       // Extract the actual URL from the response object
       const previewUrl = response.preview_url
-      // For presigned URLs, add cache-busting parameter properly
-      const cacheBustingUrl = previewUrl.includes('?')
-        ? `${previewUrl}&t=${Date.now()}`  // Use & for additional parameters
-        : `${previewUrl}?t=${Date.now()}`   // Use ? for first parameter
-      console.log('🎯 PreviewSection: Using cache-busting URL:', cacheBustingUrl)
-      setPreviewUrl(cacheBustingUrl)
+      // Don't add cache-busting to presigned URLs as it invalidates the AWS signature
+      // Presigned URLs already have expiration times and unique timestamps
+      console.log('🎯 PreviewSection: Using presigned URL directly:', previewUrl)
+      setPreviewUrl(previewUrl)
     } catch (err: any) {
       // If image preview fails on mobile, try falling back to PDF preview
       if (useImagePreview && shouldUseImagePreview()) {
@@ -75,10 +73,8 @@ export default function PreviewSection({ onNext, onBack }: PreviewSectionProps) 
           setUseImagePreview(false)
           const response = await getPreviewUrl(session.session_token)
           const previewUrl = response.preview_url
-          const cacheBustingUrl = previewUrl.includes('?')
-            ? `${previewUrl}&t=${Date.now()}`  // Use & for additional parameters
-            : `${previewUrl}?t=${Date.now()}`   // Use ? for first parameter
-          setPreviewUrl(cacheBustingUrl)
+          // Don't add cache-busting to presigned URLs as it invalidates the AWS signature
+          setPreviewUrl(previewUrl)
           return
         } catch (fallbackErr: any) {
           console.error('Fallback PDF preview also failed:', fallbackErr)
