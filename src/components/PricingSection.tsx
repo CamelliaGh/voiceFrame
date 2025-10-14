@@ -4,6 +4,7 @@ import { Check, ArrowLeft, CreditCard, Lock, Download, Star } from 'lucide-react
 import { useSession } from '../contexts/SessionContext'
 import { createPaymentIntent, completeOrder } from '@/lib/api'
 import PaymentRequestButton from './PaymentRequestButton'
+import { trackPayment, trackDownload, trackEngagement, trackError } from '@/lib/analytics'
 // import { cn } from '../lib/utils'
 
 interface PricingSectionProps {
@@ -227,11 +228,14 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
         const orderResult = await completeOrder(paymentOrderId, paymentIntent.id, session.session_token)
         setDownloadUrl(orderResult.download_url)
         setSuccess(true)
+        trackPayment('payment_success', selectedTier.price)
       }
 
     } catch (err) {
       console.error('Payment failed:', err)
-      setError(err instanceof Error ? err.message : 'Payment failed. Please try again.')
+      const errorMessage = err instanceof Error ? err.message : 'Payment failed. Please try again.'
+      setError(errorMessage)
+      trackError(`Payment failed: ${errorMessage}`, 'PricingSection')
     } finally {
       setProcessing(false)
     }
@@ -239,6 +243,7 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
 
   const handleDownload = () => {
     if (downloadUrl) {
+      trackDownload('pdf')
       window.open(downloadUrl, '_blank')
     }
   }
@@ -469,7 +474,10 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
       {/* Back Button */}
       <div className="flex justify-center pt-6">
         <button
-          onClick={onBack}
+          onClick={() => {
+            trackEngagement('step_progression', 'payment_to_preview')
+            onBack()
+          }}
           className="btn-secondary flex items-center space-x-2"
         >
           <ArrowLeft className="w-4 h-4" />

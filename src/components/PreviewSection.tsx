@@ -3,6 +3,7 @@ import { Download, Eye, ArrowLeft, ArrowRight, RefreshCw, Maximize2 } from 'luci
 import { useSession } from '../contexts/SessionContext'
 import { getPreviewUrl, getPreviewImageUrl } from '@/lib/api'
 import { shouldUseImagePreview } from '@/lib/mobile'
+import { trackEngagement } from '@/lib/analytics'
 import MobilePreviewModal from './MobilePreviewModal'
 
 interface PreviewSectionProps {
@@ -339,7 +340,10 @@ export default function PreviewSection({ onNext, onBack }: PreviewSectionProps) 
       {/* Navigation */}
       <div className="flex flex-col sm:flex-row gap-4 sm:justify-between pt-6 px-4 sm:px-0">
         <button
-          onClick={onBack}
+          onClick={() => {
+            trackEngagement('step_progression', 'preview_to_customize')
+            onBack()
+          }}
           className="btn-secondary flex items-center justify-center space-x-2 w-full sm:w-auto"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -347,7 +351,10 @@ export default function PreviewSection({ onNext, onBack }: PreviewSectionProps) 
         </button>
 
         <button
-          onClick={onNext}
+          onClick={() => {
+            trackEngagement('step_progression', 'preview_to_payment')
+            onNext()
+          }}
           className="btn-primary flex items-center justify-center space-x-2 w-full sm:w-auto"
         >
           <span>Purchase & Download</span>

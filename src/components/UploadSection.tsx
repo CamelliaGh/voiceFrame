@@ -3,6 +3,7 @@ import { useDropzone } from 'react-dropzone'
 import { Upload, Image, Music, CheckCircle, AlertCircle, RotateCcw, X, Mic, FileAudio, Camera } from 'lucide-react'
 import { useSession } from '../contexts/SessionContext'
 import { uploadPhoto, uploadAudio, removePhoto, removeAudio } from '@/lib/api'
+import { trackFileUpload, trackError, trackEngagement } from '@/lib/analytics'
 // Utility function to format file size
 const formatFileSize = (bytes: number): string => {
   if (bytes === 0) return '0 Bytes'
@@ -432,10 +433,12 @@ export default function UploadSection({
       clearInterval(progressInterval)
       setUploadProgress(prev => ({ ...prev, photo: 100 }))
       setPhotoUploaded(true)
+      trackFileUpload('photo')
       onPhotosUploaded()
     } catch (error: any) {
       const errorMessage = handleUploadError(error, 'photo')
       setUploadErrors(prev => ({ ...prev, photo: errorMessage }))
+      trackError(`Photo upload failed: ${errorMessage}`, 'UploadSection')
     } finally {
       setPhotoUploading(false)
       setUploadSpeed(prev => ({ ...prev, photo: undefined }))
@@ -592,10 +595,12 @@ export default function UploadSection({
       clearInterval(progressInterval)
       setUploadProgress(prev => ({ ...prev, audio: 100 }))
       setAudioUploaded(true)
+      trackFileUpload('audio')
       onAudioUploaded()
     } catch (error: any) {
       const errorMessage = handleUploadError(error, 'audio')
       setUploadErrors(prev => ({ ...prev, audio: errorMessage }))
+      trackError(`Audio upload failed: ${errorMessage}`, 'UploadSection')
     } finally {
       setAudioUploading(false)
       setUploadSpeed(prev => ({ ...prev, audio: undefined }))
@@ -1185,7 +1190,10 @@ export default function UploadSection({
       {canProceed && (
         <div className="flex justify-center pt-4 sm:pt-6 animate-slide-in-bottom">
           <button
-            onClick={onNext}
+            onClick={() => {
+              trackEngagement('step_progression', 'upload_to_customize')
+              onNext()
+            }}
             className="btn-primary w-full sm:w-auto px-8 py-4 text-base sm:text-lg font-semibold"
           >
             Continue to Customize →

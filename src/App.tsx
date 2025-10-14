@@ -14,6 +14,7 @@ import TermsOfService from './components/TermsOfService'
 import LandingPage from './components/LandingPage'
 import { SessionProvider } from './contexts/SessionContext'
 import { cn } from '@/lib/utils'
+import { useAnalytics } from '@/lib/useAnalytics'
 
 // Initialize Stripe - replace with your publishable key
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_...')
@@ -170,11 +171,17 @@ function MainApp() {
   )
 }
 
+function AnalyticsWrapper() {
+  useAnalytics();
+  return null;
+}
+
 function App() {
   return (
     <Elements stripe={stripePromise}>
       <SessionProvider>
         <Router>
+          <AnalyticsWrapper />
           <Routes>
             <Route path="/" element={<MainApp />} />
             <Route path="/landing" element={<LandingPage />} />

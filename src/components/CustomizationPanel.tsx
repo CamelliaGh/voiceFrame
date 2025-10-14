@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Type, ArrowLeft, ArrowRight, Image, FileText, RefreshCw, Eye, Maximize2 } from 'lucide-react'
 import { useSession } from '../contexts/SessionContext'
 import { SessionData, getProcessingStatus, getPreviewUrl, getPreviewImageUrl } from '@/lib/api'
+import { trackCustomization, trackEngagement } from '@/lib/analytics'
 import { shouldUseImagePreview } from '@/lib/mobile'
 import TextCustomization from './TextCustomization'
 import BackgroundSelection from './BackgroundSelection'
@@ -262,6 +263,7 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
   const handleNext = async () => {
     try {
       await handleSave()
+      trackEngagement('step_progression', 'customize_to_preview')
       onNext()
     } catch (error: any) {
       // Error will be handled by the parent component
@@ -563,7 +565,10 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
       {/* Navigation */}
       <div className="flex flex-col sm:flex-row gap-4 sm:justify-between pt-6 px-4 sm:px-0">
         <button
-          onClick={onBack}
+          onClick={() => {
+            trackEngagement('step_progression', 'customize_to_upload')
+            onBack()
+          }}
           className="btn-secondary flex items-center justify-center space-x-2 w-full sm:w-auto"
         >
           <ArrowLeft className="w-4 h-4" />
