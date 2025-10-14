@@ -1,10 +1,26 @@
-import { ArrowRight, Music, Heart, Gift, Sparkles, Check, Upload, Palette, Download } from 'lucide-react'
+import { ArrowRight, Music, Heart, Gift, Sparkles, Check, Upload, Palette, Download, DollarSign } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 import Header from './Header'
 import Footer from './Footer'
 
+interface PricingData {
+  price_cents: number
+  original_price_cents: number
+  price_dollars: number
+  original_price_dollars: number
+  formatted_price: string
+  formatted_original_price: string
+  discount_percentage: number
+  discount_amount: number
+  discount_enabled: boolean
+  has_discount: boolean
+}
+
 export default function LandingPage() {
   const navigate = useNavigate()
+  const [pricingData, setPricingData] = useState<PricingData | null>(null)
+  const [pricingLoading, setPricingLoading] = useState(true)
 
   const features = [
     {
@@ -79,6 +95,28 @@ export default function LandingPage() {
       emoji: '🎵'
     }
   ]
+
+  // Fetch pricing data
+  useEffect(() => {
+    const fetchPricing = async () => {
+      try {
+        setPricingLoading(true)
+        const response = await fetch('/api/price')
+        if (response.ok) {
+          const data = await response.json()
+          setPricingData(data)
+        } else {
+          console.error('Failed to fetch pricing data')
+        }
+      } catch (error) {
+        console.error('Error fetching pricing data:', error)
+      } finally {
+        setPricingLoading(false)
+      }
+    }
+
+    fetchPricing()
+  }, [])
 
   return (
     <div className="min-h-screen bg-white">

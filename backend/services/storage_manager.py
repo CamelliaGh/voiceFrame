@@ -108,15 +108,11 @@ class StorageManager:
             migration_log = []
             start_time = time.time()
 
-            # Migrate photo
+            # Migrate photo from S3 to S3
             temp_photo_key = f"temp_photos/{session_token}.jpg"
-            temp_photo_path = os.path.join(self.temp_storage_path, temp_photo_key)
-
-            if os.path.exists(temp_photo_path):
+            if self.file_uploader.file_exists(temp_photo_key):
                 permanent_photo_key = f"permanent/photos/{order_id}.jpg"
-                file_size = os.path.getsize(temp_photo_path)
-
-                await self._upload_to_s3_permanent(temp_photo_path, permanent_photo_key, 'image/jpeg')
+                await self._copy_s3_file(temp_photo_key, permanent_photo_key)
                 permanent_keys['permanent_photo_s3_key'] = permanent_photo_key
                 migration_log.append(f"Migrated photo: {temp_photo_key} -> {permanent_photo_key}")
 
@@ -126,16 +122,16 @@ class StorageManager:
                         file_type=FileType.PHOTO,
                         source_path=temp_photo_key,
                         destination_path=permanent_photo_key,
-                        file_size=file_size,
+                        file_size=0,  # Size not available for S3 copy
                         context=context,
                         status=FileOperationStatus.SUCCESS,
                         processing_time_ms=int((time.time() - start_time) * 1000),
                         db=db
                     )
 
-                # Clean up temporary file
-                os.remove(temp_photo_path)
-                migration_log.append(f"Cleaned up temp photo: {temp_photo_path}")
+                # Clean up temporary S3 file
+                self.file_uploader.delete_file(temp_photo_key)
+                migration_log.append(f"Cleaned up temp photo: {temp_photo_key}")
 
                 # Log photo deletion
                 if context and db:
@@ -147,33 +143,32 @@ class StorageManager:
                         db=db
                     )
 
-            # Migrate audio
-            temp_audio_dir = os.path.join(self.temp_storage_path, "temp_audio")
+            # Migrate audio from S3 to S3
+            # Find audio file with session token prefix
+            audio_files = self.file_uploader.list_files_with_prefix(f"temp_audio/{session_token}")
+            for audio_key in audio_files:
+                file_extension = audio_key.split('.')[-1]
+                permanent_audio_key = f"permanent/audio/{order_id}.{file_extension}"
+                await self._copy_s3_file(audio_key, permanent_audio_key)
+                permanent_keys['permanent_audio_s3_key'] = permanent_audio_key
+                migration_log.append(f"Migrated audio: {audio_key} -> {permanent_audio_key}")
 
-            if os.path.exists(temp_audio_dir):
-                for filename in os.listdir(temp_audio_dir):
-                    if filename.startswith(session_token):
-                        temp_audio_path = os.path.join(temp_audio_dir, filename)
-                        file_extension = filename.split('.')[-1]
-                        permanent_audio_key = f"permanent/audio/{order_id}.{file_extension}"
+                # Clean up temporary S3 file
+                self.file_uploader.delete_file(audio_key)
+                migration_log.append(f"Cleaned up temp audio: {audio_key}")
+                break  # Only migrate the first audio file found
 
-                        # Determine content type based on extension
-                        content_type = self._get_audio_content_type(file_extension)
-                        await self._upload_to_s3_permanent(temp_audio_path, permanent_audio_key, content_type)
-                        permanent_keys['permanent_audio_s3_key'] = permanent_audio_key
-                        migration_log.append(f"Migrated audio: {temp_audio_path} -> {permanent_audio_key}")
-
-                        # Clean up temporary file
-                        os.remove(temp_audio_path)
-                        migration_log.append(f"Cleaned up temp audio: {temp_audio_path}")
-
-            # Migrate waveform (if exists in S3)
+            # Migrate waveform from S3 to S3
             waveform_s3_key = f"waveforms/{session_token}.png"
             if self.file_uploader.file_exists(waveform_s3_key):
                 permanent_waveform_key = f"permanent/waveforms/{order_id}.png"
                 await self._copy_s3_file(waveform_s3_key, permanent_waveform_key)
                 permanent_keys['permanent_waveform_s3_key'] = permanent_waveform_key
                 migration_log.append(f"Migrated waveform: {waveform_s3_key} -> {permanent_waveform_key}")
+
+                # Clean up temporary S3 file
+                self.file_uploader.delete_file(waveform_s3_key)
+                migration_log.append(f"Cleaned up temp waveform: {waveform_s3_key}")
 
             # Log migration success
             print(f"Migration completed for order {order_id}: {len(permanent_keys)} files migrated")
