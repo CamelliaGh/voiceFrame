@@ -61,8 +61,10 @@ export default function PreviewSection({ onNext, onBack }: PreviewSectionProps) 
       console.log('🎯 PreviewSection: API endpoint used:', useImagePreview ? 'image' : 'pdf')
       // Extract the actual URL from the response object
       const previewUrl = response.preview_url
-      // Add cache-busting parameter to prevent browser caching
-      const cacheBustingUrl = `${previewUrl}?t=${Date.now()}`
+      // For presigned URLs, add cache-busting parameter properly
+      const cacheBustingUrl = previewUrl.includes('?')
+        ? `${previewUrl}&t=${Date.now()}`  // Use & for additional parameters
+        : `${previewUrl}?t=${Date.now()}`   // Use ? for first parameter
       console.log('🎯 PreviewSection: Using cache-busting URL:', cacheBustingUrl)
       setPreviewUrl(cacheBustingUrl)
     } catch (err: any) {
