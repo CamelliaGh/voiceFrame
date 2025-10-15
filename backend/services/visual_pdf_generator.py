@@ -84,14 +84,23 @@ class VisualPDFGenerator:
             photo_key = session.photo_s3_key
             waveform_key = session.waveform_s3_key
 
+            print(f"🔵 DEBUG: Initial keys - photo: {photo_key}, waveform: {waveform_key}")
+            print(f"🔵 DEBUG: add_watermark: {add_watermark}, order exists: {order is not None}")
+
             # For final PDFs (no watermark), use permanent keys if available
             if not add_watermark and order:
+                print(f"🔵 DEBUG: Checking permanent keys - photo: {order.permanent_photo_s3_key}, waveform: {order.permanent_waveform_s3_key}")
                 if order.permanent_photo_s3_key:
                     photo_key = order.permanent_photo_s3_key
                     print(f"🔵 DEBUG: Using permanent photo key for final PDF: {photo_key}")
+                else:
+                    print(f"🔵 DEBUG: No permanent photo key, using session key: {photo_key}")
+
                 if order.permanent_waveform_s3_key:
                     waveform_key = order.permanent_waveform_s3_key
                     print(f"🔵 DEBUG: Using permanent waveform key for final PDF: {waveform_key}")
+                else:
+                    print(f"🔵 DEBUG: No permanent waveform key, using session key: {waveform_key}")
 
             # Add photo
             print(f"🔵 DEBUG: About to check photo condition - photo_key: {photo_key}")
