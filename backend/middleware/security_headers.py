@@ -62,12 +62,12 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
                 # Content Security Policy (CSP)
                 "Content-Security-Policy": (
                     "default-src 'self'; "
-                    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://static.cloudflareinsights.com; "
+                    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://static.cloudflareinsights.com https://www.googletagmanager.com; "
                     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
                     "font-src 'self' https://fonts.gstatic.com data:; "
                     "img-src 'self' data: https: blob:; "
                     "media-src 'self' https://*.s3.amazonaws.com https://*.s3.us-east-2.amazonaws.com blob:; "
-                    "connect-src 'self' https://api.stripe.com https://api.sendgrid.com https://cloudflareinsights.com; "
+                    "connect-src 'self' https://api.stripe.com https://api.sendgrid.com https://cloudflareinsights.com https://www.google-analytics.com https://analytics.google.com; "
                     "frame-src https://js.stripe.com https://*.s3.amazonaws.com https://*.s3.us-east-2.amazonaws.com; "
                     "object-src 'none'; "
                     "base-uri 'self'; "
@@ -84,10 +84,10 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             self.security_headers.update({
                 "Content-Security-Policy": (
                     "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; "
-                    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://static.cloudflareinsights.com; "
+                    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://static.cloudflareinsights.com https://www.googletagmanager.com; "
                     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
                     "font-src 'self' data: https://fonts.gstatic.com; "
-                    "connect-src 'self' http://localhost:* https://api.stripe.com https://cloudflareinsights.com; "
+                    "connect-src 'self' http://localhost:* https://api.stripe.com https://cloudflareinsights.com https://www.google-analytics.com https://analytics.google.com; "
                     "img-src 'self' data: https: blob:; "
                     "media-src 'self' https://*.s3.amazonaws.com https://*.s3.us-east-2.amazonaws.com blob:; "
                     "frame-src https://js.stripe.com https://*.s3.amazonaws.com https://*.s3.us-east-2.amazonaws.com; "
