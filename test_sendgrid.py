@@ -12,10 +12,16 @@ Usage:
 import os
 import sys
 from datetime import datetime
-from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
+# Try to load dotenv if available, otherwise use environment variables
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+    print("✅ Loaded environment variables from .env file")
+except ImportError:
+    print("ℹ️  dotenv not installed - reading from environment variables")
+    print("   (Install with: pip install python-dotenv)")
+    print()
 
 def test_sendgrid_config(test_email: str):
     """Test SendGrid configuration and send a test email"""

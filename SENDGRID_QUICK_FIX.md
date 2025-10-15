@@ -35,7 +35,12 @@ FROM_EMAIL=your-verified-email@example.com
 docker-compose down
 docker-compose up -d
 
-# Test it
+# Test it (choose one method)
+
+# Method 1: Simple shell script (no dependencies)
+./test_sendgrid_simple.sh your-email@example.com
+
+# Method 2: Python script (requires: pip install python-dotenv sendgrid)
 python3 test_sendgrid.py your-email@example.com
 ```
 
