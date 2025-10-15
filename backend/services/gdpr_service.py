@@ -515,7 +515,7 @@ class GDPRService:
         return {
             "data_controller": settings.company_name,
             "data_controller_address": settings.company_address,
-            "data_protection_officer": "privacy@audioposter.com",
+            "data_protection_officer": "support@vocaframe.com",
             "legal_basis": {
                 "data_processing": "consent",
                 "email_marketing": "consent",
@@ -573,8 +573,8 @@ class GDPRService:
                 "Right to object (Article 21)"
             ],
             "contact_information": {
-                "privacy_email": "privacy@audioposter.com",
-                "dpo_email": "dpo@audioposter.com",
+                "privacy_email": "admin@vocaframe.com",
+                "dpo_email": "admin@vocaframe.com",
                 "privacy_policy": settings.privacy_policy_url,
                 "unsubscribe_url": settings.unsubscribe_url
             }

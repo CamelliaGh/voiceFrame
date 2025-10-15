@@ -1322,7 +1322,7 @@ async def listen_to_audio(identifier: str, db: Session = Depends(get_db)):
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>AudioPoster Memory</title>
+            <title>VocaFrame</title>
             <style>
                 * {{
                     margin: 0;
@@ -1576,7 +1576,7 @@ async def unsubscribe_page():
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Unsubscribe - AudioPoster</title>
+        <title>Unsubscribe - VocaFrame</title>
         <style>
             body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }
             .container { background: #f9fafb; padding: 30px; border-radius: 10px; }
@@ -1587,7 +1587,7 @@ async def unsubscribe_page():
     </head>
     <body>
         <div class="container">
-            <h1>Unsubscribe from AudioPoster</h1>
+            <h1>Unsubscribe from VocaFrame</h1>
             <div id="content">
                 <p>We're sorry to see you go! You can unsubscribe from our emails below.</p>
                 <form id="unsubscribeForm">

@@ -357,10 +357,10 @@ export default function TermsOfService() {
                       For questions about these Terms of Service:
                     </p>
                     <a
-                      href="mailto:legal@audioposter.com"
+                      href="mailto:admin@vocaframe.com"
                       className="text-purple-600 hover:underline font-medium"
                     >
-                      legal@audioposter.com
+                      admin@vocaframe.com
                     </a>
                   </div>
                   <div>
@@ -369,10 +369,10 @@ export default function TermsOfService() {
                       For technical support or general inquiries:
                     </p>
                     <a
-                      href="mailto:support@audioposter.com"
+                      href="mailto:admin@vocaframe.com"
                       className="text-purple-600 hover:underline font-medium"
                     >
-                      support@audioposter.com
+                      admin@vocaframe.com
                     </a>
                   </div>
                 </div>

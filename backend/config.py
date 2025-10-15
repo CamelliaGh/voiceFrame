@@ -25,7 +25,7 @@ class Settings(BaseSettings):
 
     # Email Service (Resend)
     resend_api_key: str = Field(default="")
-    from_email: str = Field(default="noreply@audioposter.com")
+    from_email: str = Field(default="admin@vocaframe.com")
 
     # Application
     secret_key: str = Field(default="your-secret-key-change-this")
@@ -54,10 +54,10 @@ class Settings(BaseSettings):
     qr_code_permanent_expiration: int = Field(default=157788000)  # 5 years for paid user QR codes
 
     # Privacy Compliance
-    company_name: str = Field(default="AudioPoster")  # Company name for CAN-SPAM compliance
+    company_name: str = Field(default="VocaFrame")  # Company name for CAN-SPAM compliance
     company_address: str = Field(default="123 Business St, City, State 12345")  # Physical address for CAN-SPAM
-    privacy_policy_url: str = Field(default="https://audioposter.com/privacy")  # Privacy policy URL
-    unsubscribe_url: str = Field(default="https://audioposter.com/unsubscribe")  # Unsubscribe page URL
+    privacy_policy_url: str = Field(default="https://vocaframe.com/privacy")  # Privacy policy URL
+    unsubscribe_url: str = Field(default="https://vocaframe.com/unsubscribe")  # Unsubscribe page URL
     data_retention_days: int = Field(default=90)  # Days to retain session data
 
     # Rate Limiting Configuration

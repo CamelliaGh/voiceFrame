@@ -39,11 +39,11 @@ export default function Footer() {
           <div className="space-y-4">
             <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">Contact Us</h4>
             <a
-              href="mailto:contact@vocaframe.com"
+              href="mailto:support@vocaframe.com"
               className="flex items-center space-x-2 text-sm text-gray-600 hover:text-primary-600 transition-colors group"
             >
               <Mail className="w-4 h-4 group-hover:scale-110 transition-transform" />
-              <span>contact@vocaframe.com</span>
+              <span>support@vocaframe.com</span>
             </a>
             <p className="text-xs text-gray-500 leading-relaxed">
               We'd love to hear from you! Send us your questions, feedback, or just say hello.

@@ -153,7 +153,7 @@ class PrivacyService:
             <p style="margin: 10px 0; font-size: 12px;">
                 <a href="{links['privacy_policy']}" style="color: #8b5cf6; text-decoration: none;">Privacy Policy</a> |
                 <a href="{unsubscribe_url or links['unsubscribe']}" style="color: #8b5cf6; text-decoration: none;">Unsubscribe</a> |
-                <a href="https://audioposter.com/do-not-sell" style="color: #8b5cf6; text-decoration: none;">Do Not Sell My Personal Information</a>
+                <a href="https://vocaframe.com/do-not-sell" style="color: #8b5cf6; text-decoration: none;">Do Not Sell My Personal Information</a>
             </p>
             <p style="margin: 5px 0; font-size: 11px; color: #9ca3af;">
                 You received this email because you created an AudioPoster.
@@ -175,7 +175,7 @@ class PrivacyService:
 
 Privacy Policy: {links['privacy_policy']}
 Unsubscribe: {unsubscribe_url or links['unsubscribe']}
-Do Not Sell My Personal Information: https://audioposter.com/do-not-sell
+Do Not Sell My Personal Information: https://vocaframe.com/do-not-sell
 
 You received this email because you created an AudioPoster.
 If you no longer wish to receive emails, please unsubscribe here: {unsubscribe_url or links['unsubscribe']}

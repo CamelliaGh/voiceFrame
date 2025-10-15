@@ -147,10 +147,10 @@ class TestPrivacyCompliance:
     def test_configuration_values(self):
         """Test that privacy configuration values are properly set"""
         # Test default values
-        assert settings.company_name == "AudioPoster"
+        assert settings.company_name == "VocaFrame"
         assert settings.company_address == "123 Business St, City, State 12345"
-        assert settings.privacy_policy_url == "https://audioposter.com/privacy"
-        assert settings.unsubscribe_url == "https://audioposter.com/unsubscribe"
+        assert settings.privacy_policy_url == "https://vocaframe.com/privacy"
+        assert settings.unsubscribe_url == "https://vocaframe.com/unsubscribe"
         assert settings.data_retention_days == 90
 
         # Test that values are strings/ints

@@ -215,7 +215,7 @@ class EmailService:
 
                 <div class="footer">
                     <p>Love your AudioPoster? Share it with friends and family!</p>
-                    <p>Visit <a href="{settings.base_url}">AudioPoster.com</a> to create more beautiful memory posters.</p>
+                    <p>Visit <a href="{settings.base_url}">vocaframe.com</a> to create more beautiful memory posters.</p>
                     <p><small>If you have any questions, reply to this email and we'll help you out.</small></p>
                 </div>
 
