@@ -23,8 +23,8 @@ class Settings(BaseSettings):
     stripe_secret_key: str = Field(default="")
     stripe_webhook_secret: str = Field(default="")
 
-    # SendGrid
-    sendgrid_api_key: str = Field(default="")
+    # Email Service (Resend)
+    resend_api_key: str = Field(default="")
     from_email: str = Field(default="noreply@audioposter.com")
 
     # Application
@@ -141,13 +141,13 @@ class Settings(BaseSettings):
                 raise ValueError("Default Stripe credentials cannot be used in production")
         return v
 
-    @validator('sendgrid_api_key')
-    def validate_sendgrid_api_key(cls, v):
-        """Validate SendGrid API key"""
-        if v and v == 'sendgrid_api_key':
-            logger.warning("Using default/example SENDGRID_API_KEY")
+    @validator('resend_api_key')
+    def validate_resend_api_key(cls, v):
+        """Validate Resend API key"""
+        if v and v in ['resend_api_key', 're_123456789']:
+            logger.warning("Using default/example RESEND_API_KEY")
             if os.getenv('ENVIRONMENT') == 'production':
-                raise ValueError("Default SendGrid credentials cannot be used in production")
+                raise ValueError("Default Resend credentials cannot be used in production")
         return v
 
     def validate_security(self) -> dict:
@@ -159,7 +159,7 @@ class Settings(BaseSettings):
         config_dict = self.dict()
         sensitive_fields = [
             'secret_key', 'aws_access_key_id', 'aws_secret_access_key',
-            'stripe_secret_key', 'stripe_webhook_secret', 'sendgrid_api_key',
+            'stripe_secret_key', 'stripe_webhook_secret', 'resend_api_key',
             'local_encryption_key', 'admin_password'
         ]
 

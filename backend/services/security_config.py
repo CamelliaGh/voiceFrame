@@ -27,7 +27,7 @@ class SecurityConfig:
             'AWS_SECRET_ACCESS_KEY',
             'S3_BUCKET',
             'STRIPE_SECRET_KEY',
-            'SENDGRID_API_KEY'
+            'RESEND_API_KEY'
         ]
 
         self.sensitive_env_vars = [
@@ -36,7 +36,7 @@ class SecurityConfig:
             'AWS_SECRET_ACCESS_KEY',
             'STRIPE_SECRET_KEY',
             'STRIPE_WEBHOOK_SECRET',
-            'SENDGRID_API_KEY',
+            'RESEND_API_KEY',
             'LOCAL_ENCRYPTION_KEY'
         ]
 
@@ -73,7 +73,7 @@ class SecurityConfig:
             'AWS_ACCESS_KEY_ID': ['your_aws_access_key', 'AKIAIOSFODNN7EXAMPLE'],
             'AWS_SECRET_ACCESS_KEY': ['your_aws_secret_key', 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY'],
             'STRIPE_SECRET_KEY': ['sk_test_your_stripe_secret_key'],
-            'SENDGRID_API_KEY': ['sendgrid_api_key']
+            'RESEND_API_KEY': ['resend_api_key', 're_123456789']
         }
 
         for var, defaults in default_values.items():

@@ -1,5 +1,4 @@
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail, Email, To, Content
+import resend
 from datetime import datetime, timedelta
 from typing import List, Optional
 import logging
@@ -11,14 +10,15 @@ from .privacy_service import PrivacyService
 logger = logging.getLogger(__name__)
 
 class EmailService:
-    """Handles email delivery for downloads and marketing"""
+    """Handles email delivery for downloads and marketing using Resend"""
 
     def __init__(self):
-        if settings.sendgrid_api_key:
-            self.sg = SendGridAPIClient(api_key=settings.sendgrid_api_key)
+        if settings.resend_api_key:
+            resend.api_key = settings.resend_api_key
+            self.resend_configured = True
         else:
-            self.sg = None
-            print("Warning: SendGrid API key not configured - emails will be logged only")
+            self.resend_configured = False
+            print("Warning: Resend API key not configured - emails will be logged only")
 
         self.privacy_service = PrivacyService()
 
@@ -114,7 +114,7 @@ class EmailService:
     async def _send_email(self, to_email: str, subject: str,
                          html_content: str, text_content: str) -> bool:
         """
-        Core email sending function
+        Core email sending function using Resend
 
         Args:
             to_email: Recipient email
@@ -125,7 +125,7 @@ class EmailService:
         Returns:
             True if sent successfully
         """
-        if not self.sg:
+        if not self.resend_configured:
             # Log email for development
             logger.info(f"EMAIL (not sent - no API key):")
             logger.info(f"To: {to_email}")
@@ -134,26 +134,26 @@ class EmailService:
             return True
 
         try:
-            message = Mail(
-                from_email=Email(settings.from_email, "AudioPoster"),
-                to_emails=To(to_email),
-                subject=subject,
-                html_content=Content("text/html", html_content),
-                plain_text_content=Content("text/plain", text_content)
-            )
+            params = {
+                "from": f"VoiceFrame <{settings.from_email}>",
+                "to": [to_email],
+                "subject": subject,
+                "html": html_content,
+                "text": text_content
+            }
 
-            response = self.sg.send(message)
+            response = resend.Emails.send(params)
 
-            # SendGrid returns 202 for successful sends
-            if response.status_code == 202:
-                logger.info(f"Email sent successfully to {to_email}")
+            # Resend returns email ID on success
+            if response and "id" in response:
+                logger.info(f"Email sent successfully to {to_email} (ID: {response['id']})")
                 return True
             else:
-                logger.error(f"Email send failed with status {response.status_code}")
+                logger.error(f"Email send failed - no ID returned")
                 return False
 
         except Exception as e:
-            logger.error(f"SendGrid error: {str(e)}")
+            logger.error(f"Resend error: {str(e)}")
             return False
 
     def _create_download_email_html(self, download_url: str, expires_str: str,

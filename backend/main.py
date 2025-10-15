@@ -146,39 +146,39 @@ async def health_check():
     return {"status": "healthy", "timestamp": datetime.utcnow()}
 
 
-@app.post("/api/test/sendgrid")
-async def test_sendgrid_email(
+@app.post("/api/test/resend")
+async def test_resend_email(
     test_email: str = Form(...),
     admin_auth: bool = Depends(lambda: admin_auth_service.get_admin_dependency())
 ):
     """
-    Test SendGrid email configuration by sending a test email
+    Test Resend email configuration by sending a test email
 
     This endpoint requires admin authentication and sends a test email
-    to verify that SendGrid is properly configured.
+    to verify that Resend is properly configured.
     """
     try:
-        # Check if SendGrid is configured
-        if not settings.sendgrid_api_key:
+        # Check if Resend is configured
+        if not settings.resend_api_key:
             return {
                 "status": "error",
-                "message": "SendGrid API key is not configured",
+                "message": "Resend API key is not configured",
                 "configured": False,
                 "api_key_set": False
             }
 
-        # Check if API key looks valid (starts with SG.)
-        api_key_valid = settings.sendgrid_api_key.startswith("SG.")
+        # Check if API key looks valid (starts with re_)
+        api_key_valid = settings.resend_api_key.startswith("re_")
 
         # Try to send a test email
         try:
-            test_subject = "VoiceFrame - SendGrid Test Email"
+            test_subject = "VoiceFrame - Resend Test Email"
             test_html = """
             <html>
                 <body style="font-family: Arial, sans-serif; padding: 20px;">
-                    <h2 style="color: #8b5cf6;">✅ SendGrid Test Successful!</h2>
+                    <h2 style="color: #8b5cf6;">✅ Resend Test Successful!</h2>
                     <p>This is a test email from your VoiceFrame application.</p>
-                    <p>If you're receiving this, your SendGrid configuration is working correctly!</p>
+                    <p>If you're receiving this, your Resend configuration is working correctly!</p>
                     <hr style="margin: 20px 0;">
                     <p style="color: #666; font-size: 14px;">
                         <strong>Configuration Details:</strong><br>
@@ -193,10 +193,10 @@ async def test_sendgrid_email(
             )
 
             test_text = """
-            ✅ SendGrid Test Successful!
+            ✅ Resend Test Successful!
 
             This is a test email from your VoiceFrame application.
-            If you're receiving this, your SendGrid configuration is working correctly!
+            If you're receiving this, your Resend configuration is working correctly!
 
             Configuration Details:
             From Email: {from_email}
@@ -237,36 +237,36 @@ async def test_sendgrid_email(
             error_message = str(send_error)
 
             # Check for specific error types
-            if "401" in error_message or "Unauthorized" in error_message:
+            if "401" in error_message or "Unauthorized" in error_message or "Invalid API" in error_message:
                 return {
                     "status": "error",
-                    "message": "SendGrid API key is invalid or unauthorized",
+                    "message": "Resend API key is invalid or unauthorized",
                     "error": error_message,
                     "configured": True,
                     "api_key_set": True,
                     "api_key_valid_format": api_key_valid,
-                    "solution": "Please check your SENDGRID_API_KEY in .env file. Get a valid key from SendGrid dashboard."
+                    "solution": "Please check your RESEND_API_KEY in .env file. Get a valid key from Resend dashboard."
                 }
             elif "403" in error_message or "Forbidden" in error_message:
                 return {
                     "status": "error",
-                    "message": "SendGrid API key doesn't have required permissions",
+                    "message": "Resend API key doesn't have required permissions",
                     "error": error_message,
                     "configured": True,
                     "api_key_set": True,
                     "api_key_valid_format": api_key_valid,
-                    "solution": "Ensure your SendGrid API key has 'Mail Send' permissions"
+                    "solution": "Ensure your Resend API key has proper permissions"
                 }
-            elif "sender" in error_message.lower() or "from" in error_message.lower():
+            elif "domain" in error_message.lower() or "sender" in error_message.lower():
                 return {
                     "status": "error",
-                    "message": "Sender email is not verified in SendGrid",
+                    "message": "Sender domain is not verified in Resend",
                     "error": error_message,
                     "configured": True,
                     "api_key_set": True,
                     "api_key_valid_format": api_key_valid,
                     "from_email": settings.from_email,
-                    "solution": f"Verify the sender email '{settings.from_email}' in SendGrid dashboard"
+                    "solution": f"Verify the sender domain for '{settings.from_email}' in Resend dashboard"
                 }
             else:
                 return {
@@ -279,10 +279,10 @@ async def test_sendgrid_email(
                 }
 
     except Exception as e:
-        logger.error(f"SendGrid test endpoint error: {str(e)}")
+        logger.error(f"Resend test endpoint error: {str(e)}")
         return {
             "status": "error",
-            "message": "Unexpected error testing SendGrid",
+            "message": "Unexpected error testing Resend",
             "error": str(e)
         }
 
