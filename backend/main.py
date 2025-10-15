@@ -146,6 +146,147 @@ async def health_check():
     return {"status": "healthy", "timestamp": datetime.utcnow()}
 
 
+@app.post("/api/test/sendgrid")
+async def test_sendgrid_email(
+    test_email: str = Form(...),
+    admin_auth: bool = Depends(lambda: admin_auth_service.get_admin_dependency())
+):
+    """
+    Test SendGrid email configuration by sending a test email
+
+    This endpoint requires admin authentication and sends a test email
+    to verify that SendGrid is properly configured.
+    """
+    try:
+        # Check if SendGrid is configured
+        if not settings.sendgrid_api_key:
+            return {
+                "status": "error",
+                "message": "SendGrid API key is not configured",
+                "configured": False,
+                "api_key_set": False
+            }
+
+        # Check if API key looks valid (starts with SG.)
+        api_key_valid = settings.sendgrid_api_key.startswith("SG.")
+
+        # Try to send a test email
+        try:
+            test_subject = "VoiceFrame - SendGrid Test Email"
+            test_html = """
+            <html>
+                <body style="font-family: Arial, sans-serif; padding: 20px;">
+                    <h2 style="color: #8b5cf6;">✅ SendGrid Test Successful!</h2>
+                    <p>This is a test email from your VoiceFrame application.</p>
+                    <p>If you're receiving this, your SendGrid configuration is working correctly!</p>
+                    <hr style="margin: 20px 0;">
+                    <p style="color: #666; font-size: 14px;">
+                        <strong>Configuration Details:</strong><br>
+                        From Email: {from_email}<br>
+                        Timestamp: {timestamp}
+                    </p>
+                </body>
+            </html>
+            """.format(
+                from_email=settings.from_email,
+                timestamp=datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
+            )
+
+            test_text = """
+            ✅ SendGrid Test Successful!
+
+            This is a test email from your VoiceFrame application.
+            If you're receiving this, your SendGrid configuration is working correctly!
+
+            Configuration Details:
+            From Email: {from_email}
+            Timestamp: {timestamp}
+            """.format(
+                from_email=settings.from_email,
+                timestamp=datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
+            )
+
+            # Send the test email
+            success = await email_service._send_email(
+                test_email,
+                test_subject,
+                test_html,
+                test_text
+            )
+
+            if success:
+                return {
+                    "status": "success",
+                    "message": f"Test email sent successfully to {test_email}",
+                    "configured": True,
+                    "api_key_set": True,
+                    "api_key_valid_format": api_key_valid,
+                    "from_email": settings.from_email,
+                    "test_email": test_email
+                }
+            else:
+                return {
+                    "status": "error",
+                    "message": "Email service returned False - check logs for details",
+                    "configured": True,
+                    "api_key_set": True,
+                    "api_key_valid_format": api_key_valid
+                }
+
+        except Exception as send_error:
+            error_message = str(send_error)
+
+            # Check for specific error types
+            if "401" in error_message or "Unauthorized" in error_message:
+                return {
+                    "status": "error",
+                    "message": "SendGrid API key is invalid or unauthorized",
+                    "error": error_message,
+                    "configured": True,
+                    "api_key_set": True,
+                    "api_key_valid_format": api_key_valid,
+                    "solution": "Please check your SENDGRID_API_KEY in .env file. Get a valid key from SendGrid dashboard."
+                }
+            elif "403" in error_message or "Forbidden" in error_message:
+                return {
+                    "status": "error",
+                    "message": "SendGrid API key doesn't have required permissions",
+                    "error": error_message,
+                    "configured": True,
+                    "api_key_set": True,
+                    "api_key_valid_format": api_key_valid,
+                    "solution": "Ensure your SendGrid API key has 'Mail Send' permissions"
+                }
+            elif "sender" in error_message.lower() or "from" in error_message.lower():
+                return {
+                    "status": "error",
+                    "message": "Sender email is not verified in SendGrid",
+                    "error": error_message,
+                    "configured": True,
+                    "api_key_set": True,
+                    "api_key_valid_format": api_key_valid,
+                    "from_email": settings.from_email,
+                    "solution": f"Verify the sender email '{settings.from_email}' in SendGrid dashboard"
+                }
+            else:
+                return {
+                    "status": "error",
+                    "message": "Failed to send test email",
+                    "error": error_message,
+                    "configured": True,
+                    "api_key_set": True,
+                    "api_key_valid_format": api_key_valid
+                }
+
+    except Exception as e:
+        logger.error(f"SendGrid test endpoint error: {str(e)}")
+        return {
+            "status": "error",
+            "message": "Unexpected error testing SendGrid",
+            "error": str(e)
+        }
+
+
 @app.get("/metrics")
 async def metrics():
     """Prometheus metrics endpoint"""
