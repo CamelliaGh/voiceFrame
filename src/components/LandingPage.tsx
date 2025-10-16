@@ -107,14 +107,14 @@ export default function LandingPage() {
     {
       emoji: '👩‍👧',
       quote: 'The sweetest surprise for my mom.',
-      text: "I wanted to surprise my mother — she adores her granddaughter. I used VocaFrame to create a poster with my daughter's voice saying 'I love you, Grandma!' When my mom played it, she cried happy tears. It's such a unique and emotional gift.",
+      text: "I wanted to surprise my mother, she adores her granddaughter. I used VocaFrame to create a poster with my daughter's voice saying 'I love you, Grandma!' When my mom played it, she cried happy tears. It's such a unique and emotional gift.",
       author: 'Leila M.',
       location: 'Toronto, Canada'
     },
     {
       emoji: '💝',
       quote: 'An affordable gift that means so much.',
-      text: "Using VocaFrame was super easy. I printed the poster myself and found a lovely frame at a dollar store. It turned out beautiful — a thoughtful, personal gift that didn't cost much but meant the world.",
+      text: "Using VocaFrame was super easy. I printed the poster myself and found a lovely frame at a dollar store. It turned out beautiful, a thoughtful, personal gift that didn't cost much but meant the world.",
       author: 'Sara J.',
       location: 'Vancouver, BC'
     },
@@ -128,7 +128,7 @@ export default function LandingPage() {
     {
       emoji: '💖',
       quote: "The most meaningful gift I've ever given.",
-      text: "I turned my husband's voice message into a framed poster for our anniversary — and he actually teared up. It's so beautiful to see something that sounds like love, now hanging on our wall. VocaFrame made it in minutes and delivered instantly. Truly unforgettable.",
+      text: "I turned my husband's voice message into a framed poster for our anniversary, and he actually teared up. It's so beautiful to see something that sounds like love, now hanging on our wall. VocaFrame made it in minutes and delivered instantly. Truly unforgettable.",
       author: 'Emily R.',
       location: 'Vancouver, Canada'
     }
