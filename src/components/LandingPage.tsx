@@ -202,7 +202,7 @@ export default function LandingPage() {
                 onClick={() => navigate('/')}
                 className="btn-primary flex items-center space-x-2 text-lg px-10"
               >
-                <span>Create Your Poster</span>
+                <span>Create Your Poster instantly</span>
                 <ArrowRight className="w-5 h-5" />
               </button>
               <button
