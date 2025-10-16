@@ -1,4 +1,4 @@
-import { ArrowRight, Music, Heart, Gift, Sparkles, Check, Upload, Palette, Download, DollarSign } from 'lucide-react'
+import { ArrowRight, Music, Heart, Gift, Sparkles, Check, Upload, Palette, Download, DollarSign, Quote } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import Header from './Header'
@@ -93,6 +93,44 @@ export default function LandingPage() {
       title: 'Favorite Songs',
       description: 'Turn your anthem into wall art',
       emoji: '🎵'
+    }
+  ]
+
+  const testimonials = [
+    {
+      emoji: '🌍',
+      quote: "A voice from home he'll always have.",
+      text: "My son is studying abroad, so I recorded a message telling him, 'I love you and I'm proud of you,' and turned it into a VocaFrame poster. Now he can scan it anytime and hear my voice from across the ocean. It's such a heartfelt way to stay connected.",
+      author: 'Farah N.',
+      location: 'San Diego, CA'
+    },
+    {
+      emoji: '👩‍👧',
+      quote: 'The sweetest surprise for my mom.',
+      text: "I wanted to surprise my mother — she adores her granddaughter. I used VocaFrame to create a poster with my daughter's voice saying 'I love you, Grandma!' When my mom played it, she cried happy tears. It's such a unique and emotional gift.",
+      author: 'Leila M.',
+      location: 'Toronto, Canada'
+    },
+    {
+      emoji: '💝',
+      quote: 'An affordable gift that means so much.',
+      text: "Using VocaFrame was super easy. I printed the poster myself and found a lovely frame at a dollar store. It turned out beautiful — a thoughtful, personal gift that didn't cost much but meant the world.",
+      author: 'Sara J.',
+      location: 'Vancouver, BC'
+    },
+    {
+      emoji: '🕊️',
+      quote: 'A way to keep his voice close.',
+      text: "After my dad passed, I found an old voicemail of him saying he was proud of me. VocaFrame helped me preserve it in a way that feels timeless. It's comforting to see his words, not just hear them. Thank you for this beautiful idea.",
+      author: 'Lila G.',
+      location: 'Toronto, Canada'
+    },
+    {
+      emoji: '💖',
+      quote: "The most meaningful gift I've ever given.",
+      text: "I turned my husband's voice message into a framed poster for our anniversary — and he actually teared up. It's so beautiful to see something that sounds like love, now hanging on our wall. VocaFrame made it in minutes and delivered instantly. Truly unforgettable.",
+      author: 'Emily R.',
+      location: 'Vancouver, Canada'
     }
   ]
 
@@ -493,6 +531,65 @@ export default function LandingPage() {
                 </p>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials Section */}
+      <section className="py-20 bg-white overflow-hidden">
+        <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">
+              Stories From Our Community
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-6">
+              Real people, real memories, real emotions preserved through VocaFrame
+            </p>
+            <p className="text-sm text-gray-500">
+              Scroll to see more →
+            </p>
+          </div>
+
+          <div className="relative">
+            <div className="flex overflow-x-auto gap-6 pb-8 snap-x snap-mandatory scrollbar-hide">
+              {testimonials.map((testimonial, index) => (
+                <div
+                  key={index}
+                  className="flex-shrink-0 w-[85%] sm:w-[400px] bg-gradient-to-br from-gray-50 to-white border-2 border-gray-200 rounded-2xl p-8 hover:shadow-xl hover:border-primary-300 transition-all duration-300 snap-start"
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="text-4xl">{testimonial.emoji}</div>
+                    <Quote className="w-8 h-8 text-primary-200" />
+                  </div>
+
+                  <h3 className="text-xl font-bold text-gray-900 mb-4 leading-snug">
+                    {testimonial.quote}
+                  </h3>
+
+                  <p className="text-gray-600 leading-relaxed mb-6">
+                    {testimonial.text}
+                  </p>
+
+                  <div className="pt-4 border-t border-gray-200">
+                    <p className="font-semibold text-gray-900">{testimonial.author}</p>
+                    <p className="text-sm text-gray-500">{testimonial.location}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="absolute left-0 top-0 bottom-8 w-12 bg-gradient-to-r from-white to-transparent pointer-events-none" />
+            <div className="absolute right-0 top-0 bottom-8 w-12 bg-gradient-to-l from-white to-transparent pointer-events-none" />
+          </div>
+
+          <div className="text-center mt-8">
+            <button
+              onClick={() => navigate('/')}
+              className="btn-primary flex items-center space-x-2 text-lg px-10 mx-auto"
+            >
+              <span>Create Your Own Memory</span>
+              <ArrowRight className="w-5 h-5" />
+            </button>
           </div>
         </div>
       </section>
