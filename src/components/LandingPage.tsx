@@ -536,45 +536,53 @@ export default function LandingPage() {
       </section>
 
       {/* Testimonials Section */}
-      <section className="py-20 bg-white">
+      <section className="py-20 bg-white overflow-hidden">
         <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12">
-          <div className="text-center mb-16">
+          <div className="text-center mb-12">
             <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">
               Stories From Our Community
             </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-6">
               Real people, real memories, real emotions preserved through VocaFrame
+            </p>
+            <p className="text-sm text-gray-500">
+              Scroll to see more →
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {testimonials.map((testimonial, index) => (
-              <div
-                key={index}
-                className="bg-gradient-to-br from-gray-50 to-white border-2 border-gray-200 rounded-2xl p-8 hover:shadow-xl hover:border-primary-300 transition-all duration-300 flex flex-col"
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="text-4xl">{testimonial.emoji}</div>
-                  <Quote className="w-8 h-8 text-primary-200" />
+          <div className="relative">
+            <div className="flex overflow-x-auto gap-6 pb-8 snap-x snap-mandatory scrollbar-hide">
+              {testimonials.map((testimonial, index) => (
+                <div
+                  key={index}
+                  className="flex-shrink-0 w-[85%] sm:w-[400px] bg-gradient-to-br from-gray-50 to-white border-2 border-gray-200 rounded-2xl p-8 hover:shadow-xl hover:border-primary-300 transition-all duration-300 snap-start"
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="text-4xl">{testimonial.emoji}</div>
+                    <Quote className="w-8 h-8 text-primary-200" />
+                  </div>
+
+                  <h3 className="text-xl font-bold text-gray-900 mb-4 leading-snug">
+                    {testimonial.quote}
+                  </h3>
+
+                  <p className="text-gray-600 leading-relaxed mb-6">
+                    {testimonial.text}
+                  </p>
+
+                  <div className="pt-4 border-t border-gray-200">
+                    <p className="font-semibold text-gray-900">{testimonial.author}</p>
+                    <p className="text-sm text-gray-500">{testimonial.location}</p>
+                  </div>
                 </div>
+              ))}
+            </div>
 
-                <h3 className="text-xl font-bold text-gray-900 mb-4 leading-snug">
-                  {testimonial.quote}
-                </h3>
-
-                <p className="text-gray-600 leading-relaxed mb-6 flex-grow">
-                  {testimonial.text}
-                </p>
-
-                <div className="pt-4 border-t border-gray-200">
-                  <p className="font-semibold text-gray-900">{testimonial.author}</p>
-                  <p className="text-sm text-gray-500">{testimonial.location}</p>
-                </div>
-              </div>
-            ))}
+            <div className="absolute left-0 top-0 bottom-8 w-12 bg-gradient-to-r from-white to-transparent pointer-events-none" />
+            <div className="absolute right-0 top-0 bottom-8 w-12 bg-gradient-to-l from-white to-transparent pointer-events-none" />
           </div>
 
-          <div className="text-center mt-12">
+          <div className="text-center mt-8">
             <button
               onClick={() => navigate('/')}
               className="btn-primary flex items-center space-x-2 text-lg px-10 mx-auto"
