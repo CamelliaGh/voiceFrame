@@ -28,14 +28,14 @@ class Settings(BaseSettings):
     from_email: str = Field(default="admin@vocaframe.com")
 
     # Application
-    secret_key: str = Field(default="your-secret-key-change-this")
+    secret_key: str = Field(default="")  # Must be set via environment variable
     base_url: str = Field(default="http://localhost:3000")
     debug: bool = Field(default=True)
     project_root: str = Field(default="/app")
     environment: str = Field(default_factory=lambda: os.getenv("ENVIRONMENT", "development"))  # development, staging, production
 
     # Admin Authentication
-    admin_password: str = Field(default="admin123")
+    admin_password: str = Field(default="")  # Must be set via environment variable
 
     # Debug settings
     debug_photo_circle: bool = Field(default=False)  # Show red circle instead of photo for debugging
@@ -55,7 +55,7 @@ class Settings(BaseSettings):
 
     # Privacy Compliance
     company_name: str = Field(default="VocaFrame")  # Company name for CAN-SPAM compliance
-    company_address: str = Field(default="123 Business St, City, State 12345")  # Physical address for CAN-SPAM
+    company_address: str = Field(default="")  # Physical address for CAN-SPAM compliance
     privacy_policy_url: str = Field(default="https://vocaframe.com/privacy")  # Privacy policy URL
     unsubscribe_url: str = Field(default="https://vocaframe.com/unsubscribe")  # Unsubscribe page URL
     data_retention_days: int = Field(default=90)  # Days to retain session data

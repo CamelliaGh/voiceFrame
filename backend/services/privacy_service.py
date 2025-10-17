@@ -142,14 +142,19 @@ class PrivacyService:
         """Generate HTML footer with privacy compliance links"""
         links = self.get_privacy_footer_links()
 
+        # Only include company address if it's provided
+        address_section = ""
+        if links['company_address'] and links['company_address'].strip():
+            address_section = f"""
+            <p style="margin: 5px 0; font-size: 12px;">
+                {links['company_address']}
+            </p>"""
+
         footer = f"""
         <div style="background: #f9fafb; padding: 20px; text-align: center; color: #6b7280; border-radius: 0 0 10px 10px; margin-top: 30px;">
             <p style="margin: 5px 0; font-size: 12px;">
                 © 2024 {links['company_name']}. All rights reserved.
-            </p>
-            <p style="margin: 5px 0; font-size: 12px;">
-                {links['company_address']}
-            </p>
+            </p>{address_section}
             <p style="margin: 10px 0; font-size: 12px;">
                 <a href="{links['privacy_policy']}" style="color: #8b5cf6; text-decoration: none;">Privacy Policy</a> |
                 <a href="{unsubscribe_url or links['unsubscribe']}" style="color: #8b5cf6; text-decoration: none;">Unsubscribe</a> |
@@ -168,12 +173,15 @@ class PrivacyService:
         """Generate plain text footer with privacy compliance information"""
         links = self.get_privacy_footer_links()
 
+        # Only include company address if it's provided
+        address_line = ""
+        if links['company_address'] and links['company_address'].strip():
+            address_line = f"{links['company_address']}\n"
+
         footer = f"""
 
 © 2024 {links['company_name']}. All rights reserved.
-{links['company_address']}
-
-Privacy Policy: {links['privacy_policy']}
+{address_line}Privacy Policy: {links['privacy_policy']}
 Unsubscribe: {unsubscribe_url or links['unsubscribe']}
 Do Not Sell My Personal Information: https://vocaframe.com/do-not-sell
 
