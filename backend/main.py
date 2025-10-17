@@ -2200,6 +2200,33 @@ async def get_available_fonts(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail="Failed to get fonts")
 
 
+@app.get("/api/resources/fonts/{font_id}/file")
+async def get_font_file(font_id: str, db: Session = Depends(get_db)):
+    """Serve font file for dynamic loading"""
+    try:
+        # Get font file path from admin resource service
+        font_file_path = admin_resource_service.get_font_file_path(db, font_id)
+
+        if not font_file_path or not os.path.exists(font_file_path):
+            raise HTTPException(status_code=404, detail="Font file not found")
+
+        # Return the font file
+        return FileResponse(
+            font_file_path,
+            media_type="font/ttf",
+            filename=f"{font_id}.ttf",
+            headers={
+                "Cache-Control": "public, max-age=31536000",  # Cache for 1 year
+                "Access-Control-Allow-Origin": "*"
+            }
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error serving font file {font_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to serve font file")
+
+
 @app.get("/api/resources/suggested-texts")
 async def get_suggested_texts(
     category: Optional[str] = None,

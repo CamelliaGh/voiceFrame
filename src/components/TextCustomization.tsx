@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Type } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { fontLoader, FontResource } from '@/lib/fontLoader'
 
 interface TextCustomizationProps {
   value: string
@@ -20,11 +21,11 @@ interface SuggestionCategory {
 }
 
 const defaultFontOptions = [
-  { id: 'script', name: 'Script', description: 'Handwritten style', preview: 'Script Font' },
-  { id: 'elegant', name: 'Elegant', description: 'Sophisticated serif', preview: 'Elegant Font' },
-  { id: 'modern', name: 'Modern', description: 'Clean sans-serif', preview: 'Modern Font' },
-  { id: 'vintage', name: 'Vintage', description: 'Classic antique feel', preview: 'Vintage Font' },
-  { id: 'classic', name: 'Classic', description: 'Traditional serif', preview: 'Classic Font' }
+  { id: 'script', name: 'Script', description: 'Handwritten style', preview: 'Love' },
+  { id: 'elegant', name: 'Elegant', description: 'Sophisticated serif', preview: 'Forever' },
+  { id: 'modern', name: 'Modern', description: 'Clean sans-serif', preview: 'Together' },
+  { id: 'vintage', name: 'Vintage', description: 'Classic antique feel', preview: 'Always' },
+  { id: 'classic', name: 'Classic', description: 'Traditional serif', preview: 'Cherish' }
 ]
 
 // Font preview styles
@@ -59,6 +60,7 @@ export default function TextCustomization({
   const [isNearLimit, setIsNearLimit] = useState(false)
   const [suggestionCategories, setSuggestionCategories] = useState<SuggestionCategory[]>([])
   const [fontOptions, setFontOptions] = useState(defaultFontOptions)
+  const [fontClasses, setFontClasses] = useState<Map<string, string>>(new Map())
   const [, setLoading] = useState(true)
 
   useEffect(() => {
@@ -123,14 +125,21 @@ export default function TextCustomization({
         const fontsResponse = await fetch('/api/resources/fonts')
         if (fontsResponse.ok) {
           const fontsData = await fontsResponse.json()
-          const fonts = fontsData.fonts?.map((font: any) => ({
-            id: font.id,
-            name: font.display_name,
-            description: font.description || 'Custom font',
-            preview: font.display_name
-          })) || []
+          const fonts: FontResource[] = fontsData.fonts || []
+
           if (fonts.length > 0) {
-            setFontOptions(fonts)
+            // Map fonts to the expected format
+            const mappedFonts = fonts.map((font: FontResource) => ({
+              id: font.id,
+              name: font.display_name,
+              description: font.description || 'Custom font',
+              preview: font.display_name
+            }))
+            setFontOptions(mappedFonts)
+
+            // Load all fonts dynamically
+            const loadedFontClasses = await fontLoader.loadFonts(fonts)
+            setFontClasses(loadedFontClasses)
           }
         }
       } catch (error) {
@@ -315,9 +324,9 @@ export default function TextCustomization({
               {/* Font preview word */}
               <div className={cn(
                 "text-base text-gray-800 mb-1 text-center",
-                getFontStyle(font.id)
+                fontClasses.get(font.id) || getFontStyle(font.id)
               )}>
-                Love
+                {font.preview}
               </div>
 
               {/* Font name */}
