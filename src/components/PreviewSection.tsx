@@ -86,7 +86,9 @@ export default function PreviewSection({ onNext, onBack }: PreviewSectionProps) 
       // Extract specific error message from the response
       let errorMessage = 'Failed to generate preview. Please try again.'
 
-      if (err.response?.data?.detail) {
+      if (err.response?.status === 429) {
+        errorMessage = 'Too many requests. Please wait a moment and try again.'
+      } else if (err.response?.data?.detail) {
         const detail = err.response.data.detail
         if (detail.includes('Audio file is missing')) {
           errorMessage = 'Audio file is missing. Please upload your audio file again.'

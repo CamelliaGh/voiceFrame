@@ -59,7 +59,30 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
   const [previewError, setPreviewError] = useState<string | null>(null)
   const [showMobileModal, setShowMobileModal] = useState(false)
   const [useImagePreview, setUseImagePreview] = useState(shouldUseImagePreview())
+  const [updateError, setUpdateError] = useState<string | null>(null)
 
+  const handleUpdateError = (error: any, operation: string) => {
+    console.error(`Failed to ${operation}:`, error)
+
+    if (error.response?.status === 429) {
+      setUpdateError('Too many requests. Please wait a moment and try again.')
+    } else if (error.response?.status >= 500) {
+      setUpdateError('Server error. Please try again in a few moments.')
+    } else if (error.response?.status === 400) {
+      // Handle specific 400 errors (like audio processing not complete)
+      if (error.message?.includes('Audio processing not complete')) {
+        setUpdateError('Audio is still processing. Please wait a moment and try again.')
+      } else {
+        setUpdateError('Invalid request. Please check your settings and try again.')
+      }
+    } else {
+      setUpdateError(`Failed to ${operation}. Please try again.`)
+    }
+  }
+
+  const clearUpdateError = () => {
+    setUpdateError(null)
+  }
 
   // Check processing status when component mounts and periodically
   useEffect(() => {
@@ -111,7 +134,9 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
     if (session && !session.custom_text && customText === 'Our Song ♪') {
       // Update session with default custom text - but only if audio processing is complete
       if (processingStatus && processingStatus.waveform_ready) {
-        updateSessionData({ custom_text: customText })
+        updateSessionData({ custom_text: customText }).catch(error => {
+          handleUpdateError(error, 'set default text')
+        })
       }
     }
   }, [session, customText, updateSessionData, processingStatus])
@@ -145,11 +170,12 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
 
           try {
             setIsUpdating(true)
+            clearUpdateError() // Clear any previous errors
             console.log('📡 Calling updateSessionData with:', data)
             await updateSessionData(data)
             console.log('✅ updateSessionData completed successfully')
           } catch (error) {
-            console.error('Failed to update session:', error)
+            handleUpdateError(error, 'update session')
             // If it's a 400 error about audio processing, refresh the processing status
             if (error instanceof Error && (error.message.includes('Audio processing not complete') || error.message.includes('Request failed with status code 400'))) {
               try {
@@ -271,11 +297,12 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
   const handleNext = async () => {
     try {
       await handleSave()
+      clearUpdateError() // Clear any errors on successful save
       trackEngagement('step_progression', 'customize_to_preview')
       onNext()
     } catch (error: any) {
-      // Error will be handled by the parent component
-      throw error
+      handleUpdateError(error, 'save settings')
+      // Don't throw error - let the error display in the UI
     }
   }
 
@@ -375,6 +402,35 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
 
   return (
     <div className="space-y-6">
+      {/* Error Display */}
+      {updateError && (
+        <div className="mx-4 bg-red-50 border border-red-200 rounded-md p-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-red-800">{updateError}</p>
+            </div>
+            <div className="ml-auto pl-3">
+              <div className="-mx-1.5 -my-1.5">
+                <button
+                  onClick={clearUpdateError}
+                  className="inline-flex bg-red-50 rounded-md p-1.5 text-red-500 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-red-50 focus:ring-red-600"
+                >
+                  <span className="sr-only">Dismiss</span>
+                  <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="text-center px-4 animate-slide-in-bottom">
         <h2 className="section-title">Customize Your Poster</h2>
         <p className="section-subtitle">
