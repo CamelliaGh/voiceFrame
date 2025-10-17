@@ -326,7 +326,7 @@ export default function TextCustomization({
                 "text-base text-gray-800 mb-1 text-center",
                 fontClasses.get(font.id) || getFontStyle(font.id)
               )}>
-                Love
+                Love you
               </div>
 
               {/* Font name */}
