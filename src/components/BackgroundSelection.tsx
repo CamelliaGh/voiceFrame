@@ -51,6 +51,7 @@ export default function BackgroundSelection({
   const [backgroundOptions, setBackgroundOptions] = useState<BackgroundOption[]>(defaultBackgroundOptions)
   const [categories, setCategories] = useState<string[]>(defaultCategories)
   const [, setLoading] = useState(true)
+  const [showAll, setShowAll] = useState(false)
 
   // Fetch admin-managed backgrounds on component mount and when pdfSize changes
   useEffect(() => {
@@ -160,8 +161,9 @@ export default function BackgroundSelection({
       </div>
 
       {/* Background Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {filteredBackgrounds.map((background) => (
+      <div className="relative">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-[400px] overflow-y-auto pb-2 pr-2">
+          {(showAll ? filteredBackgrounds : filteredBackgrounds.slice(0, 8)).map((background) => (
           <div
             key={background.id}
             className={cn(
@@ -174,7 +176,7 @@ export default function BackgroundSelection({
             onClick={() => handleBackgroundSelect(background.id)}
           >
             {/* Background Preview */}
-            <div className="aspect-video bg-gray-100 relative">
+            <div className="aspect-[3/4] bg-gray-100 relative">
               {background.preview ? (
                 <img
                   src={background.preview}
@@ -184,8 +186,8 @@ export default function BackgroundSelection({
                 />
               ) : (
                 <div className="w-full h-full bg-white flex items-center justify-center">
-                  <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
-                    <Image className="w-8 h-8 text-gray-400" />
+                  <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
+                    <Image className="w-6 h-6 text-gray-400" />
                   </div>
                 </div>
               )}
@@ -198,7 +200,7 @@ export default function BackgroundSelection({
               )}
 
               {/* Hover Overlay */}
-              <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 flex items-center justify-center">
+              <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 flex items-center justify-center">
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
@@ -214,24 +216,25 @@ export default function BackgroundSelection({
             </div>
 
             {/* Background Info */}
-            <div className="p-3 bg-white">
-              <h4 className="font-medium text-gray-900 text-sm">{background.name}</h4>
-              <p className="text-xs text-gray-500 mt-1">{background.description}</p>
-              {background.tags && background.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-2">
-                  {background.tags.slice(0, 3).map((tag) => (
-                    <span
-                      key={tag}
-                      className="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded-full"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
+            <div className="p-2 bg-white">
+              <h4 className="font-medium text-gray-900 text-xs truncate" title={background.name}>{background.name}</h4>
             </div>
           </div>
         ))}
+        </div>
+
+        {/* Show More/Less Button */}
+        {filteredBackgrounds.length > 8 && (
+          <div className="text-center mt-4">
+            <button
+              onClick={() => setShowAll(!showAll)}
+              disabled={disabled}
+              className="text-sm font-medium text-primary-600 hover:text-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {showAll ? 'Show Less' : `Show All (${filteredBackgrounds.length} backgrounds)`}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Preview Modal */}
@@ -255,15 +258,15 @@ export default function BackgroundSelection({
 
             <div className="p-4">
               {previewBackground.preview ? (
-                <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
+                <div className="max-h-[50vh] bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
                   <img
                     src={previewBackground.preview}
                     alt={previewBackground.name}
-                    className="w-full h-full object-cover"
+                    className="max-w-full max-h-full object-contain"
                   />
                 </div>
               ) : (
-                <div className="aspect-video bg-white border-2 border-gray-200 rounded-lg flex items-center justify-center">
+                <div className="aspect-[3/4] bg-white border-2 border-gray-200 rounded-lg flex items-center justify-center">
                   <div className="text-center">
                     <Image className="w-16 h-16 text-gray-400 mx-auto mb-2" />
                     <p className="text-gray-500">No background preview</p>
