@@ -19,6 +19,8 @@ from .database import engine, get_db
 from .models import Base, EmailSubscriber, Order, SessionModel
 from .schemas import (
     CompleteOrderRequest,
+    DiscountCodeValidationRequest,
+    DiscountCodeValidationResponse,
     DownloadResponse,
     PaymentIntentRequest,
     PaymentIntentResponse,
@@ -961,6 +963,38 @@ async def get_preview_image(token: str, db: Session = Depends(get_db)):
 
 
 # Payment & Orders
+@app.post("/api/validate-discount-code", response_model=DiscountCodeValidationResponse)
+async def validate_discount_code(request: DiscountCodeValidationRequest):
+    """Validate a discount code and return discount information"""
+    try:
+        # Validate the promotion code using Stripe service
+        discount_info = stripe_service.validate_promotion_code(request.code)
+
+        return DiscountCodeValidationResponse(
+            valid=True,
+            discount_type=discount_info["discount_type"],
+            discount_value=discount_info["discount_value"],
+            coupon_id=discount_info["coupon_id"],
+            promotion_code_id=discount_info["promotion_code_id"],
+            max_redemptions=discount_info["max_redemptions"],
+            times_redeemed=discount_info["times_redeemed"],
+            expires_at=discount_info["expires_at"],
+            message="Discount code is valid"
+        )
+
+    except HTTPException as e:
+        # Return validation failure with error message
+        return DiscountCodeValidationResponse(
+            valid=False,
+            message=e.detail
+        )
+    except Exception as e:
+        return DiscountCodeValidationResponse(
+            valid=False,
+            message=f"Error validating discount code: {str(e)}"
+        )
+
+
 @app.post("/api/session/{token}/payment", response_model=PaymentIntentResponse)
 async def create_payment_intent(
     token: str, request: PaymentIntentRequest, db: Session = Depends(get_db)
@@ -989,9 +1023,12 @@ async def create_payment_intent(
         db.add(order)
         db.commit()
 
-        # Create Stripe payment intent
+        # Create Stripe payment intent with optional promotion code
         payment_intent = stripe_service.create_payment_intent(
-            amount=amount, email=request.email, order_id=order_id
+            amount=amount,
+            email=request.email,
+            order_id=order_id,
+            promotion_code=request.promotion_code
         )
 
         # Update order with Stripe payment intent ID

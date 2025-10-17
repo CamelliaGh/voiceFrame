@@ -38,17 +38,35 @@ class TestSessionModel(TestBase):
     photo_s3_key = Column(String(500), nullable=True)
     audio_s3_key = Column(String(500), nullable=True)
     waveform_s3_key = Column(String(500), nullable=True)
+    # File information for display
+    photo_filename = Column(String(255), nullable=True)
+    photo_size = Column(Integer, nullable=True)
+    audio_filename = Column(String(255), nullable=True)
+    audio_size = Column(Integer, nullable=True)
     custom_text = Column(Text, nullable=True)
     photo_shape = Column(String(20), default="square")
     pdf_size = Column(String(20), default="A4")
     template_id = Column(String(50), default="framed_a4_portrait")
-    background_id = Column(String(50), default="none")
-    font_id = Column(String(50), default="script")
+    background_id = Column(String(255), default="none")
+    font_id = Column(String(255), default="script")
     audio_duration = Column(Float, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     expires_at = Column(
         DateTime, default=lambda: datetime.utcnow() + timedelta(hours=24)
     )
+
+    # Privacy compliance fields
+    email = Column(String(255), nullable=True, index=True)
+    unsubscribed = Column(Boolean, default=False)
+    unsubscribed_at = Column(DateTime, nullable=True)
+
+    # GDPR consent management fields
+    consent_data = Column(Text, nullable=True)  # JSON string storing consent records
+    consent_updated_at = Column(DateTime, nullable=True)
+    data_processing_consent = Column(Boolean, default=False)
+    marketing_consent = Column(Boolean, default=False)
+    analytics_consent = Column(Boolean, default=False)
+    cookie_consent = Column(Boolean, default=False)
 
 
 class TestOrder(TestBase):

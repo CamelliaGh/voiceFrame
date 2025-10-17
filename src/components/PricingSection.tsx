@@ -76,6 +76,14 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null)
   const [clientSecret, setClientSecret] = useState<string | null>(null)
   const [orderId, setOrderId] = useState<string | null>(null)
+  const [discountCode, setDiscountCode] = useState('')
+  const [discountInfo, setDiscountInfo] = useState<{
+    valid: boolean
+    discount_type?: 'fixed' | 'percentage'
+    discount_value?: number
+    message?: string
+  } | null>(null)
+  const [discountLoading, setDiscountLoading] = useState(false)
 
   // Fetch current price from API
   useEffect(() => {
@@ -102,6 +110,34 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
 
   const selectedPrice = pricingTiers.find(tier => tier.id === selectedTier)
 
+  // Validate discount code
+  const validateDiscountCode = async (code: string) => {
+    if (!code.trim()) {
+      setDiscountInfo(null)
+      return
+    }
+
+    setDiscountLoading(true)
+    try {
+      const response = await fetch('/api/validate-discount-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code })
+      })
+
+      const data = await response.json()
+      setDiscountInfo(data)
+    } catch (error) {
+      console.error('Error validating discount code:', error)
+      setDiscountInfo({
+        valid: false,
+        message: 'Error validating discount code'
+      })
+    } finally {
+      setDiscountLoading(false)
+    }
+  }
+
   // Create payment intent when email is provided (for wallet payments)
   useEffect(() => {
     const createIntent = async () => {
@@ -115,7 +151,8 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
         const { client_secret, order_id } = await createPaymentIntent(
           session.session_token,
           email,
-          'standard'
+          'standard',
+          discountCode || undefined
         )
         setClientSecret(client_secret)
         setOrderId(order_id)
@@ -130,7 +167,7 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
     }, 500)
 
     return () => clearTimeout(timer)
-  }, [stripe, session, email])
+  }, [stripe, session, email, discountCode])
 
   // Handle wallet payment (Apple Pay / Google Pay)
   const handleWalletPayment = async (paymentMethodId: string) => {
@@ -192,7 +229,8 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
         const { client_secret, order_id } = await createPaymentIntent(
           session.session_token,
           email,
-          'standard'
+          'standard',
+          discountCode || undefined
         )
         paymentClientSecret = client_secret
         paymentOrderId = order_id
@@ -228,7 +266,7 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
         const orderResult = await completeOrder(paymentOrderId, paymentIntent.id, session.session_token)
         setDownloadUrl(orderResult.download_url)
         setSuccess(true)
-        trackPayment('payment_success', selectedTier.price)
+        trackPayment('payment_success', selectedPrice?.price || 0)
       }
 
     } catch (err) {
@@ -373,6 +411,45 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
               <p className="text-xs text-gray-500 mt-1">
                 Required for PDF delivery and download link
               </p>
+            </div>
+
+            <div>
+              <label htmlFor="discountCode" className="block text-sm font-medium text-gray-700 mb-1">
+                Discount Code (Optional)
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  id="discountCode"
+                  value={discountCode}
+                  onChange={(e) => {
+                    setDiscountCode(e.target.value.toUpperCase())
+                    validateDiscountCode(e.target.value.toUpperCase())
+                  }}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  placeholder="Enter discount code"
+                />
+                {discountLoading && (
+                  <div className="flex items-center">
+                    <div className="w-4 h-4 border-2 border-gray-300 border-t-primary-600 rounded-full animate-spin" />
+                  </div>
+                )}
+              </div>
+              {discountInfo && (
+                <div className="mt-1">
+                  {discountInfo.valid ? (
+                    <p className="text-green-600 text-sm">
+                      ✓ {discountInfo.discount_type === 'percentage'
+                        ? `${discountInfo.discount_value}% off`
+                        : `$${discountInfo.discount_value ? (discountInfo.discount_value / 100).toFixed(2) : '0.00'} off`}
+                    </p>
+                  ) : (
+                    <p className="text-red-600 text-sm">
+                      {discountInfo.message || 'Invalid discount code'}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Apple Pay / Google Pay Button */}

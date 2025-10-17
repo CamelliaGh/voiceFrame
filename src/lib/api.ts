@@ -191,9 +191,14 @@ export const getPreviewImageUrl = async (token: string): Promise<{ preview_url: 
 export const createPaymentIntent = async (
   token: string,
   email: string,
-  tier: 'standard' | 'premium' = 'standard'
+  tier: 'standard' | 'premium' = 'standard',
+  promotion_code?: string
 ): Promise<PaymentIntentResponse> => {
-  const response = await api.post(`/session/${token}/payment`, { email, tier })
+  const response = await api.post(`/session/${token}/payment`, {
+    email,
+    tier,
+    promotion_code
+  })
   return response.data
 }
 

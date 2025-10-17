@@ -13,7 +13,7 @@ class StripeService:
         else:
             print("Warning: Stripe secret key not configured")
 
-    def create_payment_intent(self, amount: int, email: str, order_id: str) -> Dict[str, Any]:
+    def create_payment_intent(self, amount: int, email: str, order_id: str, promotion_code: str = None) -> Dict[str, Any]:
         """
         Create a Stripe PaymentIntent for anonymous checkout
 
@@ -21,6 +21,7 @@ class StripeService:
             amount: Amount in cents
             email: Customer email
             order_id: Internal order ID for tracking
+            promotion_code: Optional Stripe promotion code for discounts
 
         Returns:
             PaymentIntent object with client_secret
@@ -29,20 +30,27 @@ class StripeService:
             if not stripe.api_key:
                 raise HTTPException(status_code=500, detail="Stripe not configured")
 
-            payment_intent = stripe.PaymentIntent.create(
-                amount=amount,
-                currency='usd',
-                automatic_payment_methods={'enabled': True},
-                receipt_email=email,
-                metadata={
+            payment_intent_params = {
+                'amount': amount,
+                'currency': 'usd',
+                'automatic_payment_methods': {'enabled': True},
+                'receipt_email': email,
+                'metadata': {
                     'order_id': order_id,
                     'product': 'audio_poster',
                     'email': email
                 },
-                description=f'VocaFrame - Custom Audio Poster (Order: {order_id[:8]})',
+                'description': f'VocaFrame - Custom Audio Poster (Order: {order_id[:8]})',
                 # Enable setup for future payments (optional)
-                setup_future_usage='off_session',
-            )
+                'setup_future_usage': 'off_session',
+            }
+
+            # Add promotion code if provided
+            if promotion_code:
+                payment_intent_params['promotion_code'] = promotion_code
+                payment_intent_params['metadata']['promotion_code'] = promotion_code
+
+            payment_intent = stripe.PaymentIntent.create(**payment_intent_params)
 
             return payment_intent
 
@@ -203,6 +211,62 @@ class StripeService:
         """
         # Example: 2.9% + 30¢ fee structure
         return int(amount * 0.029) + 30
+
+    def validate_promotion_code(self, code: str) -> Dict[str, Any]:
+        """
+        Validate a Stripe promotion code and return discount information
+
+        Args:
+            code: The promotion code to validate
+
+        Returns:
+            Dictionary with validation results and discount information
+        """
+        try:
+            if not stripe.api_key:
+                raise HTTPException(status_code=500, detail="Stripe not configured")
+
+            # Retrieve promotion code from Stripe
+            promotion_codes = stripe.PromotionCode.list(
+                code=code,
+                active=True,
+                limit=1
+            )
+
+            if not promotion_codes.data:
+                raise HTTPException(status_code=404, detail="Invalid discount code")
+
+            promotion_code = promotion_codes.data[0]
+            coupon = promotion_code.coupon
+
+            # Check if code is still valid
+            if promotion_code.max_redemptions and promotion_code.times_redeemed >= promotion_code.max_redemptions:
+                raise HTTPException(status_code=400, detail="Discount code has reached maximum redemptions")
+
+            # Check expiration date
+            import time
+            if promotion_code.expires_at and promotion_code.expires_at < int(time.time()):
+                raise HTTPException(status_code=400, detail="Discount code has expired")
+
+            # Determine discount type and value
+            discount_type = "fixed" if coupon.amount_off else "percentage"
+            discount_value = coupon.amount_off or coupon.percent_off
+
+            return {
+                "valid": True,
+                "discount_type": discount_type,
+                "discount_value": discount_value,
+                "coupon_id": coupon.id,
+                "promotion_code_id": promotion_code.id,
+                "max_redemptions": promotion_code.max_redemptions,
+                "times_redeemed": promotion_code.times_redeemed,
+                "expires_at": promotion_code.expires_at
+            }
+
+        except stripe.error.StripeError as e:
+            raise HTTPException(status_code=400, detail=f"Error validating code: {str(e)}")
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
 
     def format_amount_for_display(self, amount: int, currency: str = 'usd') -> str:
         """

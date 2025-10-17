@@ -143,12 +143,29 @@ class ProcessingStatus(BaseModel):
 class PaymentIntentRequest(BaseModel):
     email: EmailStr
     tier: Literal["download", "standard", "premium"] = "download"  # Accept legacy tier names
+    promotion_code: Optional[str] = None  # Optional Stripe promotion code for discounts
 
 
 class PaymentIntentResponse(BaseModel):
     client_secret: str
     amount: int
     order_id: str
+
+
+class DiscountCodeValidationRequest(BaseModel):
+    code: str = Field(..., min_length=1, max_length=50)
+
+
+class DiscountCodeValidationResponse(BaseModel):
+    valid: bool
+    discount_type: Optional[Literal["fixed", "percentage"]] = None
+    discount_value: Optional[int] = None
+    coupon_id: Optional[str] = None
+    promotion_code_id: Optional[str] = None
+    max_redemptions: Optional[int] = None
+    times_redeemed: Optional[int] = None
+    expires_at: Optional[int] = None
+    message: Optional[str] = None
 
 
 class CompleteOrderRequest(BaseModel):
