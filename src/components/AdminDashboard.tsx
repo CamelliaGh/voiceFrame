@@ -101,6 +101,7 @@ const AdminDashboard: React.FC = () => {
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
+  const [error, setError] = useState<string | null>(null)
   const [addFormData, setAddFormData] = useState({
     name: '',
     display_name: '',
@@ -140,6 +141,24 @@ const AdminDashboard: React.FC = () => {
     localStorage.removeItem('admin_password')
   }
 
+  const handleError = (error: any, operation: string) => {
+    console.error(`Failed to ${operation}:`, error)
+
+    if (error.response?.status === 429) {
+      setError('Too many requests. Please wait a moment and try again.')
+    } else if (error.response?.status === 401 || error.response?.status === 403) {
+      handleLogout()
+    } else if (error.response?.status >= 500) {
+      setError('Server error. Please try again in a few moments.')
+    } else {
+      setError(`Failed to ${operation}. Please try again.`)
+    }
+  }
+
+  const clearError = () => {
+    setError(null)
+  }
+
   const fetchStats = async () => {
     if (!adminPassword) return
 
@@ -153,12 +172,15 @@ const AdminDashboard: React.FC = () => {
       if (response.ok) {
         const data = await response.json()
         setStats(data)
+        clearError()
       } else if (response.status === 401 || response.status === 403) {
         // Password is invalid, logout
         handleLogout()
+      } else {
+        throw new Error(`HTTP ${response.status}`)
       }
     } catch (error) {
-      console.error('Failed to fetch stats:', error)
+      handleError(error, 'fetch stats')
     }
   }
 
@@ -176,11 +198,14 @@ const AdminDashboard: React.FC = () => {
       if (response.ok) {
         const data = await response.json()
         setFonts(data.items)
+        clearError()
       } else if (response.status === 401 || response.status === 403) {
         handleLogout()
+      } else {
+        throw new Error(`HTTP ${response.status}`)
       }
     } catch (error) {
-      console.error('Failed to fetch fonts:', error)
+      handleError(error, 'fetch fonts')
     } finally {
       setLoading(false)
     }
@@ -200,11 +225,14 @@ const AdminDashboard: React.FC = () => {
       if (response.ok) {
         const data = await response.json()
         setSuggestedTexts(data.items)
+        clearError()
       } else if (response.status === 401 || response.status === 403) {
         handleLogout()
+      } else {
+        throw new Error(`HTTP ${response.status}`)
       }
     } catch (error) {
-      console.error('Failed to fetch suggested texts:', error)
+      handleError(error, 'fetch suggested texts')
     } finally {
       setLoading(false)
     }
@@ -224,11 +252,14 @@ const AdminDashboard: React.FC = () => {
       if (response.ok) {
         const data = await response.json()
         setBackgrounds(data.items)
+        clearError()
       } else if (response.status === 401 || response.status === 403) {
         handleLogout()
+      } else {
+        throw new Error(`HTTP ${response.status}`)
       }
     } catch (error) {
-      console.error('Failed to fetch backgrounds:', error)
+      handleError(error, 'fetch backgrounds')
     } finally {
       setLoading(false)
     }
@@ -248,11 +279,14 @@ const AdminDashboard: React.FC = () => {
       if (response.ok) {
         const data = await response.json()
         setConfigs(data.items)
+        clearError()
       } else if (response.status === 401 || response.status === 403) {
         handleLogout()
+      } else {
+        throw new Error(`HTTP ${response.status}`)
       }
     } catch (error) {
-      console.error('Failed to fetch configurations:', error)
+      handleError(error, 'fetch configurations')
     } finally {
       setLoading(false)
     }
@@ -312,11 +346,14 @@ const AdminDashboard: React.FC = () => {
             break
         }
         fetchStats()
+        clearError()
       } else if (response.status === 401 || response.status === 403) {
         handleLogout()
+      } else {
+        throw new Error(`HTTP ${response.status}`)
       }
     } catch (error) {
-      console.error('Failed to delete item:', error)
+      handleError(error, 'delete item')
     }
   }
 
@@ -345,11 +382,14 @@ const AdminDashboard: React.FC = () => {
             fetchBackgrounds()
             break
         }
+        clearError()
       } else if (response.status === 401 || response.status === 403) {
         handleLogout()
+      } else {
+        throw new Error(`HTTP ${response.status}`)
       }
     } catch (error) {
-      console.error('Failed to upload file:', error)
+      handleError(error, 'upload file')
     }
   }
 
@@ -476,12 +516,11 @@ const AdminDashboard: React.FC = () => {
       } else if (response.status === 401 || response.status === 403) {
         handleLogout()
       } else {
-        const error = await response.json()
-        alert(`Failed to create ${activeTab.slice(0, -1)}: ${error.detail || 'Unknown error'}`)
+        const errorData = await response.json()
+        throw new Error(errorData.detail || 'Unknown error')
       }
     } catch (error) {
-      console.error('Failed to create item:', error)
-      alert(`Failed to create ${activeTab.slice(0, -1)}: ${error}`)
+      handleError(error, `create ${activeTab.slice(0, -1)}`)
     }
   }
 
@@ -590,12 +629,11 @@ const AdminDashboard: React.FC = () => {
       } else if (response.status === 401 || response.status === 403) {
         handleLogout()
       } else {
-        const error = await response.json()
-        alert(`Failed to update ${activeTab.slice(0, -1)}: ${error.detail || 'Unknown error'}`)
+        const errorData = await response.json()
+        throw new Error(errorData.detail || 'Unknown error')
       }
     } catch (error) {
-      console.error('Failed to update item:', error)
-      alert(`Failed to update ${activeTab.slice(0, -1)}: ${error}`)
+      handleError(error, `update ${activeTab.slice(0, -1)}`)
     }
   }
 
@@ -665,6 +703,35 @@ const AdminDashboard: React.FC = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Error Display */}
+        {error && (
+          <div className="mb-6 bg-red-50 border border-red-200 rounded-md p-4">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-red-800">{error}</p>
+              </div>
+              <div className="ml-auto pl-3">
+                <div className="-mx-1.5 -my-1.5">
+                  <button
+                    onClick={clearError}
+                    className="inline-flex bg-red-50 rounded-md p-1.5 text-red-500 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-red-50 focus:ring-red-600"
+                  >
+                    <span className="sr-only">Dismiss</span>
+                    <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Stats Overview */}
         {stats && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
