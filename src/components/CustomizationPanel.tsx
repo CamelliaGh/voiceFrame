@@ -109,10 +109,12 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
   // Initialize default custom text if not set
   useEffect(() => {
     if (session && !session.custom_text && customText === 'Our Song ♪') {
-      // Update session with default custom text
-      updateSessionData({ custom_text: customText })
+      // Update session with default custom text - but only if audio processing is complete
+      if (processingStatus && processingStatus.waveform_ready) {
+        updateSessionData({ custom_text: customText })
+      }
     }
-  }, [session, customText, updateSessionData])
+  }, [session, customText, updateSessionData, processingStatus])
 
   // Debounced update function for real-time preview
   const debouncedUpdate = useCallback(
@@ -132,8 +134,9 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
           }
 
           // Allow photo shape updates even if audio processing isn't complete
-          // Check if audio processing is complete before updating (except for photo_shape)
-          if (processingStatus && !processingStatus.waveform_ready && !data.photo_shape) {
+          // Check if audio processing is complete before updating (except for photo_shape-only updates)
+          const isPhotoShapeOnlyUpdate = Object.keys(data).length === 1 && 'photo_shape' in data
+          if (processingStatus && !processingStatus.waveform_ready && !isPhotoShapeOnlyUpdate) {
             console.warn('Audio processing not complete, skipping session update')
             return
           }
@@ -148,7 +151,7 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
           } catch (error) {
             console.error('Failed to update session:', error)
             // If it's a 400 error about audio processing, refresh the processing status
-            if (error instanceof Error && error.message.includes('Audio processing not complete')) {
+            if (error instanceof Error && (error.message.includes('Audio processing not complete') || error.message.includes('Request failed with status code 400'))) {
               try {
                 const status = await getProcessingStatus(session.session_token)
                 setProcessingStatus({
@@ -245,6 +248,11 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
 
     if (customText.length > 200) {
       throw new Error('Text is too long. Please keep it under 200 characters')
+    }
+
+    // Check if audio processing is complete before saving
+    if (processingStatus && !processingStatus.waveform_ready) {
+      throw new Error('Audio processing is not complete yet. Please wait a moment and try again.')
     }
 
     // Always use the appropriate framed template variant based on PDF size

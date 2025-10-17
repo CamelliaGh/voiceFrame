@@ -934,12 +934,8 @@ class VisualPDFGenerator:
                     "ServerSideEncryption": "AES256",
                 }
 
-                # Try to make preview images publicly readable
-                try:
-                    extra_args["ACL"] = "public-read"
-                except Exception:
-                    # If ACL is not supported, we'll rely on bucket policy
-                    pass
+                # Make preview images publicly readable
+                extra_args["ACL"] = "public-read"
 
                 try:
                     self.file_uploader.s3_client.upload_fileobj(
@@ -955,10 +951,9 @@ class VisualPDFGenerator:
                     else:
                         raise e
 
-                # Return presigned URL for download
-                return self.file_uploader.generate_presigned_url(
-                    image_key, expiration=3600
-                )
+                # Return public URL for preview images (they should be publicly accessible)
+                # Using public URL instead of presigned URL to avoid signature mismatch issues
+                return self.file_uploader.get_file_url(image_key)
             else:
                 # Store locally for development
                 local_path = os.path.join(

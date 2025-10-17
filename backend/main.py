@@ -146,6 +146,46 @@ async def health_check():
     return {"status": "healthy", "timestamp": datetime.utcnow()}
 
 
+@app.get("/api/test/s3-debug")
+async def test_s3_debug(
+    admin_auth: bool = Depends(lambda: admin_auth_service.get_admin_dependency())
+):
+    """Test S3 configuration and presigned URL generation"""
+    try:
+        file_uploader = FileUploader()
+
+        if not file_uploader.s3_client:
+            return {"error": "S3 client not initialized - check AWS credentials"}
+
+        # Test bucket access
+        try:
+            response = file_uploader.s3_client.head_bucket(Bucket=settings.s3_bucket)
+            bucket_status = "accessible"
+        except ClientError as e:
+            bucket_status = f"error: {e}"
+
+        # Test presigned URL generation
+        test_key = "test/debug_file.txt"
+        try:
+            test_url = file_uploader.generate_presigned_url(test_key, expiration=300)
+            url_status = "generated successfully"
+        except Exception as e:
+            url_status = f"error: {e}"
+            test_url = None
+
+        return {
+            "s3_configured": file_uploader.s3_client is not None,
+            "bucket_name": settings.s3_bucket,
+            "region": settings.s3_region,
+            "bucket_status": bucket_status,
+            "url_generation": url_status,
+            "test_url": test_url[:100] + "..." if test_url else None,
+            "access_key_prefix": settings.aws_access_key_id[:10] + "..." if settings.aws_access_key_id else None
+        }
+
+    except Exception as e:
+        return {"error": f"Debug test failed: {str(e)}"}
+
 @app.post("/api/test/resend")
 async def test_resend_email(
     test_email: str = Form(...),
