@@ -940,6 +940,8 @@ async def get_preview_image(token: str, db: Session = Depends(get_db)):
         print(f"DEBUG: Converting PDF to image")
         image_url = await pdf_generator.convert_pdf_to_image(pdf_url, session.session_token)
         print(f"DEBUG: Image conversion successful, URL: {image_url}")
+        print(f"DEBUG: URL type check - contains presigned params: {'X-Amz-' in image_url}")
+        print(f"DEBUG: URL type check - is public URL: {image_url.startswith('https://audioposter-bucket.s3.amazonaws.com/') and 'X-Amz-' not in image_url}")
 
         expires_at = (datetime.utcnow() + timedelta(hours=1)).isoformat()
 
