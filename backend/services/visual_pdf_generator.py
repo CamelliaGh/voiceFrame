@@ -530,17 +530,63 @@ class VisualPDFGenerator:
                         font = ImageFont.load_default()
                         print(f"Using default font as fallback")
 
-            # Calculate text position
+            # Calculate text position and handle overflow
             bbox = draw.textbbox((0, 0), text, font=font)
             text_width = bbox[2] - bbox[0]
             text_height = bbox[3] - bbox[1]
 
+            # Check if text exceeds placeholder width and handle overflow
+            placeholder_width = placeholder["width"]
+            placeholder_height = placeholder["height"]
+
+            # If text is too wide, try to fit it by reducing font size or wrapping
+            if text_width > placeholder_width:
+                print(f"DEBUG: Text overflow detected - text width: {text_width}, placeholder width: {placeholder_width}")
+
+                # Try reducing font size first
+                original_font_size = font_size
+                while text_width > placeholder_width and font_size > 8:  # Minimum font size
+                    font_size = max(8, font_size - 2)
+                    try:
+                        font = ImageFont.truetype(font_path, font_size)
+                        bbox = draw.textbbox((0, 0), text, font=font)
+                        text_width = bbox[2] - bbox[0]
+                        text_height = bbox[3] - bbox[1]
+                        print(f"DEBUG: Reduced font size to {font_size}, new text width: {text_width}")
+                    except:
+                        break
+
+                # If still too wide after font reduction, try text wrapping
+                if text_width > placeholder_width:
+                    print(f"DEBUG: Text still too wide after font reduction, attempting text wrapping")
+                    wrapped_text = self._wrap_text(text, font, placeholder_width)
+                    if wrapped_text != text:
+                        print(f"DEBUG: Text wrapped from '{text}' to '{wrapped_text}'")
+                        text = wrapped_text
+                        # Recalculate dimensions with wrapped text
+                        bbox = draw.textbbox((0, 0), text, font=font)
+                        text_width = bbox[2] - bbox[0]
+                        text_height = bbox[3] - bbox[1]
+                        print(f"DEBUG: Wrapped text dimensions - width: {text_width}, height: {text_height}")
+
+                # If still too wide, truncate with ellipsis
+                if text_width > placeholder_width:
+                    print(f"DEBUG: Text still too wide, truncating with ellipsis")
+                    text = self._truncate_text_with_ellipsis(text, font, placeholder_width)
+                    bbox = draw.textbbox((0, 0), text, font=font)
+                    text_width = bbox[2] - bbox[0]
+                    text_height = bbox[3] - bbox[1]
+                    print(f"DEBUG: Truncated text: '{text}', width: {text_width}")
+
+            # Calculate position with overflow handling
             if placeholder.get("alignment", "center") == "center":
-                x = placeholder["x"] + (placeholder["width"] - text_width) // 2
+                x = placeholder["x"] + max(0, (placeholder_width - text_width) // 2)
             else:
                 x = placeholder["x"]
 
-            y = placeholder["y"] + (placeholder["height"] - text_height) // 2
+            # Ensure text doesn't go outside placeholder bounds
+            x = max(placeholder["x"], min(x, placeholder["x"] + placeholder_width - text_width))
+            y = placeholder["y"] + max(0, (placeholder_height - text_height) // 2)
 
             # Draw text with the specified color from template
             text_color = placeholder.get("color", "#000000")
@@ -549,23 +595,28 @@ class VisualPDFGenerator:
             )
             print(f"DEBUG: Using color: {text_color}")
 
-            # Check if text contains emojis and load emoji font if needed
-            emojis = self._detect_emojis(text)
-            if emojis:
-                print(f"DEBUG: Detected {len(emojis)} emojis in text: {[e[0] for e in emojis]}")
-                try:
-                    # Load emoji font with fixed size (Noto Color Emoji requires specific size)
-                    emoji_font = ImageFont.truetype("/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf", 109)
-                    print("DEBUG: Loaded Noto Color Emoji font for emoji rendering")
-                    # Use emoji-aware rendering
-                    self._render_text_with_emojis(draw, text, font, emoji_font, (x, y), text_color)
-                    print("DEBUG: Text with emojis rendered successfully")
-                except Exception as e:
-                    print(f"DEBUG: Failed to load emoji font, falling back to regular rendering: {e}")
-                    draw.text((x, y), text, font=font, fill=text_color)
+            # Handle multi-line text (wrapped text)
+            if "\n" in text:
+                print(f"DEBUG: Rendering multi-line text with {text.count(chr(10)) + 1} lines")
+                self._render_multiline_text(draw, text, font, (x, y), text_color)
             else:
-                # No emojis, render normally
-                draw.text((x, y), text, font=font, fill=text_color)
+                # Check if text contains emojis and load emoji font if needed
+                emojis = self._detect_emojis(text)
+                if emojis:
+                    print(f"DEBUG: Detected {len(emojis)} emojis in text: {[e[0] for e in emojis]}")
+                    try:
+                        # Load emoji font with fixed size (Noto Color Emoji requires specific size)
+                        emoji_font = ImageFont.truetype("/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf", 109)
+                        print("DEBUG: Loaded Noto Color Emoji font for emoji rendering")
+                        # Use emoji-aware rendering
+                        self._render_text_with_emojis(draw, text, font, emoji_font, (x, y), text_color)
+                        print("DEBUG: Text with emojis rendered successfully")
+                    except Exception as e:
+                        print(f"DEBUG: Failed to load emoji font, falling back to regular rendering: {e}")
+                        draw.text((x, y), text, font=font, fill=text_color)
+                else:
+                    # No emojis, render normally
+                    draw.text((x, y), text, font=font, fill=text_color)
 
             print(
                 f"DEBUG: Text successfully added at ({x}, {y}): '{text}' with font {font_name} size {font_size}"
@@ -573,6 +624,105 @@ class VisualPDFGenerator:
 
         except Exception as e:
             print(f"Error adding text: {e}")
+
+    def _wrap_text(self, text: str, font: ImageFont.ImageFont, max_width: int) -> str:
+        """Wrap text to fit within max_width by breaking at word boundaries"""
+        try:
+            words = text.split()
+            if not words:
+                return text
+
+            lines = []
+            current_line = []
+
+            for word in words:
+                # Test if adding this word would exceed the width
+                test_line = " ".join(current_line + [word])
+                bbox = font.getbbox(test_line)
+                test_width = bbox[2] - bbox[0]
+
+                if test_width <= max_width:
+                    current_line.append(word)
+                else:
+                    # Current line is full, start a new line
+                    if current_line:
+                        lines.append(" ".join(current_line))
+                        current_line = [word]
+                    else:
+                        # Single word is too long, add it anyway
+                        lines.append(word)
+
+            # Add the last line
+            if current_line:
+                lines.append(" ".join(current_line))
+
+            return "\n".join(lines)
+        except Exception as e:
+            print(f"Error wrapping text: {e}")
+            return text
+
+    def _truncate_text_with_ellipsis(self, text: str, font: ImageFont.ImageFont, max_width: int) -> str:
+        """Truncate text to fit within max_width and add ellipsis"""
+        try:
+            if not text:
+                return text
+
+            # Start with ellipsis
+            ellipsis = "..."
+            ellipsis_bbox = font.getbbox(ellipsis)
+            ellipsis_width = ellipsis_bbox[2] - ellipsis_bbox[0]
+
+            # If ellipsis itself is too wide, return empty string
+            if ellipsis_width > max_width:
+                return ""
+
+            # Binary search for the maximum text length that fits
+            left, right = 0, len(text)
+            best_text = ""
+
+            while left <= right:
+                mid = (left + right) // 2
+                test_text = text[:mid] + ellipsis
+                bbox = font.getbbox(test_text)
+                test_width = bbox[2] - bbox[0]
+
+                if test_width <= max_width:
+                    best_text = test_text
+                    left = mid + 1
+                else:
+                    right = mid - 1
+
+            return best_text if best_text else ellipsis
+        except Exception as e:
+            print(f"Error truncating text: {e}")
+            return text
+
+    def _render_multiline_text(self, draw: ImageDraw.Draw, text: str, font: ImageFont.ImageFont,
+                              position: Tuple[int, int], color: str) -> None:
+        """Render multi-line text with proper line spacing"""
+        try:
+            x, y = position
+            lines = text.split('\n')
+
+            # Get line height from font metrics
+            bbox = draw.textbbox((0, 0), "Ay", font=font)  # Use "Ay" to get proper height
+            line_height = bbox[3] - bbox[1]
+            line_spacing = int(line_height * 1.2)  # 20% extra spacing between lines
+
+            print(f"DEBUG: Rendering {len(lines)} lines with line height {line_height}, spacing {line_spacing}")
+
+            for i, line in enumerate(lines):
+                if line.strip():  # Only render non-empty lines
+                    line_y = y + (i * line_spacing)
+                    print(f"DEBUG: Rendering line {i+1}: '{line}' at y={line_y}")
+                    draw.text((x, line_y), line, font=font, fill=color)
+                else:
+                    print(f"DEBUG: Skipping empty line {i+1}")
+
+        except Exception as e:
+            print(f"Error rendering multi-line text: {e}")
+            # Fallback to single line rendering
+            draw.text(position, text.replace('\n', ' '), font=font, fill=color)
 
     def _add_watermark_to_image(self, image: Image.Image) -> Image.Image:
         """Add diagonal watermark to image according to specifications"""
