@@ -239,7 +239,7 @@ export default function CookieConsentBanner({ onConsentChange, showSettings, onS
                     </span>
                   </div>
                   <p className="text-sm text-gray-600">
-                    Help us understand how visitors interact with our website by collecting anonymous information.
+                    Help us understand how visitors interact with our website using Google Analytics and Microsoft Clarity to collect anonymous information.
                   </p>
                 </div>
                 <div className="ml-4">

@@ -104,7 +104,7 @@ export default function ConsentCollection({
     {
       key: 'analytics' as keyof ConsentData,
       title: 'Analytics',
-      description: 'Collect anonymous usage data to improve our service',
+      description: 'Collect anonymous usage data using Google Analytics and Microsoft Clarity to improve our service',
       required: false,
       icon: Info
     },

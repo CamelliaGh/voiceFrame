@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { trackPageView } from './analytics';
+import { trackPageView, trackConsentChange } from './analytics';
 
-// Custom hook to handle Google Analytics initialization and page tracking
+// Custom hook to handle Google Analytics and Microsoft Clarity initialization and page tracking
 export const useAnalytics = () => {
   const location = useLocation();
 
@@ -12,4 +12,12 @@ export const useAnalytics = () => {
   }, [location]);
 
   return null;
+};
+
+// Hook to handle consent changes for analytics
+export const useAnalyticsConsent = (consentData: { analytics: boolean }) => {
+  useEffect(() => {
+    // Track consent changes
+    trackConsentChange('analytics', consentData.analytics);
+  }, [consentData.analytics]);
 };
