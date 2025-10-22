@@ -1005,10 +1005,16 @@ async def create_payment_intent(
         raise HTTPException(status_code=404, detail="Session not found")
 
     try:
-        # Create order record with configurable price (including discount)
+        # Create order record with configurable price
         order_id = str(uuid.uuid4())
         pricing_info = config_service.get_discounted_price_cents(db)
-        amount = pricing_info["discounted_price"]  # Use discounted price
+
+        # If promotion code is provided, use full price and let Stripe handle the discount
+        # Otherwise, use the configured discounted price
+        if request.promotion_code:
+            amount = pricing_info["original_price"]  # Use full price for Stripe promotion codes
+        else:
+            amount = pricing_info["discounted_price"]  # Use configured discounted price
 
         order = Order(
             id=order_id,
@@ -1035,9 +1041,14 @@ async def create_payment_intent(
         order.stripe_payment_intent_id = payment_intent["id"]
         db.commit()
 
+        # For the response, return the amount that will actually be charged
+        # If using promotion code, Stripe will apply the discount, so we show the original amount
+        # The actual charged amount will be determined by Stripe based on the promotion code
+        response_amount = amount
+
         return PaymentIntentResponse(
             client_secret=payment_intent["client_secret"],
-            amount=amount,
+            amount=response_amount,
             order_id=order_id,
         )
 
