@@ -143,7 +143,7 @@
 
 #### Tier 2 (10k-100k posts)
 - #audiowaveform
-- #soundwaveart
+- #soundwaveart *
 - #voicememory
 - #audioposter
 - #memoryart

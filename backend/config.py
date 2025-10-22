@@ -96,7 +96,7 @@ class Settings(BaseSettings):
         elif self.environment == "staging":
             return 120   # Moderate for staging
         else:  # production
-            return 120   # Reasonable limit for production (2 requests per second)
+            return 300   # More permissive for production (5 requests per second)
 
     def get_rate_limit_burst_size(self) -> int:
         """Get burst size based on environment"""
