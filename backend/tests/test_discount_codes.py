@@ -200,7 +200,24 @@ class TestStripeServiceDiscountCodes:
 
     def test_create_payment_intent_with_promotion_code(self):
         """Test creating payment intent with promotion code"""
-        with patch('stripe.PaymentIntent') as mock_payment_intent:
+        with patch('stripe.PaymentIntent') as mock_payment_intent, \
+             patch('stripe.PromotionCode') as mock_promotion_code:
+
+            # Mock promotion code lookup
+            mock_coupon = MagicMock()
+            mock_coupon.id = "coupon_123"
+            mock_coupon.amount_off = None
+            mock_coupon.percent_off = 20
+
+            mock_promo = MagicMock()
+            mock_promo.coupon = mock_coupon
+            mock_promo.id = "promo_123"
+            mock_promo.max_redemptions = None
+            mock_promo.times_redeemed = 0
+            mock_promo.expires_at = None
+
+            mock_promotion_code.list.return_value = MagicMock(data=[mock_promo])
+
             # Mock successful payment intent creation
             mock_payment_intent.create.return_value = {
                 "id": "pi_123",
@@ -220,11 +237,12 @@ class TestStripeServiceDiscountCodes:
             assert result["id"] == "pi_123"
             assert result["client_secret"] == "pi_123_secret"
 
-            # Verify promotion code was passed to Stripe
+            # Verify promotion code ID was passed to Stripe (not the code string)
             mock_payment_intent.create.assert_called_once()
             call_args = mock_payment_intent.create.call_args[1]
-            assert call_args["promotion_code"] == "SUMMER2024"
-            assert call_args["metadata"]["promotion_code"] == "SUMMER2024"
+            assert call_args["promotion_code"] == "promo_123"  # Should be the ID, not the code
+            assert call_args["metadata"]["promotion_code"] == "SUMMER2024"  # Original code in metadata
+            assert call_args["metadata"]["promotion_code_id"] == "promo_123"  # ID in metadata
 
     def test_create_payment_intent_without_promotion_code(self):
         """Test creating payment intent without promotion code"""
@@ -252,6 +270,24 @@ class TestStripeServiceDiscountCodes:
             call_args = mock_payment_intent.create.call_args[1]
             assert "promotion_code" not in call_args
             assert "promotion_code" not in call_args["metadata"]
+
+    def test_create_payment_intent_with_invalid_promotion_code(self):
+        """Test creating payment intent with invalid promotion code"""
+        with patch('stripe.PromotionCode') as mock_promotion_code:
+            # Mock empty promotion code list (code not found)
+            mock_promotion_code.list.return_value = MagicMock(data=[])
+
+            service = StripeService()
+
+            with pytest.raises(Exception) as exc_info:
+                service.create_payment_intent(
+                    amount=299,
+                    email="test@example.com",
+                    order_id="order_123",
+                    promotion_code="INVALID"
+                )
+
+            assert "Invalid discount code" in str(exc_info.value)
 
 
 class TestPaymentIntentWithDiscountCodes:

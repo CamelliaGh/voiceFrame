@@ -45,10 +45,29 @@ class StripeService:
                 'setup_future_usage': 'off_session',
             }
 
-            # Add promotion code if provided
+            # Add promotion code if provided - need to get the promotion code ID first
             if promotion_code:
-                payment_intent_params['promotion_code'] = promotion_code
-                payment_intent_params['metadata']['promotion_code'] = promotion_code
+                try:
+                    # Validate the promotion code to get its ID
+                    promotion_codes = stripe.PromotionCode.list(
+                        code=promotion_code,
+                        active=True,
+                        limit=1
+                    )
+
+                    if not promotion_codes.data:
+                        raise HTTPException(status_code=404, detail="Invalid discount code")
+
+                    promotion_code_obj = promotion_codes.data[0]
+                    promotion_code_id = promotion_code_obj.id
+
+                    # Use the promotion code ID, not the code string
+                    payment_intent_params['promotion_code'] = promotion_code_id
+                    payment_intent_params['metadata']['promotion_code'] = promotion_code
+                    payment_intent_params['metadata']['promotion_code_id'] = promotion_code_id
+
+                except stripe.error.StripeError as e:
+                    raise HTTPException(status_code=400, detail=f"Invalid promotion code: {str(e)}")
 
             payment_intent = stripe.PaymentIntent.create(**payment_intent_params)
 
