@@ -31,7 +31,7 @@ class SessionUpdate(BaseModel):
     custom_text: Optional[str] = Field(
         None, max_length=200, description="Custom text for the poster"
     )
-    photo_shape: Optional[Literal["square", "circle"]] = Field(
+    photo_shape: Optional[Literal["square", "circle", "fullpage"]] = Field(
         None, description="Photo shape preference"
     )
     pdf_size: Optional[

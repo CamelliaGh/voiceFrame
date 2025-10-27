@@ -998,6 +998,8 @@ class AudioProcessor:
         sample_rate: int,
         width: int = 1200,
         height: int = 200,
+        color: str = "#000000",
+        alpha: float = 0.3,
     ) -> BytesIO:
         """Generate waveform visualization as PNG image with enhanced performance"""
         try:
@@ -1030,9 +1032,9 @@ class AudioProcessor:
 
             # Plot waveform with optimized settings
             ax.plot(
-                time_axis, audio_data, color="#000000", linewidth=0.5
-            )  # Black waveform
-            ax.fill_between(time_axis, audio_data, alpha=0.3, color="#000000")
+                time_axis, audio_data, color=color, linewidth=0.5
+            )  # Configurable color waveform
+            ax.fill_between(time_axis, audio_data, alpha=alpha, color=color)
 
             # Remove axes and make it clean
             ax.set_xlim(0, time_axis[-1])

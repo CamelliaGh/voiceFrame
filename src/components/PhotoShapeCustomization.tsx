@@ -1,9 +1,9 @@
 import React, { useCallback } from 'react'
-import { Square, Circle, Image } from 'lucide-react'
+import { Square, Circle, Image, Maximize } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface PhotoShapeOption {
-  id: 'square' | 'circle'
+  id: 'square' | 'circle' | 'fullpage'
   name: string
   description: string
   icon: React.ComponentType<{ className?: string }>
@@ -11,8 +11,8 @@ interface PhotoShapeOption {
 }
 
 interface PhotoShapeCustomizationProps {
-  value: 'square' | 'circle'
-  onChange: (shape: 'square' | 'circle') => void
+  value: 'square' | 'circle' | 'fullpage'
+  onChange: (shape: 'square' | 'circle' | 'fullpage') => void
   disabled?: boolean
   className?: string
 }
@@ -31,6 +31,13 @@ const photoShapeOptions: PhotoShapeOption[] = [
     description: 'Modern circular photo',
     icon: Circle,
     preview: 'circle'
+  },
+  {
+    id: 'fullpage',
+    name: 'Full Page',
+    description: 'Photo covers entire page with gray elements',
+    icon: Maximize,
+    preview: 'fullpage'
   }
 ]
 
@@ -40,7 +47,7 @@ export default function PhotoShapeCustomization({
   disabled = false,
   className = ''
 }: PhotoShapeCustomizationProps) {
-  const handleShapeSelect = useCallback((shape: 'square' | 'circle') => {
+  const handleShapeSelect = useCallback((shape: 'square' | 'circle' | 'fullpage') => {
     if (!disabled) {
       onChange(shape)
     }
@@ -49,7 +56,7 @@ export default function PhotoShapeCustomization({
   return (
     <div className={cn("space-y-3", className)}>
       {/* Photo Shape Options - Compact */}
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-3 gap-2">
         {photoShapeOptions.map((option) => {
           const IconComponent = option.icon
           const isSelected = value === option.id
@@ -71,7 +78,8 @@ export default function PhotoShapeCustomization({
                 {/* Photo placeholder with shape */}
                 <div className={cn(
                   "relative w-16 h-12 bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center",
-                  option.id === 'circle' ? 'rounded-full w-14 h-14' : 'rounded-md'
+                  option.id === 'circle' ? 'rounded-full w-14 h-14' :
+                  option.id === 'fullpage' ? 'w-full h-full rounded-none' : 'rounded-md'
                 )}>
                   <Image className="w-6 h-6 text-primary-600" />
                 </div>

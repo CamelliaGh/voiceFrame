@@ -118,7 +118,7 @@ class VisualPDFGenerator:
             # Add QR code
             qr_url = self._generate_qr_url(session, order)
             print(f"🔴🔴🔴 CRITICAL DEBUG: QR URL GENERATED: {qr_url} 🔴🔴🔴")
-            await self._add_qr_to_template(base_image, qr_url, template)
+            await self._add_qr_to_template(base_image, qr_url, template, session)
 
             # Add text
             if session.custom_text:
@@ -221,7 +221,13 @@ class VisualPDFGenerator:
 
         try:
             # Get processed photo
-            photo_size = (placeholder["width"], placeholder["height"])
+            if session.photo_shape == 'fullpage':
+                # For full page, use the entire template dimensions
+                photo_size = (base_image.width, base_image.height)
+                print(f"🔍 FULLPAGE DEBUG: Using full template size {photo_size}")
+            else:
+                photo_size = (placeholder["width"], placeholder["height"])
+
             # Simple debug log to verify photo shape
             print(f"🔍 PHOTO SHAPE DEBUG: session.photo_shape = '{session.photo_shape}'")
 
@@ -251,23 +257,31 @@ class VisualPDFGenerator:
 
             # Paste photo onto template
             print(f"🔴 DEBUG: PHOTO PASTE #{id(photo)} - About to paste photo. Base image mode: {base_image.mode}, Photo mode: {photo.mode}")
-            print(f"🔴 DEBUG: PHOTO PASTE #{id(photo)} - Photo size: {photo.size}, Paste position: ({placeholder['x']}, {placeholder['y']})")
+
+            # Determine paste position based on photo shape
+            if session.photo_shape == 'fullpage':
+                paste_position = (0, 0)  # Cover entire template
+                print(f"🔴 DEBUG: FULLPAGE - Paste position: {paste_position}, Photo size: {photo.size}")
+            else:
+                paste_position = (placeholder["x"], placeholder["y"])
+                print(f"🔴 DEBUG: PHOTO PASTE #{id(photo)} - Photo size: {photo.size}, Paste position: {paste_position}")
+
             print(f"🔴 DEBUG: PHOTO PASTE #{id(photo)} - Photo shape being used: {session.photo_shape}")
 
             # Handle transparency for circular images using PIL's mask-based paste
             # PIL can paste RGBA onto RGB using the alpha channel as a mask
             if photo.mode == 'RGBA':
                 print(f"DEBUG: Photo has RGBA mode with transparency")
-                print(f"DEBUG: Photo size: {photo.size}, position: ({placeholder['x']}, {placeholder['y']})")
+                print(f"DEBUG: Photo size: {photo.size}, position: {paste_position}")
                 print(f"DEBUG: Base image mode: {base_image.mode} (keeping as RGB)")
 
                 # Use PIL's built-in mask paste - the third parameter uses the alpha channel as mask
                 # This works even when pasting RGBA onto RGB - transparent areas show the base image
-                base_image.paste(photo, (placeholder["x"], placeholder["y"]), photo)
+                base_image.paste(photo, paste_position, photo)
                 print("DEBUG: Photo pasted with alpha mask successfully!")
             else:
                 print(f"DEBUG: Photo has no alpha channel (mode: {photo.mode}), using regular paste")
-                base_image.paste(photo, (placeholder["x"], placeholder["y"]))
+                base_image.paste(photo, paste_position)
 
             print(f"DEBUG: Photo pasted successfully. Final base image mode: {base_image.mode}")
 
@@ -289,30 +303,32 @@ class VisualPDFGenerator:
             waveform = self.image_processor.get_image_from_s3(waveform_key)
             waveform = waveform.resize((placeholder["width"], placeholder["height"]))
 
-            # Handle waveform with transparency
-            if waveform.mode == "RGBA":
-                # If waveform has alpha channel, use it for transparency
-                base_image.paste(
-                    waveform, (placeholder["x"], placeholder["y"]), waveform
-                )
-            else:
-                # Convert to RGBA and make white pixels transparent
-                waveform = waveform.convert("RGBA")
-                data = waveform.getdata()
-                new_data = []
-                for item in data:
-                    # Change all white pixels to transparent
-                    if item[0] > 250 and item[1] > 250 and item[2] > 250:
-                        new_data.append((255, 255, 255, 0))  # Transparent
-                    else:
-                        new_data.append(
-                            (item[0], item[1], item[2], 255)
-                        )  # Keep original
+            # Handle waveform with transparency and color conversion for fullpage
+            waveform = waveform.convert("RGBA")
+            data = waveform.getdata()
+            new_data = []
 
-                waveform.putdata(new_data)
-                base_image.paste(
-                    waveform, (placeholder["x"], placeholder["y"]), waveform
-                )
+            # Convert colors to gray for fullpage mode
+            is_fullpage = session.photo_shape == 'fullpage'
+
+            for item in data:
+                # Change all white pixels to transparent
+                if item[0] > 250 and item[1] > 250 and item[2] > 250:
+                    new_data.append((255, 255, 255, 0))  # Transparent
+                else:
+                    if is_fullpage:
+                        # Convert to gray for fullpage mode
+                        # Use a medium gray (#808080 or RGB 128, 128, 128)
+                        gray_value = 128
+                        new_data.append((gray_value, gray_value, gray_value, 255))
+                    else:
+                        # Keep original black color
+                        new_data.append((item[0], item[1], item[2], 255))
+
+            waveform.putdata(new_data)
+            base_image.paste(
+                waveform, (placeholder["x"], placeholder["y"]), waveform
+            )
             print(
                 f"Waveform added at ({placeholder['x']}, {placeholder['y']}) with size ({placeholder['width']}, {placeholder['height']}) in black with matching background"
             )
@@ -321,7 +337,7 @@ class VisualPDFGenerator:
             print(f"Error adding waveform: {e}")
 
     async def _add_qr_to_template(
-        self, base_image: Image.Image, qr_url: str, template: Dict
+        self, base_image: Image.Image, qr_url: str, template: Dict, session: SessionModel = None
     ):
         """Add QR code to template at specified coordinates"""
         placeholder = template["placeholders"]["qr_code"]
@@ -339,24 +355,36 @@ class VisualPDFGenerator:
             qr.make(fit=True)
             print(f"🟡🟡🟡 QR CODE DATA ADDED SUCCESSFULLY 🟡🟡🟡")
 
-            # Create QR code with white background first
-            qr_image = qr.make_image(fill_color="black", back_color="white")
+            # Determine QR code colors based on photo shape
+            is_fullpage = session and session.photo_shape == 'fullpage'
+            if is_fullpage:
+                fill_color = "#808080"  # Gray
+                back_color = "#F0F0F0"  # Light gray background
+            else:
+                fill_color = "black"
+                back_color = "white"
+
+            # Create QR code with appropriate colors
+            qr_image = qr.make_image(fill_color=fill_color, back_color=back_color)
             qr_image = qr_image.resize((placeholder["width"], placeholder["height"]))
 
-            # Convert to RGBA and make white pixels transparent
+            # Convert to RGBA and make white/light gray pixels transparent
             qr_image = qr_image.convert("RGBA")
 
             # Create transparent version
             data = qr_image.getdata()
             new_data = []
             for item in data:
-                # Change all white (255, 255, 255) pixels to transparent
+                # Change all white/light gray pixels to transparent
                 if item[0] > 250 and item[1] > 250 and item[2] > 250:
                     new_data.append((255, 255, 255, 0))  # Make white pixels transparent
+                elif is_fullpage and item[0] > 230 and item[1] > 230 and item[2] > 230:
+                    # Make light gray background transparent for fullpage
+                    new_data.append((255, 255, 255, 0))
                 else:
                     new_data.append(
                         (item[0], item[1], item[2], 255)
-                    )  # Keep black pixels opaque
+                    )  # Keep colored pixels opaque
 
             qr_image.putdata(new_data)
 

@@ -153,7 +153,7 @@ class ImageProcessor:
 
         Args:
             image_path: Path to source image (can be S3 key or temporary file key)
-            shape: 'square' or 'circle'
+            shape: 'square', 'circle', or 'fullpage'
             size: Output dimensions
         """
         try:
@@ -185,6 +185,11 @@ class ImageProcessor:
                 print(f"DEBUG: Using circular image processing")
                 result = self._create_circular_image(image, size)
                 print(f"DEBUG: Circular image processing returned: size={result.size}, mode={result.mode}")
+                return result
+            elif shape == 'fullpage':
+                print(f"DEBUG: Using fullpage image processing")
+                result = self._create_fullpage_image(image, size)
+                print(f"DEBUG: Fullpage image processing returned: size={result.size}, mode={result.mode}")
                 return result
             else:
                 print(f"DEBUG: Using rectangle image processing (default)")
@@ -310,6 +315,38 @@ class ImageProcessor:
             traceback.print_exc()
             # Return the original circular image as fallback
             return output
+
+    def _create_fullpage_image(self, image: Image.Image, size: tuple) -> Image.Image:
+        """Create full page image that covers the entire template area"""
+        print(f"DEBUG: _create_fullpage_image called with size={size}")
+
+        # For full page, we want the image to cover the entire template area
+        # This is similar to rectangle but optimized for full page coverage
+        target_width, target_height = size
+
+        # Calculate scaling factor to fill the entire area
+        image_width, image_height = image.size
+        scale_x = target_width / image_width
+        scale_y = target_height / image_height
+
+        # Use the larger scale to ensure the image fills the entire area
+        scale = max(scale_x, scale_y)
+
+        # Resize the image
+        new_width = int(image_width * scale)
+        new_height = int(image_height * scale)
+        resized_image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+
+        # Crop to exact target size from center
+        left = (new_width - target_width) // 2
+        top = (new_height - target_height) // 2
+        right = left + target_width
+        bottom = top + target_height
+
+        cropped_image = resized_image.crop((left, top, right, bottom))
+
+        print(f"DEBUG: Fullpage image created: size={cropped_image.size}, mode={cropped_image.mode}")
+        return cropped_image
 
     def create_thumbnail(self, image_path: str, size: tuple = (200, 200)) -> BytesIO:
         """Create thumbnail for preview purposes"""
