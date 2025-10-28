@@ -37,6 +37,7 @@ class StripeService:
             promotion_code_obj = None
             if promotion_code:
                 try:
+                    print(f"DEBUG: Validating promotion code: {promotion_code}")
                     # Validate the promotion code to get its details
                     promotion_codes = stripe.PromotionCode.list(
                         code=promotion_code,
@@ -44,23 +45,37 @@ class StripeService:
                         limit=1
                     )
 
+                    print(f"DEBUG: Promotion code lookup result: {len(promotion_codes.data)} codes found")
                     if not promotion_codes.data:
+                        print(f"DEBUG: No promotion codes found for: {promotion_code}")
                         raise HTTPException(status_code=404, detail="Invalid discount code")
 
                     promotion_code_obj = promotion_codes.data[0]
                     coupon = promotion_code_obj.coupon
+                    print(f"DEBUG: Found promotion code: {promotion_code_obj.id}, coupon: {coupon.id}")
 
                     # Check if code is still valid
                     if promotion_code_obj.max_redemptions and promotion_code_obj.times_redeemed >= promotion_code_obj.max_redemptions:
+                        print(f"DEBUG: Promotion code has reached max redemptions: {promotion_code_obj.times_redeemed}/{promotion_code_obj.max_redemptions}")
                         raise HTTPException(status_code=400, detail="Discount code has reached maximum redemptions")
 
                     # Check expiration date
                     import time
                     if promotion_code_obj.expires_at and promotion_code_obj.expires_at < int(time.time()):
+                        print(f"DEBUG: Promotion code has expired: {promotion_code_obj.expires_at} < {int(time.time())}")
                         raise HTTPException(status_code=400, detail="Discount code has expired")
 
+                    print(f"DEBUG: Promotion code validation successful")
+
                 except stripe.error.StripeError as e:
+                    print(f"DEBUG: Stripe error validating promotion code: {str(e)}")
                     raise HTTPException(status_code=400, detail=f"Invalid promotion code: {str(e)}")
+                except HTTPException:
+                    # Re-raise HTTP exceptions as-is
+                    raise
+                except Exception as e:
+                    print(f"DEBUG: Unexpected error validating promotion code: {str(e)}")
+                    raise HTTPException(status_code=500, detail=f"Promotion code validation failed: {str(e)}")
 
             payment_intent_params = {
                 'amount': amount,  # Use original amount, let Stripe apply discount
@@ -78,11 +93,14 @@ class StripeService:
             }
 
             # Create PaymentIntent first
+            print(f"DEBUG: Creating PaymentIntent with params: amount={amount}, email={email}, order_id={order_id}")
             payment_intent = stripe.PaymentIntent.create(**payment_intent_params)
+            print(f"DEBUG: PaymentIntent created successfully: {payment_intent.id}")
 
             # Add promotion code metadata for tracking (promotion codes are applied client-side)
             if promotion_code and promotion_code_obj:
                 try:
+                    print(f"DEBUG: Adding promotion code metadata to PaymentIntent")
                     # Update metadata with promotion code info
                     stripe.PaymentIntent.modify(
                         payment_intent.id,
@@ -95,10 +113,12 @@ class StripeService:
                             'coupon_value': str(promotion_code_obj.coupon.amount_off or promotion_code_obj.coupon.percent_off)
                         }
                     )
+                    print(f"DEBUG: Promotion code metadata added successfully")
                 except stripe.error.StripeError as e:
                     # If metadata update fails, log but don't fail the entire request
                     print(f"Warning: Failed to update PaymentIntent metadata with promotion code {promotion_code}: {str(e)}")
 
+            print(f"DEBUG: Returning PaymentIntent: {payment_intent.id}")
             return payment_intent
 
         except stripe.error.StripeError as e:
