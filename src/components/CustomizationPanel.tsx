@@ -145,7 +145,7 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
   const debouncedUpdate = useCallback(
     (() => {
       let timeoutId: ReturnType<typeof setTimeout>
-      return (data: Partial<SessionData>) => {
+      return (data: Partial<SessionData>, delay: number = 500) => {
         console.log('⏱️ debouncedUpdate called with data:', data)
         clearTimeout(timeoutId)
         timeoutId = setTimeout(async () => {
@@ -169,7 +169,11 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
           console.log('✅ Proceeding with session update:', data)
 
           try {
-            setIsUpdating(true)
+            // Only show updating indicator for non-text changes that affect preview
+            const isTextOnlyChange = Object.keys(data).length === 1 && data.custom_text !== undefined
+            if (!isTextOnlyChange) {
+              setIsUpdating(true)
+            }
             clearUpdateError() // Clear any previous errors
             console.log('📡 Calling updateSessionData with:', data)
             await updateSessionData(data)
@@ -193,7 +197,7 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
           } finally {
             setIsUpdating(false)
           }
-        }, 500) // 500ms delay
+        }, delay)
       }
     })(),
     [session, updateSessionData, processingStatus]
@@ -202,15 +206,11 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
   const handleTextChange = (text: string) => {
     if (text.length <= 200) {
       setCustomText(text)
-      // Update session in real-time for preview
+      // Update session in real-time for preview - only send text change with longer delay
+      // This prevents excessive "updating preview" messages while typing
       debouncedUpdate({
-        custom_text: text.trim(),
-        pdf_size: pdfSize,
-        template_id: getFramedTemplateId(pdfSize),
-        background_id: backgroundId,
-        font_id: fontId,
-        photo_shape: photoShape
-      })
+        custom_text: text.trim()
+      }, 1000) // 1 second delay for text changes
     }
   }
 
