@@ -77,14 +77,27 @@ class StripeService:
                 'setup_future_usage': 'off_session',
             }
 
-            # Apply promotion code if provided
-            if promotion_code and promotion_code_obj:
-                payment_intent_params['promotion_code'] = promotion_code_obj.id
-                payment_intent_params['metadata']['promotion_code'] = promotion_code
-                payment_intent_params['metadata']['promotion_code_id'] = promotion_code_obj.id
-                payment_intent_params['metadata']['coupon_id'] = promotion_code_obj.coupon.id
-
+            # Create PaymentIntent first
             payment_intent = stripe.PaymentIntent.create(**payment_intent_params)
+
+            # Add promotion code metadata for tracking (promotion codes are applied client-side)
+            if promotion_code and promotion_code_obj:
+                try:
+                    # Update metadata with promotion code info
+                    stripe.PaymentIntent.modify(
+                        payment_intent.id,
+                        metadata={
+                            **payment_intent_params['metadata'],
+                            'promotion_code': promotion_code,
+                            'promotion_code_id': promotion_code_obj.id,
+                            'coupon_id': promotion_code_obj.coupon.id,
+                            'coupon_type': 'amount_off' if promotion_code_obj.coupon.amount_off else 'percent_off',
+                            'coupon_value': str(promotion_code_obj.coupon.amount_off or promotion_code_obj.coupon.percent_off)
+                        }
+                    )
+                except stripe.error.StripeError as e:
+                    # If metadata update fails, log but don't fail the entire request
+                    print(f"Warning: Failed to update PaymentIntent metadata with promotion code {promotion_code}: {str(e)}")
 
             return payment_intent
 

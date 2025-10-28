@@ -445,7 +445,7 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
                     </p>
                   ) : (
                     <p className="text-red-600 text-sm">
-                      {discountInfo.message || 'Invalid discount code'}
+                      {'Invalid discount code'}
                     </p>
                   )}
                 </div>

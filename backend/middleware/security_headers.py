@@ -84,10 +84,10 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             self.security_headers.update({
                 "Content-Security-Policy": (
                     "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; "
-                    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://static.cloudflareinsights.com https://www.googletagmanager.com; "
+                    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://static.cloudflareinsights.com https://www.googletagmanager.com https://www.clarity.ms; "
                     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
                     "font-src 'self' data: https://fonts.gstatic.com; "
-                    "connect-src 'self' http://localhost:* https://api.stripe.com https://cloudflareinsights.com https://www.google-analytics.com https://analytics.google.com; "
+                    "connect-src 'self' http://localhost:* https://api.stripe.com https://cloudflareinsights.com https://www.google-analytics.com https://analytics.google.com https://www.clarity.ms; "
                     "img-src 'self' data: https: blob:; "
                     "media-src 'self' https://*.s3.amazonaws.com https://*.s3.us-east-2.amazonaws.com blob:; "
                     "frame-src https://js.stripe.com https://*.s3.amazonaws.com https://*.s3.us-east-2.amazonaws.com; "
