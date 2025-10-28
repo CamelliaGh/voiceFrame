@@ -1016,6 +1016,8 @@ async def create_payment_intent(
         else:
             amount = pricing_info["discounted_price"]  # Use configured discounted price
 
+        logger.info(f"Creating payment intent for session {token}: amount={amount}, email={request.email}, promotion_code={request.promotion_code}")
+
         order = Order(
             id=order_id,
             email=request.email,
@@ -1029,6 +1031,8 @@ async def create_payment_intent(
         db.add(order)
         db.commit()
 
+        logger.info(f"Order {order_id} created successfully")
+
         # Create Stripe payment intent with optional promotion code
         payment_intent = stripe_service.create_payment_intent(
             amount=amount,
@@ -1036,6 +1040,8 @@ async def create_payment_intent(
             order_id=order_id,
             promotion_code=request.promotion_code
         )
+
+        logger.info(f"Stripe payment intent created: {payment_intent['id']}")
 
         # Update order with Stripe payment intent ID
         order.stripe_payment_intent_id = payment_intent["id"]
@@ -1053,6 +1059,7 @@ async def create_payment_intent(
         )
 
     except Exception as e:
+        logger.error(f"Payment creation failed for session {token}: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=500, detail=f"Payment creation failed: {str(e)}"
         )
