@@ -17,6 +17,7 @@ from typing import Dict, List, Optional, Tuple
 import matplotlib.pyplot as plt
 import psutil
 from fastapi import HTTPException
+from PIL import Image
 
 try:
     from pydub import AudioSegment
