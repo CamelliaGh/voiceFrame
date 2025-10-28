@@ -30,8 +30,68 @@ class StripeService:
             if not stripe.api_key:
                 raise HTTPException(status_code=500, detail="Stripe not configured")
 
+            final_amount = amount
+            discount_info = None
+
+            # Apply promotion code discount if provided
+            if promotion_code:
+                try:
+                    # Validate the promotion code to get its details
+                    promotion_codes = stripe.PromotionCode.list(
+                        code=promotion_code,
+                        active=True,
+                        limit=1
+                    )
+
+                    if not promotion_codes.data:
+                        raise HTTPException(status_code=404, detail="Invalid discount code")
+
+                    promotion_code_obj = promotion_codes.data[0]
+                    coupon = promotion_code_obj.coupon
+
+                    # Check if code is still valid
+                    if promotion_code_obj.max_redemptions and promotion_code_obj.times_redeemed >= promotion_code_obj.max_redemptions:
+                        raise HTTPException(status_code=400, detail="Discount code has reached maximum redemptions")
+
+                    # Check expiration date
+                    import time
+                    if promotion_code_obj.expires_at and promotion_code_obj.expires_at < int(time.time()):
+                        raise HTTPException(status_code=400, detail="Discount code has expired")
+
+                    # Calculate discount
+                    if coupon.amount_off:
+                        # Fixed amount discount
+                        discount_amount = coupon.amount_off
+                        final_amount = max(50, amount - discount_amount)  # Minimum 50 cents for Stripe
+                        discount_info = {
+                            'type': 'fixed',
+                            'amount': discount_amount,
+                            'original_amount': amount,
+                            'final_amount': final_amount
+                        }
+                    elif coupon.percent_off:
+                        # Percentage discount
+                        discount_amount = int(amount * coupon.percent_off / 100)
+                        final_amount = amount - discount_amount
+
+                        # Handle 100% discount (free order) - use minimum charge
+                        if final_amount <= 0:
+                            final_amount = 50  # Minimum charge for Stripe
+                            discount_amount = amount - 50  # Adjust discount to reflect minimum charge
+
+                        discount_info = {
+                            'type': 'percentage',
+                            'percentage': coupon.percent_off,
+                            'amount': discount_amount,
+                            'original_amount': amount,
+                            'final_amount': final_amount
+                        }
+
+                except stripe.error.StripeError as e:
+                    raise HTTPException(status_code=400, detail=f"Invalid promotion code: {str(e)}")
+
             payment_intent_params = {
-                'amount': amount,
+                'amount': final_amount,
                 'currency': 'usd',
                 'automatic_payment_methods': {'enabled': True},
                 'receipt_email': email,
@@ -45,29 +105,15 @@ class StripeService:
                 'setup_future_usage': 'off_session',
             }
 
-            # Add promotion code if provided - need to get the promotion code ID first
-            if promotion_code:
-                try:
-                    # Validate the promotion code to get its ID
-                    promotion_codes = stripe.PromotionCode.list(
-                        code=promotion_code,
-                        active=True,
-                        limit=1
-                    )
-
-                    if not promotion_codes.data:
-                        raise HTTPException(status_code=404, detail="Invalid discount code")
-
-                    promotion_code_obj = promotion_codes.data[0]
-                    promotion_code_id = promotion_code_obj.id
-
-                    # Use the promotion code ID, not the code string
-                    payment_intent_params['promotion_code'] = promotion_code_id
-                    payment_intent_params['metadata']['promotion_code'] = promotion_code
-                    payment_intent_params['metadata']['promotion_code_id'] = promotion_code_id
-
-                except stripe.error.StripeError as e:
-                    raise HTTPException(status_code=400, detail=f"Invalid promotion code: {str(e)}")
+            # Add promotion code metadata if discount was applied
+            if promotion_code and discount_info:
+                payment_intent_params['metadata']['promotion_code'] = promotion_code
+                payment_intent_params['metadata']['promotion_code_id'] = promotion_code_obj.id
+                payment_intent_params['metadata']['coupon_id'] = coupon.id
+                payment_intent_params['metadata']['discount_type'] = discount_info['type']
+                payment_intent_params['metadata']['discount_amount'] = str(discount_info['amount'])
+                payment_intent_params['metadata']['original_amount'] = str(discount_info['original_amount'])
+                payment_intent_params['metadata']['final_amount'] = str(discount_info['final_amount'])
 
             payment_intent = stripe.PaymentIntent.create(**payment_intent_params)
 

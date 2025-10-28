@@ -8,7 +8,7 @@ class SessionResponse(BaseModel):
     session_token: str
     expires_at: str
     custom_text: Optional[str] = None
-    photo_shape: Optional[Literal["square", "circle"]] = "square"
+    photo_shape: Optional[Literal["square", "circle", "fullpage"]] = "square"
     pdf_size: Optional[
         Literal[
             "A4", "A4_Landscape", "Letter", "Letter_Landscape", "A3", "A3_Landscape"
@@ -104,8 +104,8 @@ class SessionUpdate(BaseModel):
     @field_validator("photo_shape")
     @classmethod
     def validate_photo_shape(cls, v):
-        if v is not None and v not in ["square", "circle"]:
-            raise ValueError('Photo shape must be either "square" or "circle"')
+        if v is not None and v not in ["square", "circle", "fullpage"]:
+            raise ValueError('Photo shape must be "square", "circle", or "fullpage"')
         return v
 
     @field_validator("pdf_size")

@@ -235,19 +235,29 @@ class VisualPDFGenerator:
             debug_mode = settings.debug_photo_circle
 
             if debug_mode:
-                print("🔴 DEBUG MODE: Drawing red circle instead of photo")
-                # Create a red circle image
+                print("🔴 DEBUG MODE: Drawing debug shape instead of photo")
+                # Create a debug image based on photo shape
                 photo = Image.new('RGBA', photo_size, (0, 0, 0, 0))  # Transparent background
                 draw = ImageDraw.Draw(photo)
 
-                # Draw a red circle
-                margin = 20
-                circle_bbox = [margin, margin, photo_size[0] - margin, photo_size[1] - margin]
-                draw.ellipse(circle_bbox, fill='red', outline='darkred', width=5)
+                if session.photo_shape == 'fullpage':
+                    # Draw a full page rectangle
+                    draw.rectangle([0, 0, photo_size[0], photo_size[1]], fill='red', outline='darkred', width=5)
+                    draw.text((photo_size[0]//2 - 40, photo_size[1]//2 - 10), "FULLPAGE", fill='white')
+                elif session.photo_shape == 'circle':
+                    # Draw a red circle
+                    margin = 20
+                    circle_bbox = [margin, margin, photo_size[0] - margin, photo_size[1] - margin]
+                    draw.ellipse(circle_bbox, fill='red', outline='darkred', width=5)
+                    draw.text((photo_size[0]//2 - 30, photo_size[1]//2 - 10), "CIRCLE", fill='white')
+                else:
+                    # Draw a rectangle
+                    margin = 20
+                    rect_bbox = [margin, margin, photo_size[0] - margin, photo_size[1] - margin]
+                    draw.rectangle(rect_bbox, fill='red', outline='darkred', width=5)
+                    draw.text((photo_size[0]//2 - 40, photo_size[1]//2 - 10), "RECTANGLE", fill='white')
 
-                # Add text label
-                draw.text((photo_size[0]//2 - 30, photo_size[1]//2 - 10), "CIRCLE", fill='white')
-                print(f"🔴 DEBUG: Created red circle image with size {photo_size}")
+                print(f"🔴 DEBUG: Created debug {session.photo_shape} image with size {photo_size}")
             else:
                 photo = self.image_processor.create_shaped_image(
                     photo_key,
@@ -301,36 +311,78 @@ class VisualPDFGenerator:
         try:
             # Get waveform image
             waveform = self.image_processor.get_image_from_s3(waveform_key)
-            waveform = waveform.resize((placeholder["width"], placeholder["height"]))
+            print(f"🔍 WAVEFORM DEBUG: Original waveform size: {waveform.size}, mode: {waveform.mode}")
+
+            # For fullpage mode, position in footer
+            is_fullpage = session.photo_shape == 'fullpage'
+            if is_fullpage:
+                # Footer layout: waveform takes most of the width
+                footer_height = int(base_image.height * 0.08)  # 8% of page height for footer
+                waveform_width = int(base_image.width * 0.65)  # 65% of page width
+                waveform_height = int(footer_height * 0.6)  # 60% of footer height
+                waveform_x = int(base_image.width * 0.05)  # 5% margin from left
+                waveform_y = int(base_image.height - footer_height * 0.8)  # Position in footer
+
+                waveform = waveform.resize((waveform_width, waveform_height))
+                print(f"🔍 FULLPAGE WAVEFORM: Footer layout - position: ({waveform_x}, {waveform_y}), size: {waveform.size}")
+            else:
+                # Normal mode: use template placeholder
+                waveform = waveform.resize((placeholder["width"], placeholder["height"]))
+                waveform_x = placeholder["x"]
+                waveform_y = placeholder["y"]
+
+            print(f"🔍 WAVEFORM DEBUG: Resized waveform size: {waveform.size}")
 
             # Handle waveform with transparency and color conversion for fullpage
             waveform = waveform.convert("RGBA")
+            print(f"🔍 WAVEFORM DEBUG: Converted to RGBA, mode: {waveform.mode}")
             data = waveform.getdata()
             new_data = []
 
             # Convert colors to gray for fullpage mode
             is_fullpage = session.photo_shape == 'fullpage'
+            print(f"🔍 WAVEFORM DEBUG: is_fullpage: {is_fullpage}")
+
+            # Count different pixel types for debugging
+            white_pixels = 0
+            black_pixels = 0
+            other_pixels = 0
 
             for item in data:
+                # Check if pixel is already transparent (alpha < 128)
+                is_transparent = len(item) > 3 and item[3] < 128
+
                 # Change all white pixels to transparent
                 if item[0] > 250 and item[1] > 250 and item[2] > 250:
                     new_data.append((255, 255, 255, 0))  # Transparent
+                    white_pixels += 1
+                # Keep transparent pixels transparent
+                elif is_transparent:
+                    new_data.append((255, 255, 255, 0))  # Keep transparent
+                    white_pixels += 1
                 else:
+                    # Only process opaque, non-white pixels
                     if is_fullpage:
                         # Convert to gray for fullpage mode
                         # Use a medium gray (#808080 or RGB 128, 128, 128)
                         gray_value = 128
                         new_data.append((gray_value, gray_value, gray_value, 255))
+                        other_pixels += 1
                     else:
-                        # Keep original black color
+                        # Keep original black color with full opacity
                         new_data.append((item[0], item[1], item[2], 255))
+                        if item[0] < 10 and item[1] < 10 and item[2] < 10:
+                            black_pixels += 1
+                        else:
+                            other_pixels += 1
 
+            print(f"🔍 WAVEFORM DEBUG: Pixel counts - White: {white_pixels}, Black: {black_pixels}, Other: {other_pixels}")
             waveform.putdata(new_data)
             base_image.paste(
-                waveform, (placeholder["x"], placeholder["y"]), waveform
+                waveform, (waveform_x, waveform_y), waveform
             )
             print(
-                f"Waveform added at ({placeholder['x']}, {placeholder['y']}) with size ({placeholder['width']}, {placeholder['height']}) in black with matching background"
+                f"Waveform added at ({waveform_x}, {waveform_y}) with size {waveform.size}"
             )
 
         except Exception as e:
@@ -364,9 +416,23 @@ class VisualPDFGenerator:
                 fill_color = "black"
                 back_color = "white"
 
-            # Create QR code with appropriate colors
+            # Create QR code with appropriate colors and size based on mode
             qr_image = qr.make_image(fill_color=fill_color, back_color=back_color)
-            qr_image = qr_image.resize((placeholder["width"], placeholder["height"]))
+
+            if is_fullpage:
+                # Footer layout: QR code on the right side
+                footer_height = int(base_image.height * 0.08)  # 8% of page height for footer
+                qr_size = int(footer_height * 0.8)  # 80% of footer height
+                qr_x = int(base_image.width * 0.72)  # Position after waveform (65% + 7% gap)
+                qr_y = int(base_image.height - footer_height * 0.9)  # Center vertically in footer
+
+                qr_image = qr_image.resize((qr_size, qr_size))
+                print(f"🔍 FULLPAGE QR: Footer layout - position: ({qr_x}, {qr_y}), size: {qr_size}x{qr_size}")
+            else:
+                # Normal mode: use template placeholder
+                qr_image = qr_image.resize((placeholder["width"], placeholder["height"]))
+                qr_x = placeholder["x"]
+                qr_y = placeholder["y"]
 
             # Convert to RGBA and make white/light gray pixels transparent
             qr_image = qr_image.convert("RGBA")
@@ -389,9 +455,9 @@ class VisualPDFGenerator:
             qr_image.putdata(new_data)
 
             # Paste QR code with transparency mask
-            base_image.paste(qr_image, (placeholder["x"], placeholder["y"]), qr_image)
+            base_image.paste(qr_image, (qr_x, qr_y), qr_image)
             print(
-                f"QR code added at ({placeholder['x']}, {placeholder['y']}) with size ({placeholder['width']}, {placeholder['height']}) and matching background"
+                f"QR code added at ({qr_x}, {qr_y}) with size {qr_image.size}"
             )
 
         except Exception as e:

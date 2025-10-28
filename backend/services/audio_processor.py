@@ -1029,6 +1029,9 @@ class AudioProcessor:
 
             # Generate time axis (optimized)
             time_axis = np.linspace(0, len(audio_data) / sample_rate, len(audio_data))
+            print(f"🔍 WAVEFORM GEN DEBUG: Audio data length: {len(audio_data)}, Sample rate: {sample_rate}")
+            print(f"🔍 WAVEFORM GEN DEBUG: Time axis length: {len(time_axis)}, Range: {time_axis[0]:.2f} to {time_axis[-1]:.2f}")
+            print(f"🔍 WAVEFORM GEN DEBUG: Audio data range: {audio_data.min():.3f} to {audio_data.max():.3f}")
 
             # Plot waveform with optimized settings
             ax.plot(
@@ -1064,6 +1067,19 @@ class AudioProcessor:
             self._force_garbage_collection()
 
             buffer.seek(0)
+
+            # Debug: Check the generated image
+            debug_image = Image.open(buffer)
+            print(f"🔍 WAVEFORM GEN DEBUG: Generated image size: {debug_image.size}, mode: {debug_image.mode}")
+
+            # Check pixel distribution
+            if debug_image.mode == 'RGBA':
+                data = debug_image.getdata()
+                transparent_pixels = sum(1 for item in data if item[3] == 0)
+                opaque_pixels = sum(1 for item in data if item[3] > 0)
+                print(f"🔍 WAVEFORM GEN DEBUG: Transparent pixels: {transparent_pixels}, Opaque pixels: {opaque_pixels}")
+
+            buffer.seek(0)  # Reset buffer position
             processing_time = time.time() - start_time
             logger.debug(
                 f"Waveform generated: {len(buffer.getvalue())} bytes in {processing_time:.2f}s"
