@@ -316,12 +316,22 @@ class VisualPDFGenerator:
             # For fullpage mode, position in footer
             is_fullpage = session.photo_shape == 'fullpage'
             if is_fullpage:
-                # Footer layout: waveform takes most of the width
+                # Footer layout: center waveform and QR code
                 footer_height = int(base_image.height * 0.08)  # 8% of page height for footer
-                waveform_width = int(base_image.width * 0.65)  # 65% of page width
+                footer_y = int(base_image.height - footer_height * 0.8)  # Position in footer
+
+                # Calculate total width needed for both elements
+                waveform_width = int(base_image.width * 0.4)  # 40% of page width
+                qr_size = int(footer_height * 0.8)  # 80% of footer height
+                gap = int(base_image.width * 0.02)  # 2% gap between elements
+                total_width = waveform_width + gap + qr_size
+
+                # Center the total width
+                start_x = int((base_image.width - total_width) / 2)
+
                 waveform_height = int(footer_height * 0.6)  # 60% of footer height
-                waveform_x = int(base_image.width * 0.05)  # 5% margin from left
-                waveform_y = int(base_image.height - footer_height * 0.8)  # Position in footer
+                waveform_x = start_x
+                waveform_y = footer_y
 
                 waveform = waveform.resize((waveform_width, waveform_height))
                 print(f"🔍 FULLPAGE WAVEFORM: Footer layout - position: ({waveform_x}, {waveform_y}), size: {waveform.size}")
@@ -420,11 +430,22 @@ class VisualPDFGenerator:
             qr_image = qr.make_image(fill_color=fill_color, back_color=back_color)
 
             if is_fullpage:
-                # Footer layout: QR code on the right side
+                # Footer layout: QR code positioned after waveform
                 footer_height = int(base_image.height * 0.08)  # 8% of page height for footer
+                footer_y = int(base_image.height - footer_height * 0.8)  # Position in footer
+
+                # Calculate total width needed for both elements
+                waveform_width = int(base_image.width * 0.4)  # 40% of page width
                 qr_size = int(footer_height * 0.8)  # 80% of footer height
-                qr_x = int(base_image.width * 0.72)  # Position after waveform (65% + 7% gap)
-                qr_y = int(base_image.height - footer_height * 0.9)  # Center vertically in footer
+                gap = int(base_image.width * 0.02)  # 2% gap between elements
+                total_width = waveform_width + gap + qr_size
+
+                # Center the total width
+                start_x = int((base_image.width - total_width) / 2)
+
+                # QR code positioned after waveform
+                qr_x = start_x + waveform_width + gap
+                qr_y = footer_y
 
                 qr_image = qr_image.resize((qr_size, qr_size))
                 print(f"🔍 FULLPAGE QR: Footer layout - position: ({qr_x}, {qr_y}), size: {qr_size}x{qr_size}")
