@@ -168,6 +168,16 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if request.url.path == "/health":
             return await call_next(request)
 
+        # Skip rate limiting for critical payment endpoints
+        # These endpoints must never be rate limited as they are essential for payment processing
+        path = request.url.path
+        if (
+            path.startswith("/api/stripe/webhook") or  # Stripe webhooks (critical for payment status)
+            path.startswith("/api/session/") and "/payment" in path or  # Payment intent creation
+            path.startswith("/api/orders/") and "/complete" in path  # Order completion
+        ):
+            return await call_next(request)
+
         # Skip rate limiting in development environment
         if not settings.is_rate_limit_enabled():
             return await call_next(request)

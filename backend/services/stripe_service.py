@@ -80,6 +80,7 @@ class StripeService:
             payment_intent_params = {
                 'amount': amount,  # Use original amount, let Stripe apply discount
                 'currency': 'usd',
+                # Use automatic_payment_methods for compatibility with both card and wallet payments
                 'automatic_payment_methods': {'enabled': True},
                 'receipt_email': email,
                 'metadata': {
@@ -90,6 +91,8 @@ class StripeService:
                 'description': f'VocaFrame - Custom Audio Poster (Order: {order_id[:8]})',
                 # Enable setup for future payments (optional)
                 'setup_future_usage': 'off_session',
+                # Ensure payment intent uses manual confirmation (required for client-side confirmation)
+                'confirmation_method': 'manual',
             }
 
             # Create PaymentIntent first

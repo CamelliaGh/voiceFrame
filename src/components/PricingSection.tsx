@@ -181,6 +181,7 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
 
     try {
       // Confirm the payment with the payment method from wallet
+      // Use confirmCardPayment with payment method ID for wallet payments
       const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(
         clientSecret,
         {
@@ -189,7 +190,21 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
       )
 
       if (stripeError) {
-        throw new Error(stripeError.message)
+        console.error('Stripe error details:', {
+          type: stripeError.type,
+          code: stripeError.code,
+          message: stripeError.message,
+          payment_intent: stripeError.payment_intent,
+          decline_code: stripeError.decline_code,
+        })
+        // Provide more specific error messages
+        let errorMessage = stripeError.message || 'Payment failed'
+        if (stripeError.code === 'payment_intent_unexpected_state') {
+          errorMessage = 'This payment has already been processed. Please refresh the page and try again.'
+        } else if (stripeError.decline_code) {
+          errorMessage = `Payment declined: ${stripeError.message}`
+        }
+        throw new Error(errorMessage)
       }
 
       if (paymentIntent?.status === 'succeeded') {
@@ -197,10 +212,20 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
         const orderResult = await completeOrder(orderId, paymentIntent.id, session.session_token)
         setDownloadUrl(orderResult.download_url)
         setSuccess(true)
+      } else if (paymentIntent?.status === 'requires_action') {
+        // Payment requires additional action (3D Secure, etc.)
+        console.warn('Payment requires action:', paymentIntent.status)
+        setError('Payment requires additional authentication. Please complete the verification.')
+      } else {
+        // Unexpected status
+        console.error('Unexpected payment intent status:', paymentIntent?.status)
+        setError(`Payment status: ${paymentIntent?.status}. Please try again.`)
       }
     } catch (err) {
       console.error('Wallet payment failed:', err)
-      setError(err instanceof Error ? err.message : 'Payment failed. Please try again.')
+      const errorMessage = err instanceof Error ? err.message : 'Payment failed. Please try again.'
+      setError(errorMessage)
+      trackError('wallet_payment_error', { error: errorMessage })
     } finally {
       setProcessing(false)
     }
@@ -222,19 +247,20 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
 
     try {
       // Use existing payment intent if available, otherwise create new one
+      // For card payments, create a fresh payment intent to avoid state conflicts
       let paymentClientSecret = clientSecret
       let paymentOrderId = orderId
 
-      if (!paymentClientSecret || !paymentOrderId) {
-        const { client_secret, order_id } = await createPaymentIntent(
-          session.session_token,
-          email,
-          'standard',
-          discountCode || undefined
-        )
-        paymentClientSecret = client_secret
-        paymentOrderId = order_id
-      }
+      // Always create a new payment intent for card payments to avoid reuse issues
+      // (Wallet payments can reuse the intent created on email entry)
+      const { client_secret, order_id } = await createPaymentIntent(
+        session.session_token,
+        email,
+        'standard',
+        discountCode || undefined
+      )
+      paymentClientSecret = client_secret
+      paymentOrderId = order_id
 
       // Confirm payment with card
       const cardElement = elements.getElement(CardElement)
@@ -242,6 +268,7 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
         throw new Error('Card element not found')
       }
 
+      // Use confirmCardPayment for CardElement compatibility
       const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(
         paymentClientSecret,
         {
@@ -250,15 +277,29 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
             billing_details: {
               email: email,
               address: {
-                postal_code: zipCode,
+                postal_code: zipCode || undefined,
               },
             },
-          }
+          },
         }
       )
 
       if (stripeError) {
-        throw new Error(stripeError.message)
+        console.error('Stripe error details:', {
+          type: stripeError.type,
+          code: stripeError.code,
+          message: stripeError.message,
+          payment_intent: stripeError.payment_intent,
+          decline_code: stripeError.decline_code,
+        })
+        // Provide more specific error messages
+        let errorMessage = stripeError.message || 'Payment failed'
+        if (stripeError.code === 'payment_intent_unexpected_state') {
+          errorMessage = 'This payment has already been processed. Please refresh the page and try again.'
+        } else if (stripeError.decline_code) {
+          errorMessage = `Payment declined: ${stripeError.message}`
+        }
+        throw new Error(errorMessage)
       }
 
       if (paymentIntent?.status === 'succeeded') {
@@ -267,6 +308,15 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
         setDownloadUrl(orderResult.download_url)
         setSuccess(true)
         trackPayment('payment_success', selectedPrice?.price || 0)
+      } else if (paymentIntent?.status === 'requires_action') {
+        // Payment requires additional action (3D Secure, etc.)
+        // This should be handled automatically by Stripe, but log it
+        console.warn('Payment requires action:', paymentIntent.status)
+        setError('Payment requires additional authentication. Please complete the verification.')
+      } else {
+        // Unexpected status
+        console.error('Unexpected payment intent status:', paymentIntent?.status)
+        setError(`Payment status: ${paymentIntent?.status}. Please try again.`)
       }
 
     } catch (err) {
