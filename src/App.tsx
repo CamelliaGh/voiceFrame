@@ -183,7 +183,8 @@ function App() {
         <Router>
           <AnalyticsWrapper />
           <Routes>
-            <Route path="/" element={<MainApp />} />
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/customize" element={<MainApp />} />
             <Route path="/landing" element={<LandingPage />} />
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/privacy" element={<Privacy />} />

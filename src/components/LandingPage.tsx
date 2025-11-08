@@ -237,7 +237,7 @@ export default function LandingPage() {
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <button
-                onClick={() => navigate('/')}
+                onClick={() => navigate('/customize')}
                 className="btn-primary flex items-center space-x-2 text-lg px-10"
               >
                 <span>Create Your Poster instantly</span>
@@ -348,7 +348,7 @@ export default function LandingPage() {
 
           <div className="text-center mt-12">
             <button
-              onClick={() => navigate('/')}
+              onClick={() => navigate('/customize')}
               className="btn-primary flex items-center space-x-2 text-lg px-10 mx-auto"
             >
               <span>Get Started Now</span>
@@ -520,7 +520,7 @@ export default function LandingPage() {
 
               <div className="text-center">
                 <button
-                  onClick={() => navigate('/')}
+                  onClick={() => navigate('/customize')}
                   className="btn-primary flex items-center space-x-2 text-lg px-12 mx-auto"
                 >
                   <span>Create Your Poster Now</span>
@@ -584,7 +584,7 @@ export default function LandingPage() {
 
           <div className="text-center mt-8">
             <button
-              onClick={() => navigate('/')}
+              onClick={() => navigate('/customize')}
               className="btn-primary flex items-center space-x-2 text-lg px-10 mx-auto"
             >
               <span>Create Your Own Memory</span>
@@ -604,7 +604,7 @@ export default function LandingPage() {
             Join thousands of people preserving their precious audio memories as beautiful art
           </p>
           <button
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/customize')}
             className="bg-white text-primary-600 hover:bg-gray-50 font-bold py-4 px-10 text-lg rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 inline-flex items-center space-x-2"
           >
             <span>Start Creating Now</span>
