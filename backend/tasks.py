@@ -1,6 +1,6 @@
 import asyncio
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from celery import Celery
 from sqlalchemy.orm import Session
@@ -248,10 +248,16 @@ def cleanup_expired_sessions():
     """
     db = get_db()
     try:
-        # Find expired sessions (with 1 day buffer for safety)
+        now = datetime.utcnow()
+        retention_cutoff = now - timedelta(seconds=settings.qr_code_preview_expiration)
+
+        # Find sessions eligible for deletion (beyond preview retention window)
         expired_sessions = (
             db.query(SessionModel)
-            .filter(SessionModel.expires_at <= datetime.utcnow())
+            .filter(
+                SessionModel.created_at <= retention_cutoff,
+                SessionModel.expires_at <= now
+            )
             .all()
         )
 

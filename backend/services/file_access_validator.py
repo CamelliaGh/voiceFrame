@@ -5,8 +5,11 @@ Validates that file access requests are authorized and secure.
 Prevents unauthorized access to files from other users' sessions.
 """
 
+from datetime import datetime, timedelta
 from typing import Optional
 from sqlalchemy.orm import Session
+
+from ..config import settings
 from ..models import SessionModel, Order
 from ..services.session_manager import SessionManager
 
@@ -167,6 +170,10 @@ class FileAccessValidator:
             HTTPException: If access is denied
         """
         from fastapi import HTTPException
+        import logging
+        logger = logging.getLogger(__name__)
+
+        logger.info(f"🔍 validate_audio_playback_access called with identifier: {identifier}")
 
         # First try as order ID (paid posters) - only if identifier looks like a UUID
         import uuid
@@ -178,11 +185,14 @@ class FileAccessValidator:
                 Order.id == identifier,
                 Order.status == "completed"
             ).first()
+            logger.info(f"🔍 Order lookup (UUID): {'Found' if order else 'Not found'}")
         except ValueError:
             # Not a valid UUID, skip order lookup
+            logger.info(f"🔍 Not a valid UUID, skipping order lookup")
             pass
 
         if order and order.permanent_audio_s3_key:
+            logger.info(f"✅ Found paid order with permanent audio")
             return {
                 'type': 'order',
                 'object': order,
@@ -191,16 +201,67 @@ class FileAccessValidator:
             }
 
         # Try as session token (preview posters)
+        logger.info(f"🔍 Trying session_manager.get_session (checks expires_at > now)")
         session = self.session_manager.get_session(db, identifier)
+        logger.info(f"🔍 session_manager.get_session result: {'Found' if session else 'Not found'}")
+        if session:
+            logger.info(f"🔍 Session audio_s3_key: {session.audio_s3_key}")
+            logger.info(f"🔍 Session expires_at: {session.expires_at}")
+
         if session and session.audio_s3_key:
-            # Additional validation: ensure session is not expired
-            from datetime import datetime
-            if session.expires_at < datetime.utcnow():
+            logger.info(f"✅ Found active session with audio")
+            return {
+                'type': 'session',
+                'object': session,
+                'audio_key': session.audio_s3_key,
+                'title': 'AudioPoster Preview'
+            }
+
+        # Fallback: allow recently expired sessions within preview window
+        logger.info(f"🔍 Fallback: looking for ANY session with this token (ignoring expires_at)")
+        session = db.query(SessionModel).filter(SessionModel.session_token == identifier).first()
+        logger.info(f"🔍 Direct session lookup result: {'Found' if session else 'Not found'}")
+
+        if session:
+            logger.info(f"🔍 Session details:")
+            logger.info(f"  - audio_s3_key: {session.audio_s3_key}")
+            logger.info(f"  - created_at: {session.created_at}")
+            logger.info(f"  - expires_at: {session.expires_at}")
+
+        if session and session.audio_s3_key:
+            now = datetime.utcnow()
+            preview_expires_at = (session.created_at or now) + timedelta(
+                seconds=settings.qr_code_preview_expiration
+            )
+
+            logger.info(f"🔍 Time check:")
+            logger.info(f"  - now: {now}")
+            logger.info(f"  - preview_expires_at: {preview_expires_at}")
+            logger.info(f"  - within preview window: {now <= preview_expires_at}")
+
+            if now > preview_expires_at:
+                logger.error(f"❌ Session beyond preview window")
                 raise HTTPException(
                     status_code=410,
                     detail="Preview session has expired"
                 )
 
+            if session.expires_at is None or session.expires_at < preview_expires_at:
+                logger.info(f"🔧 Extending session expires_at to preview window")
+                session_model = session.__class__
+                db.query(session_model).filter(
+                    session_model.session_token == identifier
+                ).update(
+                    {"expires_at": preview_expires_at},
+                    synchronize_session=False
+                )
+                db.commit()
+                session = db.query(session_model).filter(
+                    session_model.session_token == identifier
+                ).first()
+                logger.info(f"✅ Extended session expires_at to: {session.expires_at}")
+
+            logger.info(f"✅ Returning session within preview window")
             return {
                 'type': 'session',
                 'object': session,
@@ -209,6 +270,11 @@ class FileAccessValidator:
             }
 
         # No valid access found
+        logger.error(f"❌ No valid session or order found for identifier: {identifier}")
+        logger.error(f"   - Order check: {'passed' if order else 'failed'}")
+        logger.error(f"   - Active session check: {'passed' if self.session_manager.get_session(db, identifier) else 'failed'}")
+        logger.error(f"   - Any session check: {'passed' if db.query(SessionModel).filter(SessionModel.session_token == identifier).first() else 'failed'}")
+
         raise HTTPException(
             status_code=404,
             detail="Audio not found or access denied"

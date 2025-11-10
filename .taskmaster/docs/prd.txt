@@ -340,7 +340,7 @@ SVG Generation → QR Code Creation → PDF Assembly → Storage
 ## 6. User Experience Flow
 
 ### 6.1 Anonymous User Journey (V1)
-1. **Landing Page**: Clear value proposition, example gallery
+1. **Landing Page**: Split hero with bold value proposition, dual CTAs, trust badges, and an eight-slot sample poster gallery ready for real customer imagery
 2. **Upload Interface**: Drag-and-drop file uploads with progress indicators
 3. **Customization**: Real-time preview with intuitive controls
 4. **Preview**: Full-screen watermarked preview with sharing options

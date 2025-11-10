@@ -1043,18 +1043,18 @@ async def create_payment_intent(
 
         logger.info(f"Stripe payment intent created: {payment_intent['id']}")
 
-        # Update order with Stripe payment intent ID
+        # Get the actual amount from the payment intent (includes discount if applied)
+        final_amount = payment_intent["amount"]
+
+        # Update order with Stripe payment intent ID and final amount
         order.stripe_payment_intent_id = payment_intent["id"]
+        order.amount_cents = final_amount  # Store the actual charged amount
         db.commit()
 
-        # For the response, return the amount that will actually be charged
-        # If using promotion code, Stripe will apply the discount, so we show the original amount
-        # The actual charged amount will be determined by Stripe based on the promotion code
-        response_amount = amount
-
+        # Return the actual amount that will be charged (after discount if applicable)
         return PaymentIntentResponse(
             client_secret=payment_intent["client_secret"],
-            amount=response_amount,
+            amount=final_amount,
             order_id=order_id,
         )
 

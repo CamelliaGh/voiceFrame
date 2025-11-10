@@ -77,51 +77,64 @@ class StripeService:
                     print(f"DEBUG: Unexpected error validating promotion code: {str(e)}")
                     raise HTTPException(status_code=500, detail=f"Promotion code validation failed: {str(e)}")
 
+            # Calculate final amount after applying discount
+            if promotion_code and promotion_code_obj:
+                coupon = promotion_code_obj.coupon
+                if coupon.amount_off:
+                    # Fixed amount discount (in cents)
+                    final_amount = max(0, amount - coupon.amount_off)
+                    print(f"DEBUG: Applying fixed discount: ${coupon.amount_off/100:.2f} off ${amount/100:.2f} = ${final_amount/100:.2f}")
+                elif coupon.percent_off:
+                    # Percentage discount
+                    discount = int(amount * (coupon.percent_off / 100))
+                    final_amount = max(0, amount - discount)
+                    print(f"DEBUG: Applying {coupon.percent_off}% discount: ${amount/100:.2f} - ${discount/100:.2f} = ${final_amount/100:.2f}")
+                else:
+                    final_amount = amount
+                    print(f"WARNING: Promotion code has no discount value")
+            else:
+                final_amount = amount
+
+            # Build metadata with promotion code info if applicable
+            metadata = {
+                'order_id': order_id,
+                'product': 'audio_poster',
+                'email': email
+            }
+
+            if promotion_code and promotion_code_obj:
+                metadata.update({
+                    'promotion_code': promotion_code,
+                    'promotion_code_id': promotion_code_obj.id,
+                    'coupon_id': promotion_code_obj.coupon.id,
+                    'coupon_type': 'amount_off' if promotion_code_obj.coupon.amount_off else 'percent_off',
+                    'coupon_value': str(promotion_code_obj.coupon.amount_off or promotion_code_obj.coupon.percent_off),
+                    'original_amount': str(amount),
+                    'discount_applied': str(amount - final_amount)
+                })
+
             payment_intent_params = {
-                'amount': amount,  # Use original amount, let Stripe apply discount
+                'amount': final_amount,  # Use discounted amount
                 'currency': 'usd',
                 # Use automatic_payment_methods for compatibility with both card and wallet payments
                 # Note: When using automatic_payment_methods, confirmation_method is automatically set
                 # and cannot be specified explicitly
                 'automatic_payment_methods': {'enabled': True},
                 'receipt_email': email,
-                'metadata': {
-                    'order_id': order_id,
-                    'product': 'audio_poster',
-                    'email': email
-                },
+                'metadata': metadata,
                 'description': f'VocaFrame - Custom Audio Poster (Order: {order_id[:8]})',
                 # Enable setup for future payments (optional)
                 'setup_future_usage': 'off_session',
             }
 
-            # Create PaymentIntent first
-            print(f"DEBUG: Creating PaymentIntent with params: amount={amount}, email={email}, order_id={order_id}")
+            # Create PaymentIntent with discounted amount
+            print(f"DEBUG: Creating PaymentIntent with params: amount={final_amount}, original_amount={amount}, email={email}, order_id={order_id}, promotion_code={promotion_code}")
             payment_intent = stripe.PaymentIntent.create(**payment_intent_params)
-            print(f"DEBUG: PaymentIntent created successfully: {payment_intent.id}")
+            # Access as dict for compatibility with both real Stripe objects and test mocks
+            pi_id = payment_intent.id if hasattr(payment_intent, 'id') else payment_intent['id']
+            print(f"DEBUG: PaymentIntent created successfully: {pi_id} with final amount ${final_amount/100:.2f}")
 
-            # Add promotion code metadata for tracking (promotion codes are applied client-side)
-            if promotion_code and promotion_code_obj:
-                try:
-                    print(f"DEBUG: Adding promotion code metadata to PaymentIntent")
-                    # Update metadata with promotion code info
-                    stripe.PaymentIntent.modify(
-                        payment_intent.id,
-                        metadata={
-                            **payment_intent_params['metadata'],
-                            'promotion_code': promotion_code,
-                            'promotion_code_id': promotion_code_obj.id,
-                            'coupon_id': promotion_code_obj.coupon.id,
-                            'coupon_type': 'amount_off' if promotion_code_obj.coupon.amount_off else 'percent_off',
-                            'coupon_value': str(promotion_code_obj.coupon.amount_off or promotion_code_obj.coupon.percent_off)
-                        }
-                    )
-                    print(f"DEBUG: Promotion code metadata added successfully")
-                except stripe.error.StripeError as e:
-                    # If metadata update fails, log but don't fail the entire request
-                    print(f"Warning: Failed to update PaymentIntent metadata with promotion code {promotion_code}: {str(e)}")
-
-            print(f"DEBUG: Returning PaymentIntent: {payment_intent.id}")
+            print(f"DEBUG: Returning PaymentIntent: {pi_id}")
             return payment_intent
 
         except stripe.error.StripeError as e:

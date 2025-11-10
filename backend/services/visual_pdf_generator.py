@@ -295,6 +295,38 @@ class VisualPDFGenerator:
 
             print(f"DEBUG: Photo pasted successfully. Final base image mode: {base_image.mode}")
 
+            # For fullpage photos, add a subtle gradient fade behind the footer elements
+            if session.photo_shape == 'fullpage':
+                fade_height = max(int(base_image.height * 0.45), 180)
+                fade_start = base_image.height - fade_height
+
+                base_region = base_image.crop(
+                    (0, fade_start, base_image.width, base_image.height)
+                ).convert("RGBA")
+
+                target_overlay = Image.new(
+                    "RGBA",
+                    (base_image.width, fade_height),
+                    (221, 219, 219, 255),
+                )  # #dddbdb
+
+                alpha_gradient = Image.new("L", (1, fade_height))
+                for y in range(fade_height):
+                    ratio = y / max(fade_height - 1, 1)
+                    alpha = int(255 * (ratio ** 1.15))
+                    alpha_gradient.putpixel((0, y), alpha)
+                alpha_gradient = alpha_gradient.resize(
+                    (base_image.width, fade_height)
+                )
+
+                blended_footer = Image.composite(
+                    target_overlay, base_region, alpha_gradient
+                )
+                base_image.paste(blended_footer, (0, fade_start))
+                print(
+                    f"DEBUG: Applied footer fade overlay to #{fade_start}-{base_image.height}"
+                )
+
         except Exception as e:
             print(f"Error adding photo: {e}")
 
@@ -373,10 +405,8 @@ class VisualPDFGenerator:
                 else:
                     # Only process opaque, non-white pixels
                     if is_fullpage:
-                        # Convert to gray for fullpage mode
-                        # Use a medium gray (#808080 or RGB 128, 128, 128)
-                        gray_value = 128
-                        new_data.append((gray_value, gray_value, gray_value, 255))
+                        # Convert to target gray (#8b8888) for fullpage mode
+                        new_data.append((139, 136, 136, 255))
                         other_pixels += 1
                     else:
                         # Keep original black color with full opacity
@@ -418,16 +448,14 @@ class VisualPDFGenerator:
             print(f"🟡🟡🟡 QR CODE DATA ADDED SUCCESSFULLY 🟡🟡🟡")
 
             # Determine QR code colors based on photo shape
-            is_fullpage = session and session.photo_shape == 'fullpage'
-            if is_fullpage:
-                fill_color = "#808080"  # Gray
-                back_color = "#F0F0F0"  # Light gray background
-            else:
-                fill_color = "black"
-                back_color = "white"
+            is_fullpage = session and session.photo_shape == "fullpage"
+            fill_color = "#8b8888" if is_fullpage else "black"
+            back_color = "white"
 
             # Create QR code with appropriate colors and size based on mode
-            qr_image = qr.make_image(fill_color=fill_color, back_color=back_color)
+            qr_image = qr.make_image(
+                fill_color=fill_color, back_color=back_color
+            ).convert("RGBA")
 
             if is_fullpage:
                 # Footer layout: QR code positioned after waveform
@@ -455,24 +483,14 @@ class VisualPDFGenerator:
                 qr_x = placeholder["x"]
                 qr_y = placeholder["y"]
 
-            # Convert to RGBA and make white/light gray pixels transparent
-            qr_image = qr_image.convert("RGBA")
-
-            # Create transparent version
+            # Remove light background pixels to let the faded photo show through
             data = qr_image.getdata()
             new_data = []
             for item in data:
-                # Change all white/light gray pixels to transparent
-                if item[0] > 250 and item[1] > 250 and item[2] > 250:
-                    new_data.append((255, 255, 255, 0))  # Make white pixels transparent
-                elif is_fullpage and item[0] > 230 and item[1] > 230 and item[2] > 230:
-                    # Make light gray background transparent for fullpage
+                if item[0] >= 230 and item[1] >= 230 and item[2] >= 230:
                     new_data.append((255, 255, 255, 0))
                 else:
-                    new_data.append(
-                        (item[0], item[1], item[2], 255)
-                    )  # Keep colored pixels opaque
-
+                    new_data.append((item[0], item[1], item[2], 255))
             qr_image.putdata(new_data)
 
             # Paste QR code with transparency mask

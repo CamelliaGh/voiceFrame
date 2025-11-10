@@ -524,16 +524,19 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
         {/* Manual Preview Section */}
         <div className="lg:sticky lg:top-8 lg:h-fit animate-slide-in-right">
           <div className="card">
-            <div className="flex items-center justify-between mb-4">
-              <div>
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
+              <div className="space-y-1 text-left">
                 <h3 className="text-lg font-semibold text-gray-900">Poster Preview</h3>
                 {pdfSize && (
                   <p className="text-sm text-gray-600 mt-1">
                     Size: {pdfSize.replace('_', ' ')}
                   </p>
                 )}
+                <p className="text-xs text-gray-500">
+                  After tweaking your settings on the left, press Refresh Preview to see the latest design.
+                </p>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center justify-end gap-2">
                 {shouldUseImagePreview() && previewUrl && !previewLoading && !previewError && (
                   <button
                     onClick={() => setShowMobileModal(true)}
@@ -546,10 +549,10 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
                 <button
                   onClick={generatePreview}
                   disabled={previewLoading || !session}
-                  className="btn-secondary flex items-center space-x-2 text-sm"
+                  className="btn-secondary flex items-center justify-center space-x-2 text-sm w-full sm:w-auto"
                 >
                   <RefreshCw className={`w-4 h-4 ${previewLoading ? 'animate-spin' : ''}`} />
-                  <span className="hidden sm:inline">Refresh</span>
+                  <span>Refresh Preview</span>
                 </button>
               </div>
             </div>
@@ -605,7 +608,7 @@ export default function CustomizationPanel({ onNext, onBack }: CustomizationPane
                   <div className="text-center text-gray-500">
                     <Eye className="w-12 h-12 mx-auto mb-2" />
                     <p>Preview not available</p>
-                    <p className="text-xs mt-1">Click "Refresh" to generate preview</p>
+                    <p className="text-xs mt-1">Click "Refresh Preview" to generate a new look.</p>
                   </div>
                 </div>
               )}

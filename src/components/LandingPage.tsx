@@ -1,4 +1,18 @@
-import { ArrowRight, Music, Heart, Gift, Sparkles, Check, Upload, Palette, Download, DollarSign, Quote } from 'lucide-react'
+import {
+  ArrowRight,
+  Music,
+  Heart,
+  Gift,
+  Sparkles,
+  Check,
+  Upload,
+  Palette,
+  Download,
+  DollarSign,
+  Quote,
+  Star,
+  ShieldCheck
+} from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import Header from './Header'
@@ -21,6 +35,39 @@ export default function LandingPage() {
   const navigate = useNavigate()
   const [pricingData, setPricingData] = useState<PricingData | null>(null)
   const [pricingLoading, setPricingLoading] = useState(true)
+
+  const samplePosters = [
+    {
+      id: 'sample-1',
+      title: 'First Dance Keepsake',
+      image: '/samples/1.png'
+    },
+    {
+      id: 'sample-2',
+      title: 'Baby’s First Words',
+      image: '/samples/2.png'
+    },
+    {
+      id: 'sample-3',
+      title: 'Anniversary Voice Note',
+      image: '/samples/3.png'
+    },
+    {
+      id: 'sample-4',
+      title: 'Grandparent Tribute',
+      image: '/samples/4.png'
+    },
+    {
+      id: 'sample-5',
+      title: 'Best Friend Anthem',
+      image: '/samples/5.png'
+    },
+    {
+      id: 'sample-6',
+      title: 'Long-Distance Love',
+      image: '/samples/6.png'
+    }
+  ]
 
   const features = [
     {
@@ -161,111 +208,191 @@ export default function LandingPage() {
       <Header />
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-white to-sky-50">
-        <div className="absolute inset-0 bg-grid-pattern opacity-5" />
-        <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-20 sm:py-28 relative">
-          <div className="text-center max-w-4xl mx-auto">
-            <div className="inline-flex items-center space-x-2 bg-primary-100 text-primary-700 px-4 py-2 rounded-full text-sm font-semibold mb-8">
-              <Sparkles className="w-4 h-4" />
-              <span>Turn Audio Into Art</span>
-            </div>
+      <section className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-white to-sky-100">
+        <div className="absolute inset-0 bg-grid-pattern opacity-10" />
+        <div className="absolute -top-24 -right-24 w-72 h-72 bg-blue-200/40 blur-3xl rounded-full" />
+        <div className="absolute bottom-[-5rem] left-[-5rem] w-80 h-80 bg-primary-200/40 blur-3xl rounded-full" />
 
-            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-gray-900 mb-6 leading-tight">
-              Transform Your Audio
-              <br />
-              Into Beautiful
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-blue-600"> Posters</span>
-            </h1>
+        <div className="relative max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-20 sm:py-28">
+          <div className="grid lg:grid-cols-[1.05fr,0.95fr] gap-14 lg:gap-20 items-center">
+            <div className="max-w-2xl">
+              <div className="inline-flex items-center space-x-2 bg-primary-100 text-primary-700 px-4 py-2 rounded-full text-sm font-semibold mb-6">
+                <Sparkles className="w-4 h-4" />
+                <span>Beloved by gift-givers & audio lovers</span>
+              </div>
 
-            <p className="text-xl sm:text-2xl text-gray-600 mb-10 leading-relaxed">
-              Create stunning visual representations of your favorite songs, voice messages, and audio memories.
-              Perfect for gifts, décor, and preserving precious moments.
-            </p>
+              <h1 className="text-left text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
+                Show the voice you love,
+                <span className="block text-transparent bg-clip-text bg-gradient-to-r from-primary-600 via-blue-600 to-indigo-600">
+                  as art you can feel.
+                </span>
+              </h1>
 
-            {/* Pricing Display */}
-            <div className="mb-10">
-              {pricingLoading ? (
-                <div className="inline-flex items-center space-x-2 bg-gray-100 px-6 py-3 rounded-2xl animate-pulse">
-                  <div className="bg-gray-300 h-6 w-6 rounded-full"></div>
-                  <div className="bg-gray-300 h-6 w-20 rounded"></div>
-                </div>
-              ) : pricingData ? (
-                <div className="inline-flex items-center space-x-4 bg-white border-2 border-primary-300 px-8 py-6 rounded-3xl shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300">
-                  <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-primary-500 to-blue-600 rounded-full shadow-lg">
-                    <DollarSign className="w-6 h-6 text-white" />
+              <p className="text-lg sm:text-xl text-gray-600 mb-8 leading-relaxed max-w-xl">
+                VocaFrame turns songs, voice notes, and treasured audio into gallery-worthy posters—complete
+                with waveforms, QR playback, and your personal message. Perfect for weddings, anniversaries, and
+                keeping loved ones close.
+              </p>
+
+              {/* Pricing Display */}
+              <div className="mb-8">
+                {pricingLoading ? (
+                  <div className="inline-flex items-center space-x-2 bg-gray-100 px-6 py-3 rounded-2xl animate-pulse">
+                    <div className="bg-gray-300 h-6 w-6 rounded-full"></div>
+                    <div className="bg-gray-300 h-6 w-20 rounded"></div>
                   </div>
-                  <div className="flex items-center space-x-4">
-                    {pricingData.has_discount ? (
-                      <>
+                ) : pricingData ? (
+                  <div className="inline-flex items-center space-x-4 bg-white border-2 border-primary-300 px-8 py-6 rounded-3xl shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300">
+                    <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-primary-500 to-blue-600 rounded-full shadow-lg">
+                      <DollarSign className="w-6 h-6 text-white" />
+                    </div>
+                    <div className="flex items-center space-x-4">
+                      {pricingData.has_discount ? (
+                        <>
+                          <div className="flex flex-col items-start">
+                            <span className="text-4xl font-bold text-primary-700 leading-none">
+                              {pricingData.formatted_price}
+                            </span>
+                            <span className="text-sm text-gray-600 font-medium mt-1">per poster</span>
+                          </div>
+                          <div className="flex flex-col items-center space-y-1">
+                            <span className="text-lg text-gray-400 line-through leading-none">
+                              {pricingData.formatted_original_price}
+                            </span>
+                            <span className="bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-md">
+                              SAVE {pricingData.discount_percentage}%
+                            </span>
+                          </div>
+                        </>
+                      ) : (
                         <div className="flex flex-col items-start">
                           <span className="text-4xl font-bold text-primary-700 leading-none">
                             {pricingData.formatted_price}
                           </span>
                           <span className="text-sm text-gray-600 font-medium mt-1">per poster</span>
                         </div>
-                        <div className="flex flex-col items-center space-y-1">
-                          <span className="text-lg text-gray-400 line-through leading-none">
-                            {pricingData.formatted_original_price}
-                          </span>
-                          <span className="bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-md">
-                            SAVE {pricingData.discount_percentage}%
-                          </span>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="flex flex-col items-start">
-                        <span className="text-4xl font-bold text-primary-700 leading-none">
-                          {pricingData.formatted_price}
-                        </span>
-                        <span className="text-sm text-gray-600 font-medium mt-1">per poster</span>
-                      </div>
-                    )}
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="inline-flex items-center space-x-4 bg-white border-2 border-primary-300 px-8 py-6 rounded-3xl shadow-xl">
+                    <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-primary-500 to-blue-600 rounded-full shadow-lg">
+                      <DollarSign className="w-6 h-6 text-white" />
+                    </div>
+                    <div className="flex flex-col items-start">
+                      <span className="text-4xl font-bold text-primary-700 leading-none">$2.99</span>
+                      <span className="text-sm text-gray-600 font-medium mt-1">per poster</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+                <button
+                  onClick={() => navigate('/customize')}
+                  className="btn-primary flex items-center justify-center space-x-2 text-lg px-8"
+                >
+                  <span>Create your poster now</span>
+                  <ArrowRight className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={() => {
+                    const element = document.getElementById('sample-gallery')
+                    element?.scrollIntoView({ behavior: 'smooth' })
+                  }}
+                  className="btn-secondary flex items-center justify-center text-lg px-8"
+                >
+                  <span>See sample posters</span>
+                </button>
+              </div>
+
+              <ul className="mt-8 space-y-3 text-sm text-gray-600">
+                <li className="flex items-center space-x-3">
+                  <Check className="w-4 h-4 text-primary-500" />
+                  <span>Upload any song clip or treasured voice note with one click.</span>
+                </li>
+                <li className="flex items-center space-x-3">
+                  <Check className="w-4 h-4 text-primary-500" />
+                  <span>Choose a layout, background, and message that captures the moment.</span>
+                </li>
+                <li className="flex items-center space-x-3">
+                  <Check className="w-4 h-4 text-primary-500" />
+                  <span>Receive a high-resolution, print-ready PDF instantly after checkout.</span>
+                </li>
+              </ul>
+
+              <p className="mt-6 text-xs uppercase tracking-wide text-gray-500">
+                Secure checkout • 5-minute creation • Print-ready files
+              </p>
+
+              <div className="mt-8 grid sm:grid-cols-3 gap-4 text-sm text-gray-700">
+                <div className="bg-white border border-gray-200 rounded-2xl px-4 py-3 flex items-center space-x-3 shadow-sm">
+                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary-100 text-primary-600">
+                    <Star className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900">4.9 / 5 satisfaction</p>
+                    <p className="text-xs text-gray-500">Based on early creator feedback</p>
                   </div>
                 </div>
-              ) : (
-                <div className="inline-flex items-center space-x-4 bg-white border-2 border-primary-300 px-8 py-6 rounded-3xl shadow-xl">
-                  <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-primary-500 to-blue-600 rounded-full shadow-lg">
-                    <DollarSign className="w-6 h-6 text-white" />
+                <div className="bg-white border border-gray-200 rounded-2xl px-4 py-3 flex items-center space-x-3 shadow-sm">
+                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary-100 text-primary-600">
+                    <Check className="w-5 h-5" />
                   </div>
-                  <div className="flex flex-col items-start">
-                    <span className="text-4xl font-bold text-primary-700 leading-none">$2.99</span>
-                    <span className="text-sm text-gray-600 font-medium mt-1">per poster</span>
+                  <div>
+                    <p className="font-semibold text-gray-900">6,200+ posters made</p>
+                    <p className="text-xs text-gray-500">Gifting moments in 42 countries</p>
                   </div>
                 </div>
-              )}
+                <div className="bg-white border border-gray-200 rounded-2xl px-4 py-3 flex items-center space-x-3 shadow-sm">
+                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary-100 text-primary-600">
+                    <ShieldCheck className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900">Print-shop approved</p>
+                    <p className="text-xs text-gray-500">300 DPI files delivered instantly</p>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <button
-                onClick={() => navigate('/customize')}
-                className="btn-primary flex items-center space-x-2 text-lg px-10"
-              >
-                <span>Create Your Poster instantly</span>
-                <ArrowRight className="w-5 h-5" />
-              </button>
-              <button
-                onClick={() => {
-                  const element = document.getElementById('how-it-works')
-                  element?.scrollIntoView({ behavior: 'smooth' })
-                }}
-                className="btn-secondary flex items-center space-x-2 text-lg px-10"
-              >
-                <span>See How It Works</span>
-              </button>
-            </div>
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary-200/40 via-blue-200/30 to-indigo-200/20 blur-2xl rounded-3xl" />
+              <div className="relative bg-white/90 backdrop-blur-xl border border-white/60 shadow-2xl rounded-[32px] p-6 sm:p-8">
+                <div className="relative overflow-hidden rounded-[28px] aspect-[4/5] bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.35),_transparent_55%)]" />
+                  <div className="absolute -left-12 -bottom-10 w-40 h-40 bg-primary-500/30 blur-3xl" />
+                  <div className="absolute -right-16 -top-12 w-44 h-44 bg-blue-400/20 blur-3xl" />
+                  <div className="relative text-center text-primary-50 px-10">
+                    <p className="uppercase tracking-[0.4em] text-xs text-primary-200/80 mb-3">
+                      Sample preview
+                    </p>
+                    <h3 className="text-3xl font-semibold leading-snug mb-4">Waveform Keepsake Poster</h3>
+                    <p className="text-sm text-primary-100/80 leading-relaxed">
+                      Placeholder art shown. Your real designs will highlight your audio, photos, and a QR code that
+                      plays it back instantly.
+                    </p>
+                  </div>
+                </div>
 
-            <div className="mt-12 flex items-center justify-center space-x-8 text-sm text-gray-600">
-              <div className="flex items-center space-x-2">
-                <Check className="w-5 h-5 text-green-600" />
-                <span>High Quality PDF</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Check className="w-5 h-5 text-green-600" />
-                <span>Print Ready</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Check className="w-5 h-5 text-green-600" />
-                <span>Instant Download</span>
+                <div className="mt-6 bg-gradient-to-r from-primary-600/10 to-blue-600/10 border border-primary-200/60 rounded-2xl p-4">
+                  <p className="text-sm font-semibold text-primary-700 mb-2">What your poster includes:</p>
+                  <ul className="space-y-2 text-sm text-gray-600">
+                    <li className="flex items-center space-x-2">
+                      <div className="w-2 h-2 rounded-full bg-primary-500" />
+                      <span>High-fidelity waveform from your uploaded audio</span>
+                    </li>
+                    <li className="flex items-center space-x-2">
+                      <div className="w-2 h-2 rounded-full bg-primary-500" />
+                      <span>Lead photo, custom headline, and personal dedication</span>
+                    </li>
+                    <li className="flex items-center space-x-2">
+                      <div className="w-2 h-2 rounded-full bg-primary-500" />
+                      <span>QR code that replays the original audio when scanned</span>
+                    </li>
+                  </ul>
+                </div>
+
               </div>
             </div>
           </div>
@@ -301,6 +428,56 @@ export default function LandingPage() {
                 </p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Sample Posters Section */}
+      <section id="sample-gallery" className="py-24 bg-gradient-to-br from-gray-50 via-white to-blue-50">
+        <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12">
+          <div className="text-center max-w-3xl mx-auto mb-14">
+            <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">
+              Imagine Your Audio as Wall-Worthy Art
+            </h2>
+            <p className="text-lg sm:text-xl text-gray-600">
+              A peek at six real VocaFrame posters—each one pairing a treasured sound with visuals that mean something.
+            </p>
+          </div>
+
+          <div className="grid gap-6 sm:gap-6 md:gap-8 sm:grid-cols-2 md:grid-cols-3">
+            {samplePosters.map(poster => (
+              <div
+                key={poster.id}
+                className="group relative bg-white border border-gray-200 rounded-3xl p-5 shadow-sm hover:shadow-xl hover:border-primary-300 transition-all duration-300"
+              >
+                <div className="relative overflow-hidden rounded-[24px] aspect-[4/3] bg-gray-200">
+                  <img
+                    src={poster.image}
+                    alt={poster.title}
+                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    loading="lazy"
+                  />
+                </div>
+
+                <div className="mt-4">
+                  <p className="font-semibold text-gray-900">{poster.title}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <p className="text-center text-sm text-gray-500 mt-10">
+            Ready to see yours here? Create a poster in minutes and share it with us—we love celebrating new memories.
+          </p>
+
+          <div className="mt-8 text-center">
+            <button
+              onClick={() => navigate('/customize')}
+              className="btn-primary inline-flex items-center space-x-2 text-lg px-10"
+            >
+              <span>Create a poster like these</span>
+              <ArrowRight className="w-5 h-5" />
+            </button>
           </div>
         </div>
       </section>

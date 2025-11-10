@@ -1,9 +1,11 @@
-import secrets
-from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
+import secrets
+
+from sqlalchemy.orm import Session
 
 from ..models import SessionModel
+from ..config import settings
 
 class SessionManager:
     """Manages user sessions for file uploads and customization"""
@@ -94,8 +96,12 @@ class SessionManager:
 
     def cleanup_expired_sessions(self, db: Session) -> int:
         """Remove expired sessions and their associated files"""
+        now = datetime.utcnow()
+        retention_cutoff = now - timedelta(seconds=settings.qr_code_preview_expiration)
+
         expired_sessions = db.query(SessionModel).filter(
-            SessionModel.expires_at <= datetime.utcnow()
+            SessionModel.created_at <= retention_cutoff,
+            SessionModel.expires_at <= now
         ).all()
 
         count = len(expired_sessions)

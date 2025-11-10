@@ -66,7 +66,7 @@ repos:
       - id: trailing-whitespace
       - id: check-merge-conflict
       - id: check-added-large-files
-        args: [--maxkb=1000]
+        args: [--maxkb=1500]
 
   # Docker file validation
   - repo: https://github.com/hadolint/hadolint
