@@ -78,6 +78,9 @@ class StripeService:
                     raise HTTPException(status_code=500, detail=f"Promotion code validation failed: {str(e)}")
 
             # Calculate final amount after applying discount
+            # Stripe minimum charge amount for USD (in cents)
+            STRIPE_MINIMUM_CHARGE = 50  # $0.50 USD
+
             if promotion_code and promotion_code_obj:
                 coupon = promotion_code_obj.coupon
                 if coupon.amount_off:
@@ -92,6 +95,18 @@ class StripeService:
                 else:
                     final_amount = amount
                     print(f"WARNING: Promotion code has no discount value")
+
+                # Check if discount brings amount below Stripe's minimum
+                if final_amount > 0 and final_amount < STRIPE_MINIMUM_CHARGE:
+                    print(f"WARNING: Discounted amount ${final_amount/100:.2f} is below Stripe minimum ${STRIPE_MINIMUM_CHARGE/100:.2f}. Clamping to minimum.")
+                    final_amount = STRIPE_MINIMUM_CHARGE
+                elif final_amount == 0:
+                    # For 100% discounts (free orders), reject with helpful message
+                    print(f"ERROR: 100% discount results in $0.00 charge, which Stripe doesn't allow")
+                    raise HTTPException(
+                        status_code=400,
+                        detail="This discount code makes the order free. Please contact support for free order processing."
+                    )
             else:
                 final_amount = amount
 

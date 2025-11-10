@@ -5,6 +5,7 @@ Tests for discount code functionality
 import pytest
 from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
+from fastapi.exceptions import HTTPException
 from sqlalchemy.orm import Session
 
 from backend.main import app
@@ -251,9 +252,8 @@ class TestStripeServiceDiscountCodes:
             assert call_args["metadata"]["discount_applied"] == "59"  # 20% of 299 = int(59.8) = 59
 
     def test_create_payment_intent_with_100_percent_discount(self):
-        """Test creating payment intent with 100% discount (free order)"""
-        with patch('stripe.PaymentIntent') as mock_payment_intent, \
-             patch('stripe.PromotionCode') as mock_promotion_code:
+        """Test creating payment intent with 100% discount (free order) - should be rejected"""
+        with patch('stripe.PromotionCode') as mock_promotion_code:
 
             # Mock promotion code lookup for 100% discount
             mock_coupon = MagicMock()
@@ -270,11 +270,46 @@ class TestStripeServiceDiscountCodes:
 
             mock_promotion_code.list.return_value = MagicMock(data=[mock_promo])
 
-            # Mock successful payment intent creation with 0 amount (100% discount)
+            service = StripeService()
+
+            # 100% discount should be rejected with helpful error message
+            with pytest.raises(HTTPException) as exc_info:
+                service.create_payment_intent(
+                    amount=299,
+                    email="test@example.com",
+                    order_id="order_100",
+                    promotion_code="FREE100"
+                )
+
+            assert exc_info.value.status_code == 400
+            assert "free" in exc_info.value.detail.lower()
+            assert "contact support" in exc_info.value.detail.lower()
+
+    def test_create_payment_intent_with_discount_below_minimum(self):
+        """Test creating payment intent with discount that brings amount below Stripe minimum"""
+        with patch('stripe.PaymentIntent') as mock_payment_intent, \
+             patch('stripe.PromotionCode') as mock_promotion_code:
+
+            # Mock promotion code lookup that would bring price to $0.20 (below $0.50 minimum)
+            mock_coupon = MagicMock()
+            mock_coupon.id = "coupon_bigdiscount"
+            mock_coupon.amount_off = None
+            mock_coupon.percent_off = 95  # 95% off of $2.99 = $0.15 (below $0.50 minimum)
+
+            mock_promo = MagicMock()
+            mock_promo.coupon = mock_coupon
+            mock_promo.id = "promo_bigdiscount"
+            mock_promo.max_redemptions = None
+            mock_promo.times_redeemed = 0
+            mock_promo.expires_at = None
+
+            mock_promotion_code.list.return_value = MagicMock(data=[mock_promo])
+
+            # Mock successful payment intent creation with minimum charge
             mock_payment_intent.create.return_value = {
-                "id": "pi_100",
-                "client_secret": "pi_100_secret",
-                "amount": 0,  # 100% discount results in 0
+                "id": "pi_minimum",
+                "client_secret": "pi_minimum_secret",
+                "amount": 50,  # Clamped to $0.50 minimum
                 "currency": "usd"
             }
 
@@ -282,24 +317,18 @@ class TestStripeServiceDiscountCodes:
             result = service.create_payment_intent(
                 amount=299,
                 email="test@example.com",
-                order_id="order_100",
-                promotion_code="FREE100"
+                order_id="order_minimum",
+                promotion_code="BIGDISCOUNT"
             )
 
-            assert result["id"] == "pi_100"
-            assert result["client_secret"] == "pi_100_secret"
+            assert result["id"] == "pi_minimum"
+            assert result["client_secret"] == "pi_minimum_secret"
 
-            # Verify payment intent was created with 0 amount (100% discount)
+            # Verify payment intent was created with minimum charge (50 cents)
             mock_payment_intent.create.assert_called_once()
             call_args = mock_payment_intent.create.call_args[1]
-            assert call_args["amount"] == 0  # 100% discount = 0
-            assert call_args["metadata"]["promotion_code"] == "FREE100"
-            assert call_args["metadata"]["promotion_code_id"] == "promo_100"
-            assert call_args["metadata"]["coupon_id"] == "coupon_100"
-            assert call_args["metadata"]["coupon_type"] == "percent_off"
-            assert call_args["metadata"]["coupon_value"] == "100"
-            assert call_args["metadata"]["original_amount"] == "299"
-            assert call_args["metadata"]["discount_applied"] == "299"  # Full discount
+            assert call_args["amount"] == 50  # Clamped to Stripe minimum
+            assert call_args["metadata"]["promotion_code"] == "BIGDISCOUNT"
 
     def test_create_payment_intent_without_promotion_code(self):
         """Test creating payment intent without promotion code"""
