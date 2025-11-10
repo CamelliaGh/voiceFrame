@@ -84,6 +84,7 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
     message?: string
   } | null>(null)
   const [discountLoading, setDiscountLoading] = useState(false)
+  const [finalAmount, setFinalAmount] = useState<number | null>(null) // Actual amount after discount from backend
 
   // Fetch current price from API
   useEffect(() => {
@@ -144,11 +145,12 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
       if (!stripe || !session || !email || email.length < 5) {
         setClientSecret(null)
         setOrderId(null)
+        setFinalAmount(null)
         return
       }
 
       try {
-        const { client_secret, order_id } = await createPaymentIntent(
+        const { client_secret, order_id, amount } = await createPaymentIntent(
           session.session_token,
           email,
           'standard',
@@ -156,8 +158,10 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
         )
         setClientSecret(client_secret)
         setOrderId(order_id)
+        setFinalAmount(amount) // Store the actual amount from backend (after discount)
       } catch (err) {
         console.error('Failed to create payment intent:', err)
+        setFinalAmount(null)
       }
     }
 
@@ -253,7 +257,7 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
 
       // Always create a new payment intent for card payments to avoid reuse issues
       // (Wallet payments can reuse the intent created on email entry)
-      const { client_secret, order_id } = await createPaymentIntent(
+      const { client_secret, order_id, amount } = await createPaymentIntent(
         session.session_token,
         email,
         'standard',
@@ -261,6 +265,7 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
       )
       paymentClientSecret = client_secret
       paymentOrderId = order_id
+      setFinalAmount(amount) // Update amount in case discount was applied
 
       // Confirm payment with card
       const cardElement = elements.getElement(CardElement)
@@ -492,6 +497,11 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
                       ✓ {discountInfo.discount_type === 'percentage'
                         ? `${discountInfo.discount_value}% off`
                         : `$${discountInfo.discount_value ? (discountInfo.discount_value / 100).toFixed(2) : '0.00'} off`}
+                      {finalAmount && selectedPrice && finalAmount < selectedPrice.price && (
+                        <span className="ml-1">
+                          (Save ${((selectedPrice.price - finalAmount) / 100).toFixed(2)})
+                        </span>
+                      )}
                     </p>
                   ) : (
                     <p className="text-red-600 text-sm">
@@ -506,7 +516,7 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
             {email && email.length > 5 && selectedPrice && (
               <div className="space-y-3">
                 <PaymentRequestButton
-                  amount={selectedPrice.price}
+                  amount={finalAmount || selectedPrice.price}
                   currency="USD"
                   country="US"
                   email={email}
@@ -577,10 +587,10 @@ export default function PricingSection({ onBack }: PricingSectionProps) {
                 <>
                   <CreditCard className="w-4 h-4" />
                   <span>
-                    Pay {priceLoading ? '...' : `$${selectedPrice ? (selectedPrice.price / 100).toFixed(2) : '0.00'}`}
-                    {!priceLoading && selectedPrice?.hasDiscount && (
+                    Pay {priceLoading ? '...' : `$${finalAmount ? (finalAmount / 100).toFixed(2) : selectedPrice ? (selectedPrice.price / 100).toFixed(2) : '0.00'}`}
+                    {!priceLoading && finalAmount && selectedPrice && finalAmount < selectedPrice.price && (
                       <span className="ml-1 text-xs opacity-75">
-                        (was ${selectedPrice.originalPrice ? (selectedPrice.originalPrice / 100).toFixed(2) : '0.00'})
+                        (was ${(selectedPrice.price / 100).toFixed(2)})
                       </span>
                     )}
                   </span>
