@@ -152,6 +152,9 @@ class StripeService:
             print(f"DEBUG: Returning PaymentIntent: {pi_id}")
             return payment_intent
 
+        except HTTPException:
+            # Re-raise HTTP exceptions as-is (e.g., from discount validation)
+            raise
         except stripe.error.StripeError as e:
             raise HTTPException(status_code=400, detail=f"Payment creation failed: {str(e)}")
         except Exception as e:
