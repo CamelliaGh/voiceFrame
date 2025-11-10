@@ -36,6 +36,8 @@ export default function LandingPage() {
   const [pricingData, setPricingData] = useState<PricingData | null>(null)
   const [pricingLoading, setPricingLoading] = useState(true)
 
+  const heroSampleImage = '/samples/main%20sample.jpg'
+
   const samplePosters = [
     {
       id: 'sample-1',
@@ -359,18 +361,19 @@ export default function LandingPage() {
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-br from-primary-200/40 via-blue-200/30 to-indigo-200/20 blur-2xl rounded-3xl" />
               <div className="relative bg-white/90 backdrop-blur-xl border border-white/60 shadow-2xl rounded-[32px] p-6 sm:p-8">
-                <div className="relative overflow-hidden rounded-[28px] aspect-[4/5] bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.35),_transparent_55%)]" />
-                  <div className="absolute -left-12 -bottom-10 w-40 h-40 bg-primary-500/30 blur-3xl" />
-                  <div className="absolute -right-16 -top-12 w-44 h-44 bg-blue-400/20 blur-3xl" />
-                  <div className="relative text-center text-primary-50 px-10">
-                    <p className="uppercase tracking-[0.4em] text-xs text-primary-200/80 mb-3">
-                      Sample preview
-                    </p>
-                    <h3 className="text-3xl font-semibold leading-snug mb-4">Waveform Keepsake Poster</h3>
-                    <p className="text-sm text-primary-100/80 leading-relaxed">
-                      Placeholder art shown. Your real designs will highlight your audio, photos, and a QR code that
-                      plays it back instantly.
+                <div className="relative overflow-hidden rounded-[28px] aspect-[4/5] bg-gray-200 shadow-inner">
+                  <img
+                    src={heroSampleImage}
+                    alt="Real VocaFrame poster example showing an engagement moment"
+                    className="h-full w-full object-cover"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                  <div className="absolute bottom-6 left-6 right-6 text-white">
+
+                    <h3 className="text-2xl font-semibold leading-snug">“Our Song” Engagement Poster</h3>
+                    <p className="text-sm text-white/80 mt-2 leading-relaxed">
+                      A custom waveform and QR code preserve the proposal audio so they can replay the moment forever.
                     </p>
                   </div>
                 </div>
