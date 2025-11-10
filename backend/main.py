@@ -1058,6 +1058,9 @@ async def create_payment_intent(
             order_id=order_id,
         )
 
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is (e.g., from discount validation)
+        raise
     except Exception as e:
         logger.error(f"Payment creation failed for session {token}: {str(e)}", exc_info=True)
         raise HTTPException(

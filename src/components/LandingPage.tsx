@@ -39,12 +39,12 @@ export default function LandingPage() {
   const samplePosters = [
     {
       id: 'sample-1',
-      title: 'First Dance Keepsake',
+      title: 'Father day gift',
       image: '/samples/1.png'
     },
     {
       id: 'sample-2',
-      title: 'Baby’s First Words',
+      title: 'A gift for your abroad kid',
       image: '/samples/2.png'
     },
     {
@@ -54,17 +54,17 @@ export default function LandingPage() {
     },
     {
       id: 'sample-4',
-      title: 'Grandparent Tribute',
+      title: 'Long distance love',
       image: '/samples/4.png'
     },
     {
       id: 'sample-5',
-      title: 'Best Friend Anthem',
+      title: 'Memorial gift',
       image: '/samples/5.png'
     },
     {
       id: 'sample-6',
-      title: 'Long-Distance Love',
+      title: 'Pregnancy announcement',
       image: '/samples/6.png'
     }
   ]
