@@ -67,7 +67,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
                     "font-src 'self' https://fonts.gstatic.com data:; "
                     "img-src 'self' data: https: blob:; "
                     "media-src 'self' https://*.s3.amazonaws.com https://*.s3.us-east-2.amazonaws.com blob:; "
-                    "connect-src 'self' https://api.stripe.com https://api.sendgrid.com https://cloudflareinsights.com https://www.google-analytics.com https://analytics.google.com https://www.clarity.ms; "
+                    "connect-src 'self' https://api.stripe.com https://api.sendgrid.com https://cloudflareinsights.com https://www.google-analytics.com https://analytics.google.com https://www.clarity.ms https://i.clarity.ms; "
                     "frame-src https://js.stripe.com https://*.s3.amazonaws.com https://*.s3.us-east-2.amazonaws.com; "
                     "object-src 'none'; "
                     "base-uri 'self'; "

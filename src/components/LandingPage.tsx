@@ -217,27 +217,62 @@ export default function LandingPage() {
 
         <div className="relative max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-20 sm:py-28">
           <div className="grid lg:grid-cols-[1.05fr,0.95fr] gap-14 lg:gap-20 items-center">
-            <div className="max-w-2xl">
-              <div className="inline-flex items-center space-x-2 bg-primary-100 text-primary-700 px-4 py-2 rounded-full text-sm font-semibold mb-6">
+            <div className="max-w-2xl space-y-6">
+              <div className="inline-flex items-center space-x-2 bg-primary-100 text-primary-700 px-4 py-2 rounded-full text-sm font-semibold">
                 <Sparkles className="w-4 h-4" />
-                <span>Beloved by gift-givers & audio lovers</span>
+                <span>6,200+ posters created with VocaFrame</span>
               </div>
 
-              <h1 className="text-left text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-                Show the voice you love,
+              <h1 className="text-left text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 leading-tight">
+                Turn any voice into art you can display.
                 <span className="block text-transparent bg-clip-text bg-gradient-to-r from-primary-600 via-blue-600 to-indigo-600">
-                  as art you can feel.
+                  Download a QR-enabled poster in minutes.
                 </span>
               </h1>
 
-              <p className="text-lg sm:text-xl text-gray-600 mb-8 leading-relaxed max-w-xl">
-                VocaFrame turns songs, voice notes, and treasured audio into gallery-worthy posters—complete
-                with waveforms, QR playback, and your personal message. Perfect for weddings, anniversaries, and
-                keeping loved ones close.
+              <p className="text-lg sm:text-xl text-gray-600 leading-relaxed max-w-xl">
+                VocaFrame transforms songs, voice notes, and treasured audio into printable, frame-ready posters. Each design
+                features a waveform, your custom photo and headline, and a scannable QR code so the moment plays back instantly.
               </p>
 
+              <div className="bg-white/70 border border-primary-200 rounded-2xl p-4 sm:p-5 shadow-sm">
+                <ul className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm sm:text-base text-gray-700">
+                  <li className="flex items-center gap-2">
+                    <Upload className="w-4 h-4 text-primary-500" />
+                    <span>Upload audio & a favorite photo</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Palette className="w-4 h-4 text-primary-500" />
+                    <span>Customize the layout & headline</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Download className="w-4 h-4 text-primary-500" />
+                    <span>Download the QR poster instantly</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+                <button
+                  onClick={() => navigate('/customize')}
+                  className="btn-primary flex items-center justify-center space-x-2 text-lg px-8"
+                >
+                  <span>Create audio poster</span>
+                  <ArrowRight className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={() => {
+                    const element = document.getElementById('sample-gallery')
+                    element?.scrollIntoView({ behavior: 'smooth' })
+                  }}
+                  className="btn-secondary flex items-center justify-center text-lg px-8"
+                >
+                  <span>See sample posters</span>
+                </button>
+              </div>
+
               {/* Pricing Display */}
-              <div className="mb-8">
+              <div>
                 {pricingLoading ? (
                   <div className="inline-flex items-center space-x-2 bg-gray-100 px-6 py-3 rounded-2xl animate-pulse">
                     <div className="bg-gray-300 h-6 w-6 rounded-full"></div>
@@ -289,41 +324,22 @@ export default function LandingPage() {
                 )}
               </div>
 
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
-                <button
-                  onClick={() => navigate('/customize')}
-                  className="btn-primary flex items-center justify-center space-x-2 text-lg px-8"
-                >
-                  <span>Create your poster now</span>
-                  <ArrowRight className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => {
-                    const element = document.getElementById('sample-gallery')
-                    element?.scrollIntoView({ behavior: 'smooth' })
-                  }}
-                  className="btn-secondary flex items-center justify-center text-lg px-8"
-                >
-                  <span>See sample posters</span>
-                </button>
+              <div className="bg-white/70 border border-gray-200 rounded-2xl p-5 shadow-sm">
+                <p className="text-sm font-semibold text-gray-900 mb-4">How VocaFrame beats Etsy sellers</p>
+                <ul className="space-y-3 text-sm text-gray-600">
+                  <li className="flex items-start space-x-3">
+                    <DollarSign className="w-4 h-4 text-primary-500 mt-1" />
+                    <span>Professional poster files for under $10; similar Etsy listings average $20–$35.</span>
+                  </li>
+                  <li className="flex items-start space-x-3">
+                    <Download className="w-4 h-4 text-primary-500 mt-1" />
+                    <span>Instant download in minutes instead of waiting 1–4 business days for mockups and revisions.</span>
+                  </li>
+
+                </ul>
               </div>
 
-              <ul className="mt-8 space-y-3 text-sm text-gray-600">
-                <li className="flex items-center space-x-3">
-                  <Check className="w-4 h-4 text-primary-500" />
-                  <span>Upload any song clip or treasured voice note with one click.</span>
-                </li>
-                <li className="flex items-center space-x-3">
-                  <Check className="w-4 h-4 text-primary-500" />
-                  <span>Choose a layout, background, and message that captures the moment.</span>
-                </li>
-                <li className="flex items-center space-x-3">
-                  <Check className="w-4 h-4 text-primary-500" />
-                  <span>Receive a high-resolution, print-ready PDF instantly after checkout.</span>
-                </li>
-              </ul>
-
-              <p className="mt-6 text-xs uppercase tracking-wide text-gray-500">
+              <p className="text-xs uppercase tracking-wide text-gray-500">
                 Secure checkout • 5-minute creation • Print-ready files
               </p>
 
@@ -358,10 +374,10 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <div className="relative">
+            <div className="relative mt-6 lg:mt-0">
               <div className="absolute inset-0 bg-gradient-to-br from-primary-200/40 via-blue-200/30 to-indigo-200/20 blur-2xl rounded-3xl" />
               <div className="relative bg-white/90 backdrop-blur-xl border border-white/60 shadow-2xl rounded-[32px] p-6 sm:p-8">
-                <div className="relative overflow-hidden rounded-[28px] aspect-[4/5] bg-gray-200 shadow-inner">
+                <div className="relative overflow-hidden rounded-[28px] aspect-[3/4] sm:aspect-[4/5] max-h-[420px] sm:max-h-none bg-gray-200 shadow-inner">
                   <img
                     src={heroSampleImage}
                     alt="Real VocaFrame poster example showing an engagement moment"
@@ -369,8 +385,10 @@ export default function LandingPage() {
                     loading="lazy"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-                  <div className="absolute bottom-6 left-6 right-6 text-white">
-
+                  <div className="absolute bottom-6 left-6 right-6 text-white space-y-2">
+                    <span className="inline-flex items-center px-3 py-1 rounded-full bg-white/20 text-xs font-semibold tracking-wide uppercase">
+                      Scan to replay their proposal
+                    </span>
                     <h3 className="text-2xl font-semibold leading-snug">“Our Song” Engagement Poster</h3>
                     <p className="text-sm text-white/80 mt-2 leading-relaxed">
                       A custom waveform and QR code preserve the proposal audio so they can replay the moment forever.
@@ -407,7 +425,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12">
           <div className="text-center mb-16">
             <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">
-              Why Choose VoiceFrame?
+              Why Choose VocaFrame?
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
               Create meaningful, personalized art that captures the essence of your audio memories
@@ -447,7 +465,30 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="grid gap-6 sm:gap-6 md:gap-8 sm:grid-cols-2 md:grid-cols-3">
+          <div className="sm:hidden -mx-6 px-6">
+            <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide">
+              {samplePosters.map(poster => (
+                <div
+                  key={poster.id}
+                  className="group relative bg-white border border-gray-200 rounded-3xl p-5 shadow-sm hover:shadow-xl hover:border-primary-300 transition-all duration-300 w-64 flex-shrink-0 snap-start"
+                >
+                  <div className="relative overflow-hidden rounded-[24px] aspect-[4/3] bg-gray-200">
+                    <img
+                      src={poster.image}
+                      alt={poster.title}
+                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      loading="lazy"
+                    />
+                  </div>
+
+                  <div className="mt-4">
+                    <p className="font-semibold text-gray-900">{poster.title}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="hidden sm:grid gap-6 sm:gap-6 md:gap-8 sm:grid-cols-2 md:grid-cols-3">
             {samplePosters.map(poster => (
               <div
                 key={poster.id}
