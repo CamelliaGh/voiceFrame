@@ -116,7 +116,9 @@
 - **Micro Goals**: File upload, template selection
 - **Engagement Goals**: Time on site, pages per session
 
-### Facebook Pixel Configuration
+### Meta Pixel Configuration
+
+Refer to [META_PIXEL_SETUP.md](mdc:docs/META_PIXEL_SETUP.md) for implementation details.
 
 #### Standard Events
 - **PageView**: Track page visits

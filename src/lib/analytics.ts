@@ -16,6 +16,7 @@ import {
   trackClarityConsentChange,
   isClarityAvailable
 } from './clarity';
+import { trackPixelPageView, trackPixelCustomEvent, trackPixelConsentChange } from './metaPixel';
 
 declare global {
   interface Window {
@@ -30,12 +31,14 @@ export const isGAAvailable = (): boolean => {
 
 // Track page views
 export const trackPageView = (url: string, title?: string): void => {
-  if (!isGAAvailable()) return;
+  if (isGAAvailable()) {
+    window.gtag('config', import.meta.env.VITE_GA_TRACKING_ID, {
+      page_path: url,
+      page_title: title || document.title,
+    });
+  }
 
-  window.gtag('config', import.meta.env.VITE_GA_TRACKING_ID, {
-    page_path: url,
-    page_title: title || document.title,
-  });
+  trackPixelPageView(url, title || document.title);
 };
 
 // Track custom events
@@ -45,13 +48,27 @@ export const trackEvent = (
   label?: string,
   value?: number
 ): void => {
-  if (!isGAAvailable()) return;
+  if (isGAAvailable()) {
+    window.gtag('event', action, {
+      event_category: category,
+      event_label: label,
+      value: value,
+    });
+  }
 
-  window.gtag('event', action, {
-    event_category: category,
-    event_label: label,
-    value: value,
-  });
+  const pixelPayload: Record<string, any> = {
+    category,
+  };
+
+  if (label) {
+    pixelPayload.label = label;
+  }
+
+  if (typeof value === 'number') {
+    pixelPayload.value = value;
+  }
+
+  trackPixelCustomEvent(action, pixelPayload);
 };
 
 // Combined tracking functions for Google Analytics and Microsoft Clarity
@@ -136,4 +153,5 @@ export const trackBackgroundSelect = (backgroundId: string): void => {
 
 export const trackConsentChange = (consentType: string, granted: boolean): void => {
   trackClarityConsentChange(consentType, granted);
+  trackPixelConsentChange(consentType, granted);
 };
